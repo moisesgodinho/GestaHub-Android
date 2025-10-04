@@ -3,22 +3,31 @@ package br.com.gestahub.ui.calculator
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardOptions // <-- IMPORT ADICIONADO
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType // <-- IMPORT ADICIONADO
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
-fun CalculatorScreen(onSaveSuccess: () -> Unit) {
+fun CalculatorScreen(
+    onSaveSuccess: () -> Unit,
+    onCancelClick: () -> Unit, // <-- NOVO PARÂMETRO
+    initialLmp: String?,
+    initialExamDate: String?,
+    initialWeeks: String?,
+    initialDays: String?
+) {
     val viewModel: CalculatorViewModel = viewModel()
     val saveState by viewModel.saveState.collectAsState()
     val context = LocalContext.current
 
-    var selectedTab by remember { mutableIntStateOf(0) }
+    val initialTab = if (!initialExamDate.isNullOrEmpty()) 1 else 0
+    var selectedTab by remember { mutableIntStateOf(initialTab) }
     val tabs = listOf("Calculadora DUM", "Calculadora Ultrassom")
 
     LaunchedEffect(saveState) {
@@ -33,7 +42,7 @@ fun CalculatorScreen(onSaveSuccess: () -> Unit) {
                 Toast.makeText(context, "Erro: $message", Toast.LENGTH_LONG).show()
                 viewModel.resetState()
             }
-            else -> { /* Não faz nada nos outros estados */ }
+            else -> {}
         }
     }
 
@@ -49,15 +58,20 @@ fun CalculatorScreen(onSaveSuccess: () -> Unit) {
         }
 
         when (selectedTab) {
-            0 -> DumCalculator(viewModel, saveState is SaveState.Loading)
-            1 -> UltrasoundCalculator(viewModel, saveState is SaveState.Loading)
+            0 -> DumCalculator(viewModel, saveState is SaveState.Loading, initialLmp, onCancelClick)
+            1 -> UltrasoundCalculator(viewModel, saveState is SaveState.Loading, initialExamDate, initialWeeks, initialDays, onCancelClick)
         }
     }
 }
 
 @Composable
-fun DumCalculator(viewModel: CalculatorViewModel, isLoading: Boolean) {
-    var lmp by remember { mutableStateOf("") }
+fun DumCalculator(
+    viewModel: CalculatorViewModel,
+    isLoading: Boolean,
+    initialLmp: String?,
+    onCancelClick: () -> Unit // <-- NOVO PARÂMETRO
+) {
+    var lmp by remember { mutableStateOf(initialLmp ?: "") }
 
     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         OutlinedTextField(
@@ -67,21 +81,41 @@ fun DumCalculator(viewModel: CalculatorViewModel, isLoading: Boolean) {
             placeholder = { Text("AAAA-MM-DD") },
             modifier = Modifier.fillMaxWidth()
         )
-        Button(
-            onClick = { viewModel.saveLmp(lmp) },
-            enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth()
+        // Linha para os botões
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            if (isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp)) else Text("Salvar")
+            TextButton(
+                onClick = onCancelClick,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Cancelar")
+            }
+            Button(
+                onClick = { viewModel.saveLmp(lmp) },
+                enabled = !isLoading,
+                modifier = Modifier.weight(1f)
+            ) {
+                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp)) else Text("Salvar")
+            }
         }
     }
 }
 
 @Composable
-fun UltrasoundCalculator(viewModel: CalculatorViewModel, isLoading: Boolean) {
-    var examDate by remember { mutableStateOf("") }
-    var weeks by remember { mutableStateOf("") }
-    var days by remember { mutableStateOf("") }
+fun UltrasoundCalculator(
+    viewModel: CalculatorViewModel,
+    isLoading: Boolean,
+    initialExamDate: String?,
+    initialWeeks: String?,
+    initialDays: String?,
+    onCancelClick: () -> Unit // <-- NOVO PARÂMETRO
+) {
+    var examDate by remember { mutableStateOf(initialExamDate ?: "") }
+    var weeks by remember { mutableStateOf(initialWeeks ?: "") }
+    var days by remember { mutableStateOf(initialDays ?: "") }
 
     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         OutlinedTextField(
@@ -107,12 +141,25 @@ fun UltrasoundCalculator(viewModel: CalculatorViewModel, isLoading: Boolean) {
                 modifier = Modifier.weight(1f)
             )
         }
-        Button(
-            onClick = { viewModel.saveUltrasound(examDate, weeks, days) },
-            enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth()
+        // Linha para os botões
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            if (isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp)) else Text("Salvar")
+            TextButton(
+                onClick = onCancelClick,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Cancelar")
+            }
+            Button(
+                onClick = { viewModel.saveUltrasound(examDate, weeks, days) },
+                enabled = !isLoading,
+                modifier = Modifier.weight(1f)
+            ) {
+                if (isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp)) else Text("Salvar")
+            }
         }
     }
 }

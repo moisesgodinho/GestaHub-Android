@@ -14,10 +14,10 @@ import java.time.temporal.ChronoUnit
 import java.util.*
 
 data class GestationalData(
-    val lmp: LocalDate? = null,
-    val ultrasoundExamDate: LocalDate? = null,
-    val weeksAtExam: Int = 0,
-    val daysAtExam: Int = 0
+    val lmp: String? = null, // Alterado para String
+    val ultrasoundExamDate: String? = null, // Alterado para String
+    val weeksAtExam: String? = null, // Alterado para String
+    val daysAtExam: String? = null // Alterado para String
 )
 
 data class UiState(
@@ -27,7 +27,8 @@ data class UiState(
     val dueDate: String = "",
     val countdownWeeks: Int = 0,
     val countdownDays: Int = 0,
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val gestationalData: GestationalData = GestationalData() // Adicionado
 )
 
 class HomeViewModel : ViewModel() {
@@ -58,30 +59,50 @@ class HomeViewModel : ViewModel() {
             val lmpString = profile?.get("lmp") as? String
             val ultrasoundMap = profile?.get("ultrasound") as? Map<*, *>
 
-            val gestationalData = GestationalData(
-                lmp = lmpString?.let { LocalDate.parse(it) },
-                ultrasoundExamDate = (ultrasoundMap?.get("examDate") as? String)?.let { LocalDate.parse(it) },
-                weeksAtExam = (ultrasoundMap?.get("weeksAtExam") as? String)?.toIntOrNull() ?: 0,
-                daysAtExam = (ultrasoundMap?.get("daysAtExam") as? String)?.toIntOrNull() ?: 0
+            val rawData = GestationalData(
+                lmp = lmpString,
+                ultrasoundExamDate = ultrasoundMap?.get("examDate") as? String,
+                weeksAtExam = ultrasoundMap?.get("weeksAtExam") as? String,
+                daysAtExam = ultrasoundMap?.get("daysAtExam") as? String
             )
 
-            calculateUiState(gestationalData)
+            // Usar os dados brutos para os cálculos
+            val gestationalDataForCalc = GestationalData(
+                lmp = rawData.lmp,
+                ultrasoundExamDate = rawData.ultrasoundExamDate,
+                weeksAtExam = rawData.weeksAtExam,
+                daysAtExam = rawData.daysAtExam
+            )
+
+            calculateUiState(gestationalDataForCalc, rawData)
         }
     }
 
-    private fun calculateUiState(data: GestationalData) {
-        val estimatedLmp = getEstimatedLmp(data)
+    private fun calculateUiState(dataForCalc: GestationalData, rawData: GestationalData) {
+        val lmpDate = dataForCalc.lmp?.let { LocalDate.parse(it) }
+        val ultrasoundDate = dataForCalc.ultrasoundExamDate?.let { LocalDate.parse(it) }
+        val weeks = dataForCalc.weeksAtExam?.toIntOrNull() ?: 0
+        val days = dataForCalc.daysAtExam?.toIntOrNull() ?: 0
+
+        val estimatedLmp = getEstimatedLmp(
+            GestationalData( // Recriar com tipos corretos para o cálculo
+                lmp = lmpDate?.toString(),
+                ultrasoundExamDate = ultrasoundDate?.toString(),
+                weeksAtExam = weeks.toString(),
+                daysAtExam = days.toString()
+            )
+        )
 
         if (estimatedLmp == null) {
-            _uiState.value = UiState(isLoading = false, hasData = false)
+            _uiState.value = UiState(isLoading = false, hasData = false, gestationalData = rawData)
             return
         }
 
         val today = LocalDate.now(ZoneId.of("America/Sao_Paulo"))
         val gestationalAgeInDays = ChronoUnit.DAYS.between(estimatedLmp, today).toInt()
 
-        val weeks = gestationalAgeInDays / 7
-        val days = gestationalAgeInDays % 7
+        val currentWeeks = gestationalAgeInDays / 7
+        val currentDays = gestationalAgeInDays % 7
 
         val dueDate = estimatedLmp.plusDays(280)
         val remainingDays = ChronoUnit.DAYS.between(today, dueDate).toInt()
@@ -90,22 +111,29 @@ class HomeViewModel : ViewModel() {
 
         _uiState.value = UiState(
             hasData = true,
-            gestationalWeeks = weeks,
-            gestationalDays = days,
+            gestationalWeeks = currentWeeks,
+            gestationalDays = currentDays,
             dueDate = dueDate.format(dateFormatter),
             countdownWeeks = if (remainingDays > 0) remainingDays / 7 else 0,
             countdownDays = if (remainingDays > 0) remainingDays % 7 else 0,
-            isLoading = false
+            isLoading = false,
+            gestationalData = rawData // Salvar os dados brutos no state
         )
     }
 
+
     private fun getEstimatedLmp(data: GestationalData): LocalDate? {
+        val ultrasoundExamDate = data.ultrasoundExamDate?.let { LocalDate.parse(it) }
+        val weeksAtExam = data.weeksAtExam?.toIntOrNull() ?: 0
+        val daysAtExam = data.daysAtExam?.toIntOrNull() ?: 0
+        val lmp = data.lmp?.let { LocalDate.parse(it) }
+
         // Prioriza o ultrassom
-        if (data.ultrasoundExamDate != null && data.weeksAtExam > 0) {
-            val daysAtExamTotal = (data.weeksAtExam * 7) + data.daysAtExam
-            return data.ultrasoundExamDate.minusDays(daysAtExamTotal.toLong())
+        if (ultrasoundExamDate != null && weeksAtExam > 0) {
+            val daysAtExamTotal = (weeksAtExam * 7) + daysAtExam
+            return ultrasoundExamDate.minusDays(daysAtExamTotal.toLong())
         }
         // Se não, usa a DUM
-        return data.lmp
+        return lmp
     }
 }

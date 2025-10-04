@@ -1,4 +1,3 @@
-// Inserir em: app/src/main/java/br/com/gestahub/ui/theme/Theme.kt
 package br.com.gestahub.ui.theme
 
 import android.app.Activity
@@ -11,54 +10,64 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// Paleta de cores para o Tema Escuro
-private val DarkColorScheme = darkColorScheme(
-    primary = Rose500, // A cor principal se destaca bem
-    background = Slate800, // Fundo escuro
-    surface = Slate800, // Superfície dos cards
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFFE2E8F0), // Texto principal (slate-200)
-    onSurface = Color(0xFFE2E8F0), // Texto nos cards (slate-200)
-    onSurfaceVariant = Color(0xFF94A3B8) // Texto secundário (slate-400)
+// Paleta de Cores para o Tema Claro (Light Mode)
+private val LightColorScheme = lightColorScheme(
+    primary = Indigo600,
+    onPrimary = White,
+    primaryContainer = Indigo100,
+    onPrimaryContainer = Indigo900,
+    secondary = Green600,
+    onSecondary = White,
+    background = Slate100, // Fundo principal da tela
+    onBackground = Slate900,
+    surface = White,      // Fundo dos Cards
+    onSurface = Slate900,
+    surfaceVariant = Slate100, // Fundo dos InfoChips (ex: Idade Gestacional)
+    onSurfaceVariant = Slate700
 )
 
-// Paleta de cores para o Tema Claro
-private val LightColorScheme = lightColorScheme(
-    primary = Rose500,
-    background = Color(0xFFF8FAFC), // Fundo claro (slate-50)
-    surface = Color.White, // Superfície dos cards
-    onPrimary = Color.White,
-    onSecondary = Color.Black,
-    onTertiary = Color.Black,
-    onBackground = Color(0xFF0F172A), // Texto principal (slate-900)
-    onSurface = Color(0xFF0F172A), // Texto nos cards (slate-900)
-    onSurfaceVariant = Color(0xFF64748B) // Texto secundário (slate-500)
+// Paleta de Cores para o Tema Escuro (Dark Mode)
+private val DarkColorScheme = darkColorScheme(
+    primary = Indigo400,
+    onPrimary = Indigo900,
+    primaryContainer = Indigo900,
+    onPrimaryContainer = Indigo100,
+    secondary = Green400,
+    onSecondary = Slate900,
+    background = Slate900, // Fundo principal da tela
+    onBackground = Slate200,
+    surface = Slate800,       // Fundo dos Cards
+    onSurface = Slate200,
+    surfaceVariant = Slate700, // Fundo dos InfoChips
+    onSurfaceVariant = Slate400
 )
 
 @Composable
 fun GestaHubTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    // Dynamic color is available on Android 12+
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) {
-        DarkColorScheme
-    } else {
-        LightColorScheme
-    }
+    val colorScheme = when {
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            val context = LocalContext.current
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        }
 
+        darkTheme -> DarkColorScheme
+        else -> LightColorScheme
+    }
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
+            window.statusBarColor = colorScheme.background.toArgb() // Cor da status bar igual ao fundo
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }

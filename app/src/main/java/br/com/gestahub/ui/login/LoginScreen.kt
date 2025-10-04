@@ -1,18 +1,13 @@
-// Inserir em: src/main/java/br/com/gestahub/ui/login/LoginScreen.kt
 package br.com.gestahub.ui.login
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -21,93 +16,60 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import br.com.gestahub.R
 import br.com.gestahub.ui.theme.GestaHubTheme
-import br.com.gestahub.ui.theme.Rose500
 
 @Composable
 fun LoginScreen(onSignInClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
+    Surface(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "GestaHub",
-                    fontSize = 48.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Rose500
-                )
-                Text(
-                    text = "Sua jornada da maternidade semana a semana.",
-                    fontSize = 18.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                Image(
-                    painter = painterResource(id = R.drawable.login),
-                    contentDescription = "Ilustração da jornada da maternidade",
-                    modifier = Modifier
-                        .size(200.dp)
-                        .padding(top = 16.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Parte Inferior: Features e Botão de Login
-            Column(
-                horizontalAlignment = Alignment.Start, // Alinhado à esquerda
-                modifier = Modifier.padding(horizontal = 16.dp)
-            ) {
-                FeatureList()
-                Spacer(modifier = Modifier.height(24.dp))
-                GoogleSignInButton(onClick = onSignInClick)
-            }
+            HeaderImage()
+            Spacer(modifier = Modifier.height(32.dp))
+            WelcomeText()
+            Spacer(modifier = Modifier.height(48.dp))
+            GoogleSignInButton(onClick = onSignInClick)
         }
     }
 }
 
 @Composable
-fun FeatureList() {
-    val features = listOf(
-        "Calculadoras precisas (DUM e Ultrassom)",
-        "Diário de Sintomas e Humor",
-        "Acompanhamento de Peso",
-        "Contador de Movimentos com histórico",
-        "Cronômetro de Contrações",
-        "Cronograma de exames importantes"
+fun HeaderImage() {
+    Image(
+        painter = painterResource(id = R.drawable.login),
+        contentDescription = "Ilustração de uma gestante",
+        modifier = Modifier
+            .fillMaxWidth(0.7f)
+            .aspectRatio(1f),
+        contentScale = ContentScale.Fit
     )
-
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        features.forEach { featureText ->
-            FeatureItem(text = featureText)
-        }
-    }
 }
 
 @Composable
-fun FeatureItem(text: String) {
-    Row(verticalAlignment = Alignment.Top) {
-        Icon(
-            imageVector = Icons.Default.Check,
-            contentDescription = null,
-            tint = Rose500,
-            modifier = Modifier.size(20.dp).padding(top = 2.dp)
+fun WelcomeText() {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = "Bem-vinda ao",
+            fontSize = 24.sp,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onBackground
         )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(text = text, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            text = "GestaHub",
+            fontSize = 42.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.primary // <-- CORRIGIDO AQUI
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Seu companheiro de bolso para uma jornada gestacional mais tranquila e informada.",
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -118,29 +80,32 @@ fun GoogleSignInButton(onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .height(50.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Rose500)
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        ),
+        shape = MaterialTheme.shapes.medium
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            // Lembrete: Adicione um ícone do Google à sua pasta res/drawable
-            // Ex: ic_google_logo.xml
-            // Por enquanto, usaremos um ícone genérico se não tiver um.
             Icon(
                 painter = painterResource(id = R.drawable.ic_google_logo),
-                contentDescription = "Google Logo",
-                tint = Color.White,
-                modifier = Modifier.size(24.dp)
+                contentDescription = "Logo do Google",
+                modifier = Modifier.size(24.dp),
+                tint = Color.Unspecified // Para manter a cor original do logo
             )
             Spacer(modifier = Modifier.width(12.dp))
-            Text("Entrar com Google", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 16.sp)
+            Text(
+                text = "Entrar com Google",
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
         }
     }
 }
 
-// Função para pré-visualizar a tela no Android Studio
-@Preview(showBackground = true, name = "Light Mode")
+@Preview(showBackground = true)
 @Composable
 fun LoginScreenPreview() {
     GestaHubTheme {

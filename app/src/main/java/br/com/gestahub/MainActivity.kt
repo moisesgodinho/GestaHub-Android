@@ -1,4 +1,3 @@
-// Local do arquivo: app/src/main/java/br/com/gestahub/MainActivity.kt
 package br.com.gestahub
 
 import android.os.Bundle
@@ -17,6 +16,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import br.com.gestahub.ui.calculator.CalculatorScreen
 import br.com.gestahub.ui.components.AppHeader
 import br.com.gestahub.ui.home.HomeScreen
@@ -24,6 +27,8 @@ import br.com.gestahub.ui.login.AuthState
 import br.com.gestahub.ui.login.AuthViewModel
 import br.com.gestahub.ui.login.LoginScreen
 import br.com.gestahub.ui.main.MainViewModel
+import br.com.gestahub.ui.profile.EditProfileScreen
+import br.com.gestahub.ui.profile.ProfileScreen
 import br.com.gestahub.ui.theme.GestaHubTheme
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -44,7 +49,6 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // Decide qual tela mostrar com base no estado de login do Firebase
                     if (Firebase.auth.currentUser == null) {
                         AuthScreen(mainViewModel)
                     } else {
@@ -63,37 +67,83 @@ fun MainAppScreen(mainViewModel: MainViewModel) {
     val homeUiState by homeViewModel.uiState.collectAsState()
     val isDarkTheme by mainViewModel.isDarkTheme.collectAsState()
 
-    // Controla se a tela da calculadora deve ser exibida
-    var showCalculators by remember { mutableStateOf(!homeUiState.hasData) }
+    val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
 
-    // Efeito para atualizar 'showCalculators' quando os dados do Firebase chegam
-    LaunchedEffect(homeUiState.hasData) {
-        showCalculators = !homeUiState.hasData
-    }
+    // O cabeçalho principal só será exibido se a rota atual NÃO for a de perfil ou edição
+    val showMainHeader = currentRoute != "profile" && currentRoute != "editProfile"
 
     Scaffold(
         topBar = {
-            AppHeader(
-                isDarkTheme = isDarkTheme,
-                onThemeToggle = { mainViewModel.toggleTheme() }
-            )
+            if (showMainHeader) {
+                AppHeader(
+                    isDarkTheme = isDarkTheme,
+                    onThemeToggle = { mainViewModel.toggleTheme() },
+                    onProfileClick = { navController.navigate("profile") }
+                )
+            }
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
-            if (showCalculators) {
-                CalculatorScreen(onSaveSuccess = { showCalculators = false })
-            } else {
-                HomeScreen(onEditDataClick = { showCalculators = true })
+        NavHost(
+            navController = navController,
+            startDestination = "home"
+        ) {
+            composable("home") {
+                Box(modifier = Modifier.padding(innerPadding)) {
+                    HomeScreen(
+                        homeViewModel = homeViewModel,
+                        onEditDataClick = {
+                            val data = homeUiState.gestationalData
+                            navController.navigate(
+                                "calculator?lmp=${data.lmp ?: ""}&examDate=${data.ultrasoundExamDate ?: ""}&weeks=${data.weeksAtExam ?: ""}&days=${data.daysAtExam ?: ""}"
+                            )
+                        }
+                    )
+                }
+
+                LaunchedEffect(homeUiState.hasData, homeUiState.isLoading) {
+                    if (!homeUiState.isLoading && !homeUiState.hasData) {
+                        navController.navigate("calculator")
+                    }
+                }
+            }
+
+            composable("calculator?lmp={lmp}&examDate={examDate}&weeks={weeks}&days={days}") { backStackEntry ->
+                Box(modifier = Modifier.padding(innerPadding)) {
+                    CalculatorScreen(
+                        onSaveSuccess = { navController.navigate("home") { popUpTo("home") { inclusive = true } } },
+                        onCancelClick = { navController.popBackStack() },
+                        initialLmp = backStackEntry.arguments?.getString("lmp"),
+                        initialExamDate = backStackEntry.arguments?.getString("examDate"),
+                        initialWeeks = backStackEntry.arguments?.getString("weeks"),
+                        initialDays = backStackEntry.arguments?.getString("days"),
+                    )
+                }
+            }
+
+            composable("profile") {
+                ProfileScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onEditClick = { navController.navigate("editProfile") }
+                )
+            }
+
+            composable("editProfile") {
+                EditProfileScreen(
+                    onSaveSuccess = { navController.popBackStack() },
+                    onCancelClick = { navController.popBackStack() }
+                )
             }
         }
     }
 }
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthScreen(mainViewModel: MainViewModel, authViewModel: AuthViewModel = viewModel()) {
     val authState by authViewModel.authState.collectAsState()
-    val isDarkTheme by mainViewModel.isDarkTheme.collectAsState()
     val context = LocalContext.current
 
     val googleSignInLauncher = rememberLauncherForActivityResult(
@@ -111,15 +161,11 @@ fun AuthScreen(mainViewModel: MainViewModel, authViewModel: AuthViewModel = view
         }
     }
 
-    Scaffold(
-        topBar = {
-            // O cabeçalho só é mostrado na tela principal, não no login
-        }
-    ) { innerPadding ->
+    Scaffold { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (val state = authState) {
                 is AuthState.Idle, is AuthState.Error -> {
-                    if(state is AuthState.Error) {
+                    if (state is AuthState.Error) {
                         Toast.makeText(context, "Erro: ${state.message}", Toast.LENGTH_LONG).show()
                     }
                     LoginScreen(
@@ -140,10 +186,7 @@ fun AuthScreen(mainViewModel: MainViewModel, authViewModel: AuthViewModel = view
                         CircularProgressIndicator()
                     }
                 }
-                is AuthState.Success -> {
-                    // O estado de sucesso agora é gerenciado pela verificação inicial no setContent.
-                    // Este bloco não será mais alcançado diretamente, pois o app recompõe para MainAppScreen.
-                }
+                is AuthState.Success -> {}
             }
         }
     }

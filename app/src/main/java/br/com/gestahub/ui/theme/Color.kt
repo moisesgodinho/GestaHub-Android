@@ -2,13 +2,22 @@ package br.com.gestahub.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// Paleta base extraída do PWA (Tailwind CSS)
+val Indigo600 = Color(0xFF4F46E5) // Cor primária (light)
+val Indigo400 = Color(0xFF818CF8) // Cor primária (dark)
+val Indigo100 = Color(0xFFE0E7FF) // Container primário (light)
+val Indigo900 = Color(0xFF312E81) // Texto sobre container (light)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val Green600 = Color(0xFF16A34A)  // Cor secundária (light)
+val Green400 = Color(0xFF4ADE80)  // Cor secundária (dark)
 
-val Rose500 = Color(0xFFF43F5E) // Cor equivalente a rose-500 do Tailwind
-val Slate800 = Color(0xFF1E293B) // Cor para o fundo escuro
+// Tons de Cinza/Azul (Slate)
+val Slate50 = Color(0xFFF8FAFC)
+val Slate100 = Color(0xFFF1F5F9) // Fundo (light)
+val Slate200 = Color(0xFFE2E8F0)
+val Slate400 = Color(0xFF94A3B8)
+val Slate700 = Color(0xFF334155) // Fundo de Chip (dark)
+val Slate800 = Color(0xFF1E293B) // Fundo de Card (dark)
+val Slate900 = Color(0xFF0F172A) // Fundo (dark)
+
+val White = Color(0xFFFFFFFF)
