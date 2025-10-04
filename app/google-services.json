@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "565508957327",
+    "project_id": "gestahub-6295b",
+    "storage_bucket": "gestahub-6295b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:565508957327:android:736fee36421a9de38fbcfa",
+        "android_client_info": {
+          "package_name": "br.com.gestahub"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "565508957327-9puku81gb8fqn6u6sr2an71lgk3lv7je.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "br.com.gestahub",
+            "certificate_hash": "d6b5682f2a366ad9dae6cc42e563443da72f8db9"
+          }
+        },
+        {
+          "client_id": "565508957327-lhlf2qs5vpf0gq6og429dsk4vbefjg84.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCT_DKILiLFVzH2UTLl0diJhQyhHQmMRAM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "565508957327-lhlf2qs5vpf0gq6og429dsk4vbefjg84.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "565508957327-3fv2h3fvf65hpi66ne0ql5lfkslnrlnh.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.anonymous.GestaHubNative"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
