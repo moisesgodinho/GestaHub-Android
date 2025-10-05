@@ -4,6 +4,7 @@ package br.com.gestahub.ui.appointment
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import br.com.gestahub.util.GestationalAgeCalculator
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -25,6 +26,7 @@ data class AppointmentFormUiState(
     val professional: String = "",
     val location: String = "",
     val notes: String = "",
+    val isDone: Boolean = false,
     val isUltrasound: Boolean = false,
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
@@ -42,6 +44,10 @@ class AppointmentFormViewModel(
     private val appointmentId: String? = savedStateHandle["appointmentId"]
     private val appointmentType: String? = savedStateHandle["appointmentType"]
 
+    // Armazena a DUM estimada e a DPP calculada a partir dela
+    private var estimatedLmp: LocalDate? = null
+    private var dueDate: LocalDate? = null
+
     private val _uiState = MutableStateFlow(AppointmentFormUiState())
     val uiState = _uiState.asStateFlow()
 
@@ -49,18 +55,35 @@ class AppointmentFormViewModel(
         val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
         val now = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
 
-        if (appointmentId != null && appointmentType != null && userId != null) {
-            loadAppointment(userId, appointmentId, AppointmentType.valueOf(appointmentType))
+        if (userId != null) {
+            loadGestationalDatesAndAppointment(userId, today, now)
         } else {
-            _uiState.update {
-                it.copy(
-                    date = today,
-                    time = now,
-                    isLoading = false
-                )
+            _uiState.update { it.copy(isLoading = false, userMessage = "Usuário não autenticado.") }
+        }
+    }
+
+    private fun loadGestationalDatesAndAppointment(userId: String, today: String, now: String) {
+        viewModelScope.launch {
+            try {
+                val userDoc = db.collection("users").document(userId).get().await()
+                val gestationalProfile = userDoc.get("gestationalProfile") as? Map<*, *>
+
+                // --- USA A FUNÇÃO CENTRALIZADA ---
+                estimatedLmp = GestationalAgeCalculator.getEstimatedLmp(gestationalProfile)
+                dueDate = estimatedLmp?.plusDays(280)
+
+                if (appointmentId != null && appointmentType != null) {
+                    loadAppointment(userId, appointmentId, AppointmentType.valueOf(appointmentType))
+                } else {
+                    _uiState.update { it.copy(date = today, time = now, isLoading = false) }
+                }
+
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, userMessage = "Erro ao buscar dados do perfil.") }
             }
         }
     }
+
 
     private fun loadAppointment(userId: String, id: String, type: AppointmentType) {
         viewModelScope.launch {
@@ -94,6 +117,7 @@ class AppointmentFormViewModel(
                             title = app.title,
                             date = app.date ?: LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE),
                             time = app.time ?: "",
+                            isDone = app.done,
                             professional = (app as? ManualAppointment)?.professional ?: (app as? UltrasoundAppointment)?.professional ?: "",
                             location = (app as? ManualAppointment)?.location ?: (app as? UltrasoundAppointment)?.location ?: "",
                             notes = (app as? ManualAppointment)?.notes ?: (app as? UltrasoundAppointment)?.notes ?: "",
@@ -129,15 +153,42 @@ class AppointmentFormViewModel(
     }
 
     fun saveAppointment() {
+        val state = _uiState.value
+
         if (userId == null) {
             _uiState.update { it.copy(userMessage = "Usuário não autenticado.") }
             return
         }
 
-        val state = _uiState.value
         if (state.title.isBlank() || state.date.isBlank()) {
             _uiState.update { it.copy(userMessage = "Título e data são obrigatórios.") }
             return
+        }
+
+        val selectedDate = runCatching { LocalDate.parse(state.date) }.getOrNull()
+        if (selectedDate == null) {
+            _uiState.update { it.copy(userMessage = "Formato de data inválido.") }
+            return
+        }
+
+        if (state.isDone && selectedDate.isAfter(LocalDate.now())) {
+            _uiState.update { it.copy(userMessage = "Uma consulta concluída não pode ser agendada para o futuro.") }
+            return
+        }
+
+        // --- VALIDAÇÃO ATUALIZADA USANDO A DUM ESTIMADA ---
+        if (estimatedLmp != null && dueDate != null) {
+            val extendedDueDate = dueDate!!.plusDays(14)
+            if (selectedDate.isBefore(estimatedLmp) || selectedDate.isAfter(extendedDueDate)) {
+                _uiState.update { it.copy(userMessage = "A data da consulta deve ser dentro do período da gestação.") }
+                return
+            }
+        } else {
+            val oneYearFromNow = LocalDate.now().plusYears(1)
+            if (selectedDate.isAfter(oneYearFromNow)) {
+                _uiState.update { it.copy(userMessage = "A data não pode ser mais de um ano no futuro.") }
+                return
+            }
         }
 
         _uiState.update { it.copy(isSaving = true) }
@@ -152,16 +203,18 @@ class AppointmentFormViewModel(
                         "location" to state.location,
                         "notes" to state.notes
                     )
-                    docRef.update("gestationalProfile.ultrasoundSchedule.${state.id}", fieldMap).await()
+                    val update = mapOf("gestationalProfile" to mapOf("ultrasoundSchedule" to mapOf(state.id to fieldMap)))
+                    docRef.set(update, com.google.firebase.firestore.SetOptions.merge()).await()
+
                 } else {
-                    val appointmentData = ManualAppointment(
-                        documentId = state.id ?: "",
-                        title = state.title,
-                        date = state.date,
-                        time = state.time,
-                        professional = state.professional,
-                        location = state.location,
-                        notes = state.notes
+                    val appointmentData = mapOf(
+                        "title" to state.title,
+                        "date" to state.date,
+                        "time" to state.time,
+                        "professional" to state.professional,
+                        "location" to state.location,
+                        "notes" to state.notes,
+                        "done" to state.isDone
                     )
                     if (state.id != null) {
                         db.collection("users").document(userId).collection("appointments").document(state.id)

@@ -1,11 +1,28 @@
 // Local: app/src/main/java/br/com/gestahub/ui/appointment/AppointmentsScreen.kt
 package br.com.gestahub.ui.appointment
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -64,6 +81,7 @@ fun AppointmentsScreen(
                             uiState.upcomingAppointments.forEach { appointment ->
                                 AppointmentItem(
                                     appointment = appointment,
+                                    lmpDate = uiState.lmpDate, // Passando a DUM
                                     onToggleDone = onToggleDone,
                                     onEdit = onEditClick,
                                     onDelete = onDeleteRequest
@@ -82,6 +100,7 @@ fun AppointmentsScreen(
                             pastAppointmentsToShow.forEach { appointment ->
                                 AppointmentItem(
                                     appointment = appointment,
+                                    lmpDate = uiState.lmpDate, // Passando a DUM
                                     onToggleDone = onToggleDone,
                                     onEdit = onEditClick,
                                     onDelete = onDeleteRequest
@@ -89,9 +108,6 @@ fun AppointmentsScreen(
                             }
 
                             if (uiState.pastAppointments.size > visiblePastCount) {
-                                // --- CORREÇÃO APLICADA AQUI ---
-                                // O Spacer extra foi removido. O Arrangement.spacedBy(12.dp)
-                                // da Column pai já criará um espaçamento adequado.
                                 OutlinedButton(
                                     onClick = { visiblePastCount += LOAD_MORE_COUNT },
                                     modifier = Modifier.fillMaxWidth()

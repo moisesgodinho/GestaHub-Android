@@ -3,12 +3,41 @@ package br.com.gestahub.ui.appointment
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.WatchLater
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -17,16 +46,20 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import br.com.gestahub.util.GestationalAgeCalculator
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 private const val NOTES_TRUNCATE_LENGTH = 100
 
 @Composable
 fun AppointmentItem(
     appointment: Appointment,
+    lmpDate: LocalDate?, // Parâmetro para receber a DUM
     onToggleDone: (Appointment) -> Unit,
     onEdit: (Appointment) -> Unit,
     onDelete: (Appointment) -> Unit
@@ -51,7 +84,6 @@ fun AppointmentItem(
             .alpha(contentAlpha)
             .animateContentSize(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        // Ação de clique principal do card ainda edita, mas anotações terão sua própria ação
         onClick = { onEdit(appointment) }
     ) {
         Row(
@@ -92,14 +124,21 @@ fun AppointmentItem(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     if (isScheduled) {
-                        val formattedDate = java.time.LocalDate.parse(appointment.date).format(
-                            java.time.format.DateTimeFormatter.ofPattern("dd 'de' MMMM, yyyy", java.util.Locale("pt", "BR"))
+                        val formattedDate = LocalDate.parse(appointment.date).format(
+                            DateTimeFormatter.ofPattern("dd 'de' MMMM, yyyy", Locale("pt", "BR"))
                         )
                         InfoRow(icon = Icons.Default.CalendarMonth, text = formattedDate)
                     } else if (appointment is UltrasoundAppointment) {
+                        val windowText = if (lmpDate != null) {
+                            val startDate = GestationalAgeCalculator.getWindowStartDate(lmpDate, appointment.startWeek)
+                            val endDate = GestationalAgeCalculator.getWindowEndDate(lmpDate, appointment.endWeek)
+                            "Janela ideal: $startDate a $endDate"
+                        } else {
+                            "Entre ${appointment.startWeek} e ${appointment.endWeek} semanas"
+                        }
                         InfoRow(
                             icon = Icons.Default.CalendarMonth,
-                            text = "Janela ideal: ${appointment.startWeek} a ${appointment.endWeek} semanas",
+                            text = windowText,
                             color = MaterialTheme.colorScheme.secondary
                         )
                     }
@@ -120,7 +159,6 @@ fun AppointmentItem(
 
                     val notes = (appointment as? ManualAppointment)?.notes ?: (appointment as? UltrasoundAppointment)?.notes
                     if (!notes.isNullOrBlank()) {
-                        // --- LÓGICA DE ANOTAÇÕES COM "VER MAIS" COMO LINK ---
                         NotesWithExpandableLink(
                             notes = notes,
                             isExpanded = isNotesExpanded,
@@ -156,7 +194,6 @@ fun AppointmentItem(
     }
 }
 
-// --- NOVO COMPONENTE PARA AS ANOTAÇÕES ---
 @Composable
 private fun NotesWithExpandableLink(
     notes: String,
@@ -177,10 +214,8 @@ private fun NotesWithExpandableLink(
 
         val annotatedString = buildAnnotatedString {
             if (isExpanded || !isLongNote) {
-                // Texto completo
                 append(notes)
                 if (isLongNote) {
-                    // Adiciona " Ver menos" clicável
                     append(" ")
                     pushStringAnnotation(tag = "expand_toggle", annotation = "toggle")
                     withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)) {
@@ -189,9 +224,7 @@ private fun NotesWithExpandableLink(
                     pop()
                 }
             } else {
-                // Texto truncado
                 append(notes.take(NOTES_TRUNCATE_LENGTH))
-                // Adiciona "... Ver mais" clicável
                 append("... ")
                 pushStringAnnotation(tag = "expand_toggle", annotation = "toggle")
                 withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)) {
