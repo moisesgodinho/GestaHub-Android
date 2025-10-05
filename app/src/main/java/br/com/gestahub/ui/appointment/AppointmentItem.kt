@@ -13,6 +13,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -23,7 +24,7 @@ fun AppointmentItem(
     appointment: Appointment,
     onToggleDone: (Appointment) -> Unit,
     onEdit: (Appointment) -> Unit,
-    onDelete: (Appointment) -> Unit // Nova função de callback
+    onDelete: (Appointment) -> Unit
 ) {
     val isDone = appointment.done
     val isUltrasound = appointment.type == AppointmentType.ULTRASOUND
@@ -54,14 +55,12 @@ fun AppointmentItem(
                     .background(borderColor)
             )
 
-            // --- LAYOUT REESTRUTURADO ---
             Row(
                 modifier = Modifier
                     .padding(start = 8.dp, end = 4.dp, top = 12.dp, bottom = 12.dp)
                     .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Checkbox à esquerda
                 Checkbox(
                     checked = isDone,
                     onCheckedChange = { onToggleDone(appointment) },
@@ -73,12 +72,12 @@ fun AppointmentItem(
 
                 Spacer(Modifier.width(8.dp))
 
-                // Coluna com Título e Informações
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = appointment.title,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -99,11 +98,34 @@ fun AppointmentItem(
                     appointment.time?.takeIf { it.isNotBlank() }?.let {
                         InfoRow(icon = Icons.Default.WatchLater, text = it)
                     }
+
+                    // --- INÍCIO DAS NOVAS INFORMAÇÕES ---
+                    val professional = (appointment as? ManualAppointment)?.professional ?: (appointment as? UltrasoundAppointment)?.professional
+                    professional?.takeIf { it.isNotBlank() }?.let {
+                        InfoRow(icon = Icons.Default.Person, text = it)
+                    }
+
+                    val location = (appointment as? ManualAppointment)?.location ?: (appointment as? UltrasoundAppointment)?.location
+                    location?.takeIf { it.isNotBlank() }?.let {
+                        InfoRow(icon = Icons.Default.LocationOn, text = it)
+                    }
+
+                    val notes = (appointment as? ManualAppointment)?.notes ?: (appointment as? UltrasoundAppointment)?.notes
+                    if (!notes.isNullOrBlank()) {
+                        Divider(modifier = Modifier.padding(vertical = 8.dp))
+                        Text(
+                            text = notes,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    // --- FIM DAS NOVAS INFORMAÇÕES ---
                 }
 
                 Spacer(Modifier.width(8.dp))
 
-                // Botões de Ação à direita
                 Row {
                     IconButton(
                         onClick = { onEdit(appointment) },
@@ -113,7 +135,6 @@ fun AppointmentItem(
                     ) {
                         Icon(Icons.Default.Edit, contentDescription = "Editar")
                     }
-                    // Botão de deletar aparece apenas para consultas manuais
                     if (appointment is ManualAppointment) {
                         IconButton(
                             onClick = { onDelete(appointment) },
@@ -131,7 +152,9 @@ fun AppointmentItem(
 }
 
 @Composable
-private fun InfoRow(icon: ImageVector, text: String, color: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
+private fun InfoRow(icon: ImageVector, text: String, color: Color? = null) {
+    val textColor = color ?: MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
@@ -140,9 +163,9 @@ private fun InfoRow(icon: ImageVector, text: String, color: Color = MaterialThem
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(18.dp),
-            tint = color
+            tint = textColor
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text = text, style = MaterialTheme.typography.bodyMedium, color = color)
+        Text(text = text, style = MaterialTheme.typography.bodyMedium, color = textColor)
     }
 }

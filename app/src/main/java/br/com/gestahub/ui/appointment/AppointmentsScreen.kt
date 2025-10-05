@@ -10,17 +10,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+
+private const val INITIAL_VISIBLE_PAST_APPOINTMENTS = 5
+private const val LOAD_MORE_COUNT = 5
 
 @Composable
 fun AppointmentsScreen(
-    // Parâmetros para o conteúdo da tela e para o padding vindo do Scaffold principal
     contentPadding: PaddingValues,
     uiState: AppointmentsUiState,
     onToggleDone: (Appointment) -> Unit,
     onEditClick: (Appointment) -> Unit,
     onDeleteRequest: (Appointment) -> Unit
 ) {
+    var visiblePastCount by remember { mutableStateOf(INITIAL_VISIBLE_PAST_APPOINTMENTS) }
+
     if (uiState.isLoading) {
         Box(Modifier.fillMaxSize().padding(contentPadding), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
@@ -29,7 +32,7 @@ fun AppointmentsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(contentPadding) // Aplica o padding vindo da MainActivity
+                .padding(contentPadding)
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
@@ -73,13 +76,28 @@ fun AppointmentsScreen(
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
                             SectionHeader("Consultas Passadas")
-                            uiState.pastAppointments.forEach { appointment ->
+
+                            val pastAppointmentsToShow = uiState.pastAppointments.take(visiblePastCount)
+
+                            pastAppointmentsToShow.forEach { appointment ->
                                 AppointmentItem(
                                     appointment = appointment,
                                     onToggleDone = onToggleDone,
                                     onEdit = onEditClick,
                                     onDelete = onDeleteRequest
                                 )
+                            }
+
+                            if (uiState.pastAppointments.size > visiblePastCount) {
+                                // --- CORREÇÃO APLICADA AQUI ---
+                                // O Spacer extra foi removido. O Arrangement.spacedBy(12.dp)
+                                // da Column pai já criará um espaçamento adequado.
+                                OutlinedButton(
+                                    onClick = { visiblePastCount += LOAD_MORE_COUNT },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Mostrar mais")
+                                }
                             }
                         }
                     }
