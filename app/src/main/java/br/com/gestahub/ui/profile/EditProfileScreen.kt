@@ -4,7 +4,7 @@ import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close // <-- IMPORT CORRIGIDO
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -58,7 +58,6 @@ fun EditProfileScreen(
                 title = { Text("Editar Perfil") },
                 navigationIcon = {
                     IconButton(onClick = onCancelClick) {
-                        // --- CORREÇÃO APLICADA AQUI ---
                         Icon(Icons.Filled.Close, contentDescription = "Cancelar")
                     }
                 }
@@ -86,19 +85,30 @@ fun EditProfileScreen(
                         singleLine = true
                     )
 
-                    OutlinedTextField(
-                        value = birthDateForDisplay,
-                        onValueChange = { },
-                        label = { Text("Data de Nascimento") },
-                        placeholder = { Text("DD/MM/AAAA") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showDatePicker = true },
-                        readOnly = true,
-                        trailingIcon = {
-                            Icon(Icons.Default.DateRange, contentDescription = "Abrir calendário")
-                        }
-                    )
+                    // --- CORREÇÃO APLICADA AQUI ---
+                    // Envolvemos o TextField em um Box que captura o clique.
+                    Box(modifier = Modifier.clickable { showDatePicker = true }) {
+                        OutlinedTextField(
+                            value = birthDateForDisplay,
+                            onValueChange = { },
+                            label = { Text("Data de Nascimento") },
+                            placeholder = { Text("DD/MM/AAAA") },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = false, // Desabilitamos o campo
+                            readOnly = true,
+                            trailingIcon = {
+                                Icon(Icons.Default.DateRange, contentDescription = "Abrir calendário")
+                            },
+                            // Personalizamos as cores para que não pareça "apagado"
+                            colors = OutlinedTextFieldDefaults.colors(
+                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                    }
                 }
 
                 Row(

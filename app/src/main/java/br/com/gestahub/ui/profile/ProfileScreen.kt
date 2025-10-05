@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -37,14 +36,7 @@ fun ProfileScreen(
                         )
                     }
                 },
-                actions = {
-                    IconButton(onClick = onEditClick) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Editar Perfil"
-                        )
-                    }
-                }
+                actions = { /* O ícone de editar não fica mais aqui */ }
             )
         }
     ) { innerPadding ->
@@ -55,29 +47,51 @@ fun ProfileScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            if (uiState.isLoading) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (uiState.isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 64.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        ProfileInfoRow("Nome de Exibição", userProfile.displayName)
-                        Divider()
-                        ProfileInfoRow("E-mail", userProfile.email)
-                        Divider()
-                        ProfileInfoRow("Idade", userProfile.age)
+                        CircularProgressIndicator()
                     }
+                } else {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            ProfileInfoRow("Nome de Exibição", userProfile.displayName)
+                            Divider()
+                            ProfileInfoRow("E-mail", userProfile.email)
+                            Divider()
+                            ProfileInfoRow("Idade", userProfile.age)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // --- BOTÃO ALTERADO AQUI ---
+                // Trocado de TextButton para Button
+                Button(
+                    onClick = onEditClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Editar Perfil")
                 }
             }
 
+            // Botão de Sair continua no final da tela
             Button(
                 onClick = { profileViewModel.signOut() },
                 modifier = Modifier.fillMaxWidth(),
