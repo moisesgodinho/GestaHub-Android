@@ -19,19 +19,44 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MonitorWeight
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import br.com.gestahub.ui.appointment.Appointment
+import br.com.gestahub.ui.appointment.AppointmentFormScreen
 import br.com.gestahub.ui.appointment.AppointmentsScreen
 import br.com.gestahub.ui.appointment.AppointmentsViewModel
 import br.com.gestahub.ui.calculator.CalculatorScreen
@@ -65,7 +90,7 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
     val homeViewModel: br.com.gestahub.ui.home.HomeViewModel = viewModel(key = user.uid)
     val appointmentsViewModel: AppointmentsViewModel = viewModel()
 
-    val homeUiState by homeViewModel.uiState.collectAsState() // Coletado aqui, no lugar certo
+    val homeUiState by homeViewModel.uiState.collectAsState()
     val appointmentsUiState by appointmentsViewModel.uiState.collectAsState()
     val isDarkTheme by mainViewModel.isDarkTheme.collectAsState()
 
@@ -133,7 +158,7 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
         floatingActionButton = {
             if (currentRoute == "appointments") {
                 FloatingActionButton(onClick = {
-                    Toast.makeText(context, "Abrir formulário de nova consulta", Toast.LENGTH_SHORT).show()
+                    navController.navigate("appointmentForm")
                 }) {
                     Icon(Icons.Default.Add, contentDescription = "Adicionar Consulta")
                 }
@@ -169,12 +194,11 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
             composable("home") {
                 HomeScreen(
                     contentPadding = innerPadding,
-                    homeViewModel = homeViewModel,
                     onAddDataClick = { navController.navigate("calculator") },
                     onEditDataClick = {
                         // --- CORREÇÃO APLICADA AQUI ---
-                        // A linha "val homeUiState by..." foi removida.
-                        // Usamos a variável `homeUiState` que já foi coletada no topo da tela.
+                        // Usa a variável 'homeUiState' já coletada no escopo de MainAppScreen,
+                        // em vez de tentar chamar 'collectAsState' novamente aqui dentro.
                         val dataState = homeUiState.dataState
                         if (dataState is GestationalDataState.HasData) {
                             val data = dataState.gestationalData
@@ -190,7 +214,7 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
                     uiState = appointmentsUiState,
                     onToggleDone = { appointmentsViewModel.toggleDone(it) },
                     onEditClick = { appointment ->
-                        Toast.makeText(context, "Editar: ${appointment.title}", Toast.LENGTH_SHORT).show()
+                        navController.navigate("appointmentForm?appointmentId=${appointment.id}&appointmentType=${appointment.type.name}")
                     },
                     onDeleteRequest = {
                         appointmentToDelete = it
@@ -202,6 +226,24 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
             composable("journal") { Box(Modifier.padding(innerPadding)) { ComingSoonScreen() } }
             composable("weight") { Box(Modifier.padding(innerPadding)) { ComingSoonScreen() } }
             composable("more") { Box(Modifier.padding(innerPadding)) { ComingSoonScreen() } }
+
+            composable(
+                route = "appointmentForm?appointmentId={appointmentId}&appointmentType={appointmentType}",
+                arguments = listOf(
+                    navArgument("appointmentId") {
+                        type = NavType.StringType
+                        nullable = true
+                    },
+                    navArgument("appointmentType") {
+                        type = NavType.StringType
+                        nullable = true
+                    }
+                )
+            ) {
+                AppointmentFormScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
 
             composable("calculator?lmp={lmp}&examDate={examDate}&weeks={weeks}&days={days}") { backStackEntry ->
                 CalculatorScreen(
