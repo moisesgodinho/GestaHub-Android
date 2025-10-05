@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "565508957327-ch8ujqe05cotnoa2bng8sjuiogssivus.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "br.com.gestahub",
+            "certificate_hash": "3c3a628508a6d639405f01d508ff7effbb360dda"
+          }
+        },
+        {
           "client_id": "565508957327-lhlf2qs5vpf0gq6og429dsk4vbefjg84.apps.googleusercontent.com",
           "client_type": 3
         }

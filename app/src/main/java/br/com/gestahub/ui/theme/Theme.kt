@@ -10,6 +10,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -23,12 +24,13 @@ private val LightColorScheme = lightColorScheme(
     onPrimaryContainer = Indigo900,
     secondary = Green600,
     onSecondary = White,
-    background = Slate100, // Fundo principal da tela
+    background = Slate100,
     onBackground = Slate900,
-    surface = White,      // Fundo dos Cards
+    surface = White,
     onSurface = Slate900,
-    surfaceVariant = Slate100, // Fundo dos InfoChips (ex: Idade Gestacional)
-    onSurfaceVariant = Slate700
+    surfaceVariant = Slate50,
+    onSurfaceVariant = Slate700,
+    surfaceTint = White
 )
 
 // Paleta de Cores para o Tema Escuro (Dark Mode)
@@ -39,18 +41,21 @@ private val DarkColorScheme = darkColorScheme(
     onPrimaryContainer = Indigo100,
     secondary = Green400,
     onSecondary = Slate900,
-    background = Slate900, // Fundo principal da tela
+
+    // --- CORREÇÃO APLICADA AQUI ---
+    background = Slate900,      // Fundo principal (o mais escuro: #0F172A)
+    surface = Slate800,         // Fundo dos cards principais (intermediário: #1E293B)
+    surfaceVariant = Slate700,  // Fundo dos cards internos (o menos escuro: #334155)
+    // --- FIM DA CORREÇÃO ---
+
     onBackground = Slate200,
-    surface = Slate800,       // Fundo dos Cards
     onSurface = Slate200,
-    surfaceVariant = Slate700, // Fundo dos InfoChips
-    onSurfaceVariant = Slate400
+    onSurfaceVariant = Slate400,
 )
 
 @Composable
 fun GestaHubTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
@@ -59,7 +64,6 @@ fun GestaHubTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
@@ -67,8 +71,15 @@ fun GestaHubTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb() // Cor da status bar igual ao fundo
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+
+            window.statusBarColor = Color.Transparent.toArgb()
+            window.navigationBarColor = Color.Transparent.toArgb()
+
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+
+            val isLight = !darkTheme
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = isLight
+            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = isLight
         }
     }
 

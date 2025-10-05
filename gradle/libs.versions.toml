@@ -17,6 +17,7 @@ kotlinxCoroutinesPlayServices = "1.8.1" # Adicionado
 lifecycleViewmodelCompose = "2.8.0" # Adicionado
 datastore = "1.1.1"
 navigationCompose = "2.7.7"
+kotlinx-coroutines-playservices = "1.7.3"
 
 
 [libraries]
@@ -46,6 +47,7 @@ firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging
 # Google Sign-In & Coroutines
 google-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
 kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "kotlinxCoroutinesPlayServices" }
+kotlinx-coroutines-playservices = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "kotlinx-coroutines-playservices" }
 
 # ViewModel for Compose
 androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelCompose" }

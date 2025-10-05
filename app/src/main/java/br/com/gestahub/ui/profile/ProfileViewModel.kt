@@ -63,9 +63,9 @@ class ProfileViewModel : ViewModel() {
                 return@addSnapshotListener
             }
 
-            val personalProfile = snapshot.get("personalProfile") as? Map<*, *>
-            val displayName = personalProfile?.get("displayName") as? String ?: authUser?.displayName
-            val birthDate = personalProfile?.get("birthDate") as? String
+            val profile = snapshot.get("profile") as? Map<*, *>
+            val displayName = profile?.get("displayName") as? String ?: authUser?.displayName
+            val birthDate = profile?.get("dob") as? String
 
             _uiState.update {
                 it.copy(
@@ -93,7 +93,12 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
+    // --- CORREÇÃO APLICADA AQUI ---
     fun signOut() {
-        Firebase.auth.signOut()
+        // Primeiro, terminamos a instância do Firestore para limpar seu cache e estado de permissões.
+        Firebase.firestore.terminate().addOnCompleteListener {
+            // Após a conclusão da terminação, fazemos o logout do serviço de autenticação.
+            Firebase.auth.signOut()
+        }
     }
 }

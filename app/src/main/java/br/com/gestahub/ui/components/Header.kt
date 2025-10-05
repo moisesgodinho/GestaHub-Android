@@ -7,32 +7,30 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.font.FontWeight
+import br.com.gestahub.ui.theme.Rose500 // Importa a nova cor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppHeader(
     isDarkTheme: Boolean,
     onThemeToggle: () -> Unit,
-    onProfileClick: () -> Unit, // <-- NOVO PARÂMETRO
-    showProfileButton: Boolean = true // <-- NOVO PARÂMETRO para controlar a visibilidade
+    onProfileClick: () -> Unit
 ) {
     TopAppBar(
         title = {
             Text(
                 "GestaHub",
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = Rose500 // <-- COR ALTERADA AQUI
             )
         },
         actions = {
             ThemeToggleButton(isDarkTheme = isDarkTheme, onToggle = onThemeToggle)
-            if (showProfileButton) { // O botão só aparece se for permitido
-                IconButton(onClick = onProfileClick) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Ver Perfil"
-                    )
-                }
+            IconButton(onClick = onProfileClick) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Ver Perfil"
+                )
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(

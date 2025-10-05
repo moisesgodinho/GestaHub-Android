@@ -22,6 +22,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import br.com.gestahub.ui.calculator.CalculatorScreen
 import br.com.gestahub.ui.components.AppHeader
+import br.com.gestahub.ui.home.GestationalDataState
 import br.com.gestahub.ui.home.HomeScreen
 import br.com.gestahub.ui.login.AuthState
 import br.com.gestahub.ui.login.AuthViewModel
@@ -33,6 +34,7 @@ import br.com.gestahub.ui.theme.GestaHubTheme
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -42,17 +44,27 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val mainViewModel: MainViewModel = viewModel()
+            val authViewModel: AuthViewModel = viewModel()
             val isDarkTheme by mainViewModel.isDarkTheme.collectAsState()
+            val authState by authViewModel.authState.collectAsState()
 
             GestaHubTheme(darkTheme = isDarkTheme) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    if (Firebase.auth.currentUser == null) {
-                        AuthScreen(mainViewModel)
-                    } else {
-                        MainAppScreen(mainViewModel)
+                    when (val state = authState) {
+                        is AuthState.Success -> {
+                            MainAppScreen(mainViewModel, state.user)
+                        }
+                        is AuthState.Loading -> {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                        else -> {
+                            AuthScreen(mainViewModel, authViewModel)
+                        }
                     }
                 }
             }
@@ -62,8 +74,8 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainAppScreen(mainViewModel: MainViewModel) {
-    val homeViewModel: br.com.gestahub.ui.home.HomeViewModel = viewModel()
+fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
+    val homeViewModel: br.com.gestahub.ui.home.HomeViewModel = viewModel(key = user.uid)
     val homeUiState by homeViewModel.uiState.collectAsState()
     val isDarkTheme by mainViewModel.isDarkTheme.collectAsState()
 
@@ -71,7 +83,6 @@ fun MainAppScreen(mainViewModel: MainViewModel) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // O cabeçalho principal só será exibido se a rota atual NÃO for a de perfil ou edição
     val showMainHeader = currentRoute != "profile" && currentRoute != "editProfile"
 
     Scaffold(
@@ -93,27 +104,41 @@ fun MainAppScreen(mainViewModel: MainViewModel) {
                 Box(modifier = Modifier.padding(innerPadding)) {
                     HomeScreen(
                         homeViewModel = homeViewModel,
+                        // Ação do botão no estado vazio
+                        onAddDataClick = {
+                            navController.navigate("calculator")
+                        },
+                        // Ação do botão "Alterar Dados"
                         onEditDataClick = {
-                            val data = homeUiState.gestationalData
-                            navController.navigate(
-                                "calculator?lmp=${data.lmp ?: ""}&examDate=${data.ultrasoundExamDate ?: ""}&weeks=${data.weeksAtExam ?: ""}&days=${data.daysAtExam ?: ""}"
-                            )
+                            val dataState = homeUiState.dataState
+                            if (dataState is GestationalDataState.HasData) {
+                                val data = dataState.gestationalData
+                                navController.navigate(
+                                    "calculator?lmp=${data.lmp ?: ""}&examDate=${data.ultrasoundExamDate ?: ""}&weeks=${data.weeksAtExam ?: ""}&days=${data.daysAtExam ?: ""}"
+                                )
+                            }
                         }
                     )
                 }
 
-                LaunchedEffect(homeUiState.hasData, homeUiState.isLoading) {
-                    if (!homeUiState.isLoading && !homeUiState.hasData) {
-                        navController.navigate("calculator")
-                    }
-                }
+                // --- REMOVIDO: O LaunchedEffect que causava o bug foi removido daqui ---
             }
 
             composable("calculator?lmp={lmp}&examDate={examDate}&weeks={weeks}&days={days}") { backStackEntry ->
                 Box(modifier = Modifier.padding(innerPadding)) {
                     CalculatorScreen(
                         onSaveSuccess = { navController.navigate("home") { popUpTo("home") { inclusive = true } } },
-                        onCancelClick = { navController.popBackStack() },
+                        onCancelClick = {
+                            // Se o usuário cancelar e não tiver dados, ele não deve poder voltar para a home vazia
+                            val dataState = homeUiState.dataState
+                            if (dataState is GestationalDataState.HasData) {
+                                navController.popBackStack()
+                            } else {
+                                // Se não houver dados, não há para onde voltar, então não fazemos nada ou podemos fechar o app
+                                // Neste caso, popBackStack não fará nada de errado.
+                                navController.popBackStack()
+                            }
+                        },
                         initialLmp = backStackEntry.arguments?.getString("lmp"),
                         initialExamDate = backStackEntry.arguments?.getString("examDate"),
                         initialWeeks = backStackEntry.arguments?.getString("weeks"),
@@ -142,7 +167,7 @@ fun MainAppScreen(mainViewModel: MainViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AuthScreen(mainViewModel: MainViewModel, authViewModel: AuthViewModel = viewModel()) {
+fun AuthScreen(mainViewModel: MainViewModel, authViewModel: AuthViewModel) {
     val authState by authViewModel.authState.collectAsState()
     val context = LocalContext.current
 

@@ -19,19 +19,34 @@ import br.com.gestahub.ui.theme.GestaHubTheme
 
 @Composable
 fun LoginScreen(onSignInClick: () -> Unit) {
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background // Usa a cor de fundo do tema
+    ) {
+        // Usamos um Box para permitir que o botão seja empurrado para o final
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(32.dp) // Padding geral maior, como no PWA
         ) {
-            HeaderImage()
-            Spacer(modifier = Modifier.height(32.dp))
-            WelcomeText()
-            Spacer(modifier = Modifier.height(48.dp))
-            GoogleSignInButton(onClick = onSignInClick)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.Center), // Alinha a coluna de texto e imagem no centro
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                HeaderImage()
+                Spacer(modifier = Modifier.height(48.dp)) // Espaço maior após a imagem
+                WelcomeText()
+            }
+
+            // Botão posicionado na parte de baixo da tela
+            GoogleSignInButton(
+                onClick = onSignInClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter) // Alinha o botão na parte inferior do Box
+            )
         }
     }
 }
@@ -42,7 +57,7 @@ fun HeaderImage() {
         painter = painterResource(id = R.drawable.login),
         contentDescription = "Ilustração de uma gestante",
         modifier = Modifier
-            .fillMaxWidth(0.7f)
+            .fillMaxWidth(0.8f) // Imagem um pouco maior
             .aspectRatio(1f),
         contentScale = ContentScale.Fit
     )
@@ -53,20 +68,21 @@ fun WelcomeText() {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = "Bem-vinda ao",
-            fontSize = 24.sp,
+            style = MaterialTheme.typography.headlineMedium, // Usando estilos do tema
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onBackground
         )
         Text(
             text = "GestaHub",
-            fontSize = 42.sp,
+            style = MaterialTheme.typography.displaySmall, // Tamanho maior para o título
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.primary // <-- CORRIGIDO AQUI
+            color = MaterialTheme.colorScheme.primary
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp)) // Espaço maior para o subtítulo
         Text(
             text = "Seu companheiro de bolso para uma jornada gestacional mais tranquila e informada.",
+            style = MaterialTheme.typography.bodyLarge, // Usando estilos do tema
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -74,14 +90,13 @@ fun WelcomeText() {
 }
 
 @Composable
-fun GoogleSignInButton(onClick: () -> Unit) {
+fun GoogleSignInButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Button(
         onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp),
+        modifier = modifier.height(52.dp), // Botão um pouco mais alto
         colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
         ),
         shape = MaterialTheme.shapes.medium
     ) {
@@ -93,22 +108,31 @@ fun GoogleSignInButton(onClick: () -> Unit) {
                 painter = painterResource(id = R.drawable.ic_google_logo),
                 contentDescription = "Logo do Google",
                 modifier = Modifier.size(24.dp),
-                tint = Color.Unspecified // Para manter a cor original do logo
+                tint = Color.Unspecified // Mantém as cores originais do logo do Google
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = "Entrar com Google",
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimary
+                fontSize = 16.sp
             )
         }
     }
 }
 
-@Preview(showBackground = true)
+
+@Preview(showBackground = true, name = "Light Mode")
 @Composable
-fun LoginScreenPreview() {
-    GestaHubTheme {
+fun LoginScreenPreviewLight() {
+    GestaHubTheme(darkTheme = false) {
+        LoginScreen(onSignInClick = {})
+    }
+}
+
+@Preview(showBackground = true, name = "Dark Mode")
+@Composable
+fun LoginScreenPreviewDark() {
+    GestaHubTheme(darkTheme = true) {
         LoginScreen(onSignInClick = {})
     }
 }

@@ -1,7 +1,11 @@
 package br.com.gestahub.ui.profile
 
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close // <-- IMPORT CORRIGIDO
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -9,6 +13,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -20,7 +29,22 @@ fun EditProfileScreen(
     val uiState by editProfileViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // Efeito para fechar a tela após salvar com sucesso
+    var showDatePicker by remember { mutableStateOf(false) }
+    val displayFormatter = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale("pt", "BR")) }
+    val dbFormatter = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale("pt", "BR")) }
+
+    val birthDateForDisplay = remember(uiState.birthDate) {
+        if (uiState.birthDate.isNotBlank()) {
+            try {
+                LocalDate.parse(uiState.birthDate, dbFormatter).format(displayFormatter)
+            } catch (e: Exception) {
+                ""
+            }
+        } else {
+            ""
+        }
+    }
+
     LaunchedEffect(uiState.saveSuccess) {
         if (uiState.saveSuccess) {
             Toast.makeText(context, "Perfil salvo com sucesso!", Toast.LENGTH_SHORT).show()
@@ -28,7 +52,19 @@ fun EditProfileScreen(
         }
     }
 
-    Scaffold { innerPadding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Editar Perfil") },
+                navigationIcon = {
+                    IconButton(onClick = onCancelClick) {
+                        // --- CORREÇÃO APLICADA AQUI ---
+                        Icon(Icons.Filled.Close, contentDescription = "Cancelar")
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
         if (uiState.isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
@@ -39,24 +75,31 @@ fun EditProfileScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
                     .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                OutlinedTextField(
-                    value = uiState.displayName,
-                    onValueChange = { editProfileViewModel.onDisplayNameChange(it) },
-                    label = { Text("Nome de Exibição") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    OutlinedTextField(
+                        value = uiState.displayName,
+                        onValueChange = { editProfileViewModel.onDisplayNameChange(it) },
+                        label = { Text("Nome de Exibição") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
 
-                OutlinedTextField(
-                    value = uiState.birthDate,
-                    onValueChange = { editProfileViewModel.onBirthDateChange(it) },
-                    label = { Text("Data de Nascimento") },
-                    placeholder = { Text("AAAA-MM-DD") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.weight(1f)) // Empurra os botões para baixo
+                    OutlinedTextField(
+                        value = birthDateForDisplay,
+                        onValueChange = { },
+                        label = { Text("Data de Nascimento") },
+                        placeholder = { Text("DD/MM/AAAA") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showDatePicker = true },
+                        readOnly = true,
+                        trailingIcon = {
+                            Icon(Icons.Default.DateRange, contentDescription = "Abrir calendário")
+                        }
+                    )
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -81,6 +124,43 @@ fun EditProfileScreen(
                     }
                 }
             }
+        }
+    }
+
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = if (uiState.birthDate.isNotBlank()) {
+                try {
+                    LocalDate.parse(uiState.birthDate, dbFormatter).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                } catch (e: Exception) {
+                    Instant.now().toEpochMilli()
+                }
+            } else {
+                Instant.now().toEpochMilli()
+            }
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val selectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+                            editProfileViewModel.onBirthDateChange(selectedDate.format(dbFormatter))
+                        }
+                        showDatePicker = false
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancelar")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }

@@ -3,7 +3,6 @@ package br.com.gestahub.ui.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,7 +12,7 @@ import kotlinx.coroutines.launch
 
 data class EditProfileUiState(
     val displayName: String = "",
-    val birthDate: String = "", // Formato "YYYY-MM-DD"
+    val birthDate: String = "",
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false
@@ -38,12 +37,13 @@ class EditProfileViewModel : ViewModel() {
         }
         val userDocRef = db.collection("users").document(userId)
         userDocRef.get().addOnSuccessListener { snapshot ->
-            val personalProfile = snapshot.get("personalProfile") as? Map<*, *>
+            // --- CORREÇÃO APLICADA AQUI ---
+            val profile = snapshot.get("profile") as? Map<*, *>
             _uiState.update {
                 it.copy(
                     isLoading = false,
-                    displayName = personalProfile?.get("displayName") as? String ?: authUser?.displayName ?: "",
-                    birthDate = personalProfile?.get("birthDate") as? String ?: ""
+                    displayName = profile?.get("displayName") as? String ?: authUser?.displayName ?: "",
+                    birthDate = profile?.get("dob") as? String ?: ""
                 )
             }
         }.addOnFailureListener {
@@ -65,19 +65,19 @@ class EditProfileViewModel : ViewModel() {
             _uiState.update { it.copy(isSaving = true) }
             val userDocRef = db.collection("users").document(userId)
 
-            val personalProfile = hashMapOf(
+            // --- CORREÇÃO APLICADA AQUI ---
+            // Salvando no mapa "profile" e com o campo "dob"
+            val profileData = hashMapOf(
                 "displayName" to _uiState.value.displayName,
-                "birthDate" to _uiState.value.birthDate
+                "dob" to _uiState.value.birthDate
             )
 
-            // Usamos `set` com `merge` para criar ou atualizar o documento/campo sem sobrescrever outros mapas como `gestationalProfile`
-            userDocRef.set(hashMapOf("personalProfile" to personalProfile), com.google.firebase.firestore.SetOptions.merge())
+            userDocRef.set(hashMapOf("profile" to profileData), com.google.firebase.firestore.SetOptions.merge())
                 .addOnSuccessListener {
                     _uiState.update { it.copy(isSaving = false, saveSuccess = true) }
                 }
                 .addOnFailureListener {
                     _uiState.update { it.copy(isSaving = false) }
-                    // TODO: Mostrar mensagem de erro
                 }
         }
     }
