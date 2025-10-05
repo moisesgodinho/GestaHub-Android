@@ -9,9 +9,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Home
@@ -29,7 +31,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import br.com.gestahub.ui.appointment.AppointmentsScreen // Adicionado
+import br.com.gestahub.ui.appointment.Appointment
+import br.com.gestahub.ui.appointment.AppointmentsScreen
+import br.com.gestahub.ui.appointment.AppointmentsViewModel
 import br.com.gestahub.ui.calculator.CalculatorScreen
 import br.com.gestahub.ui.components.AppHeader
 import br.com.gestahub.ui.home.GestationalDataState
@@ -47,6 +51,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
+import kotlinx.coroutines.launch
 
 data class NavItem(
     val label: String,
@@ -58,13 +63,16 @@ data class NavItem(
 @Composable
 fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
     val homeViewModel: br.com.gestahub.ui.home.HomeViewModel = viewModel(key = user.uid)
-    val homeUiState by homeViewModel.uiState.collectAsState()
+    val appointmentsViewModel: AppointmentsViewModel = viewModel()
+
+    val homeUiState by homeViewModel.uiState.collectAsState() // Coletado aqui, no lugar certo
+    val appointmentsUiState by appointmentsViewModel.uiState.collectAsState()
     val isDarkTheme by mainViewModel.isDarkTheme.collectAsState()
 
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val context = LocalContext.current // Contexto para o Toast
+    val context = LocalContext.current
 
     val navItems = listOf(
         NavItem("Início", Icons.Default.Home, "home"),
@@ -77,7 +85,42 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
     val showBottomBar = navItems.any { it.route == currentRoute }
     val showMainHeader = showBottomBar
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var appointmentToDelete by remember { mutableStateOf<Appointment?>(null) }
+
+    LaunchedEffect(appointmentsUiState.userMessage) {
+        appointmentsUiState.userMessage?.let { message ->
+            scope.launch {
+                snackbarHostState.showSnackbar(message)
+                appointmentsViewModel.userMessageShown()
+            }
+        }
+    }
+
+    if (showDeleteDialog && appointmentToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Confirmar Exclusão") },
+            text = { Text("Tem certeza que deseja apagar a consulta \"${appointmentToDelete!!.title}\"?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        appointmentsViewModel.deleteAppointment(appointmentToDelete!!)
+                        showDeleteDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("Deletar") }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             if (showMainHeader) {
                 AppHeader(
@@ -85,6 +128,15 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
                     onThemeToggle = { mainViewModel.toggleTheme() },
                     onProfileClick = { navController.navigate("profile") }
                 )
+            }
+        },
+        floatingActionButton = {
+            if (currentRoute == "appointments") {
+                FloatingActionButton(onClick = {
+                    Toast.makeText(context, "Abrir formulário de nova consulta", Toast.LENGTH_SHORT).show()
+                }) {
+                    Icon(Icons.Default.Add, contentDescription = "Adicionar Consulta")
+                }
             }
         },
         bottomBar = {
@@ -96,9 +148,7 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
                             selected = isSelected,
                             onClick = {
                                 navController.navigate(item.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
+                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                                     launchSingleTop = true
                                     restoreState = true
                                 }
@@ -113,50 +163,45 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = "home"
+            startDestination = "home",
+            modifier = Modifier.fillMaxSize()
         ) {
-            fun composableWithMainScaffoldPadding(route: String, content: @Composable () -> Unit) {
-                composable(route) {
-                    Box(modifier = Modifier.padding(innerPadding)) {
-                        content()
-                    }
-                }
-            }
-
-            composableWithMainScaffoldPadding("home") {
+            composable("home") {
                 HomeScreen(
+                    contentPadding = innerPadding,
                     homeViewModel = homeViewModel,
                     onAddDataClick = { navController.navigate("calculator") },
                     onEditDataClick = {
+                        // --- CORREÇÃO APLICADA AQUI ---
+                        // A linha "val homeUiState by..." foi removida.
+                        // Usamos a variável `homeUiState` que já foi coletada no topo da tela.
                         val dataState = homeUiState.dataState
                         if (dataState is GestationalDataState.HasData) {
                             val data = dataState.gestationalData
-                            navController.navigate(
-                                "calculator?lmp=${data.lmp ?: ""}&examDate=${data.ultrasoundExamDate ?: ""}&weeks=${data.weeksAtExam ?: ""}&days=${data.daysAtExam ?: ""}"
-                            )
+                            navController.navigate("calculator?lmp=${data.lmp ?: ""}&examDate=${data.ultrasoundExamDate ?: ""}&weeks=${data.weeksAtExam ?: ""}&days=${data.daysAtExam ?: ""}")
                         }
                     }
                 )
             }
 
-            // --- Tela de Consultas Atualizada ---
-            composableWithMainScaffoldPadding("appointments") {
+            composable("appointments") {
                 AppointmentsScreen(
-                    onAddClick = {
-                        Toast.makeText(context, "Abrir formulário de nova consulta", Toast.LENGTH_SHORT).show()
-                        // Futuramente: navController.navigate("appointmentForm")
-                    },
+                    contentPadding = innerPadding,
+                    uiState = appointmentsUiState,
+                    onToggleDone = { appointmentsViewModel.toggleDone(it) },
                     onEditClick = { appointment ->
                         Toast.makeText(context, "Editar: ${appointment.title}", Toast.LENGTH_SHORT).show()
-                        // Futuramente: navController.navigate("appointmentForm/${appointment.id}")
+                    },
+                    onDeleteRequest = {
+                        appointmentToDelete = it
+                        showDeleteDialog = true
                     }
                 )
             }
-            // --- Fim da Atualização ---
 
-            composableWithMainScaffoldPadding("journal") { ComingSoonScreen() }
-            composableWithMainScaffoldPadding("weight") { ComingSoonScreen() }
-            composableWithMainScaffoldPadding("more") { ComingSoonScreen() }
+            composable("journal") { Box(Modifier.padding(innerPadding)) { ComingSoonScreen() } }
+            composable("weight") { Box(Modifier.padding(innerPadding)) { ComingSoonScreen() } }
+            composable("more") { Box(Modifier.padding(innerPadding)) { ComingSoonScreen() } }
 
             composable("calculator?lmp={lmp}&examDate={examDate}&weeks={weeks}&days={days}") { backStackEntry ->
                 CalculatorScreen(
@@ -168,14 +213,12 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
                     initialDays = backStackEntry.arguments?.getString("days"),
                 )
             }
-
             composable("profile") {
                 ProfileScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onEditClick = { navController.navigate("editProfile") }
                 )
             }
-
             composable("editProfile") {
                 EditProfileScreen(
                     onSaveSuccess = { navController.popBackStack() },

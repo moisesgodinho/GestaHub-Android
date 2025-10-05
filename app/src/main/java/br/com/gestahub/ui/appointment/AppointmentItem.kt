@@ -1,7 +1,7 @@
 // Local: app/src/main/java/br/com/gestahub/ui/appointment/AppointmentItem.kt
 package br.com.gestahub.ui.appointment
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -21,103 +22,125 @@ import java.util.Locale
 fun AppointmentItem(
     appointment: Appointment,
     onToggleDone: (Appointment) -> Unit,
-    onEdit: (Appointment) -> Unit
+    onEdit: (Appointment) -> Unit,
+    onDelete: (Appointment) -> Unit // Nova função de callback
 ) {
-    // --- CORREÇÃO APLICADA AQUI ---
-    val cardColors = if (appointment.done) {
-        CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
-    } else if (appointment.type == AppointmentType.ULTRASOUND && (appointment as UltrasoundAppointment).isScheduled) {
-        CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer
-        )
-    } else {
-        CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+    val isDone = appointment.done
+    val isUltrasound = appointment.type == AppointmentType.ULTRASOUND
+    val isScheduled = appointment.date != null
+
+    val borderColor = when {
+        isDone -> MaterialTheme.colorScheme.secondary
+        isUltrasound -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.primary
     }
 
+    val contentAlpha = if (isDone) 0.6f else 1f
+
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { onEdit(appointment) },
-        colors = cardColors,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(contentAlpha),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        onClick = { onEdit(appointment) }
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Row(
+            modifier = Modifier.height(IntrinsicSize.Min)
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(6.dp)
+                    .fillMaxHeight()
+                    .background(borderColor)
+            )
+
+            // --- LAYOUT REESTRUTURADO ---
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier
+                    .padding(start = 8.dp, end = 4.dp, top = 12.dp, bottom = 12.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = appointment.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
+                // Checkbox à esquerda
+                Checkbox(
+                    checked = isDone,
+                    onCheckedChange = { onToggleDone(appointment) },
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = MaterialTheme.colorScheme.secondary,
+                        uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { onEdit(appointment) }) {
+
+                Spacer(Modifier.width(8.dp))
+
+                // Coluna com Título e Informações
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = appointment.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    if (isScheduled) {
+                        val formattedDate = LocalDate.parse(appointment.date).format(
+                            DateTimeFormatter.ofPattern("dd 'de' MMMM, yyyy", Locale("pt", "BR"))
+                        )
+                        InfoRow(icon = Icons.Default.CalendarMonth, text = formattedDate)
+                    } else if (appointment is UltrasoundAppointment) {
+                        InfoRow(
+                            icon = Icons.Default.CalendarMonth,
+                            text = "Janela ideal: ${appointment.startWeek} a ${appointment.endWeek} semanas",
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+
+                    appointment.time?.takeIf { it.isNotBlank() }?.let {
+                        InfoRow(icon = Icons.Default.WatchLater, text = it)
+                    }
+                }
+
+                Spacer(Modifier.width(8.dp))
+
+                // Botões de Ação à direita
+                Row {
+                    IconButton(
+                        onClick = { onEdit(appointment) },
+                        colors = IconButtonDefaults.iconButtonColors(
+                            contentColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
                         Icon(Icons.Default.Edit, contentDescription = "Editar")
                     }
-                    Checkbox(
-                        // --- CORREÇÃO APLICADA AQUI ---
-                        checked = appointment.done,
-                        onCheckedChange = { onToggleDone(appointment) }
-                    )
+                    // Botão de deletar aparece apenas para consultas manuais
+                    if (appointment is ManualAppointment) {
+                        IconButton(
+                            onClick = { onDelete(appointment) },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Deletar")
+                        }
+                    }
                 }
-            }
-
-            if (!appointment.date.isNullOrBlank()) {
-                val formattedDate = LocalDate.parse(appointment.date).format(
-                    DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy", Locale("pt", "BR"))
-                )
-                InfoRow(icon = Icons.Default.CalendarMonth, text = formattedDate)
-            } else if (appointment is UltrasoundAppointment) {
-                InfoRow(
-                    icon = Icons.Default.CalendarMonth,
-                    text = "Janela ideal: ${appointment.startWeek} a ${appointment.endWeek} semanas",
-                    color = MaterialTheme.colorScheme.secondary
-                )
-            }
-
-            appointment.time?.takeIf { it.isNotBlank() }?.let {
-                InfoRow(icon = Icons.Default.WatchLater, text = it)
-            }
-
-            val professional = (appointment as? ManualAppointment)?.professional ?: (appointment as? UltrasoundAppointment)?.professional
-            professional?.takeIf { it.isNotBlank() }?.let {
-                InfoRow(icon = Icons.Default.Person, text = it)
-            }
-
-            val location = (appointment as? ManualAppointment)?.location ?: (appointment as? UltrasoundAppointment)?.location
-            location?.takeIf { it.isNotBlank() }?.let {
-                InfoRow(icon = Icons.Default.LocationOn, text = it)
-            }
-
-            val notes = (appointment as? ManualAppointment)?.notes ?: (appointment as? UltrasoundAppointment)?.notes
-            if (!notes.isNullOrBlank()) {
-                Divider(modifier = Modifier.padding(vertical = 8.dp))
-                Text(
-                    text = notes,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
     }
 }
 
 @Composable
-private fun InfoRow(icon: ImageVector, text: String, color: Color = MaterialTheme.colorScheme.onSurface) {
+private fun InfoRow(icon: ImageVector, text: String, color: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(top = 8.dp)
+        modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(16.dp),
-            tint = color.copy(alpha = 0.8f)
+            modifier = Modifier.size(18.dp),
+            tint = color
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(text = text, style = MaterialTheme.typography.bodyMedium, color = color)

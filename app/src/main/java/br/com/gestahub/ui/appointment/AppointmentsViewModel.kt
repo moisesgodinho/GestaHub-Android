@@ -11,6 +11,7 @@ import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
@@ -20,7 +21,7 @@ data class AppointmentsUiState(
     val pastAppointments: List<Appointment> = emptyList(),
     val lmpDate: LocalDate? = null,
     val isLoading: Boolean = true,
-    val error: String? = null
+    val userMessage: String? = null // Para exibir mensagens de erro/aviso
 )
 
 class AppointmentsViewModel : ViewModel() {
@@ -31,7 +32,6 @@ class AppointmentsViewModel : ViewModel() {
     private val _ultrasoundData = MutableStateFlow<Map<String, Any>>(emptyMap())
     private val _lmpDate = MutableStateFlow<LocalDate?>(null)
     private val _isLoading = MutableStateFlow(true)
-    private val _error = MutableStateFlow<String?>(null)
 
     private val _uiState = MutableStateFlow(AppointmentsUiState())
     val uiState = _uiState.asStateFlow()
@@ -42,7 +42,7 @@ class AppointmentsViewModel : ViewModel() {
             observeAndCombineData()
         } else {
             _isLoading.value = false
-            _uiState.value = AppointmentsUiState(isLoading = false, error = "Usuário não autenticado.")
+            _uiState.value = AppointmentsUiState(isLoading = false, userMessage = "Usuário não autenticado.")
         }
     }
 
@@ -50,7 +50,7 @@ class AppointmentsViewModel : ViewModel() {
         db.collection("users").document(userId).collection("appointments")
             .addSnapshotListener { snapshot, e ->
                 if (e != null) {
-                    _error.value = "Erro ao buscar consultas: ${e.message}"
+                    _uiState.update { it.copy(userMessage = "Erro ao buscar consultas.") }
                     return@addSnapshotListener
                 }
                 _manualAppointments.value = snapshot?.documents?.mapNotNull { it.toObject<ManualAppointment>() } ?: emptyList()
@@ -59,7 +59,7 @@ class AppointmentsViewModel : ViewModel() {
         db.collection("users").document(userId)
             .addSnapshotListener { snapshot, e ->
                 if (e != null) {
-                    _error.value = "Erro ao buscar perfil: ${e.message}"
+                    _uiState.update { it.copy(userMessage = "Erro ao buscar perfil.") }
                     return@addSnapshotListener
                 }
                 val profile = snapshot?.get("gestationalProfile") as? Map<*, *>
@@ -87,14 +87,9 @@ class AppointmentsViewModel : ViewModel() {
                 }
 
                 val allAppointments = (manual + ultrasoundList).filter { it.date != null || it.type == AppointmentType.ULTRASOUND }
-
-                val today = LocalDate.now()
-                val (past, upcoming) = allAppointments.partition {
-                    it.done || (it.date?.let { d -> runCatching { LocalDate.parse(d).isBefore(today) }.getOrDefault(false) } ?: false)
-                }
+                val (past, upcoming) = allAppointments.partition { it.done }
 
                 AppointmentsUiState(
-                    // --- CORREÇÃO APLICADA AQUI ---
                     upcomingAppointments = upcoming.sortedWith { a, b ->
                         val dateA = a.date
                         val dateB = b.date
@@ -112,14 +107,14 @@ class AppointmentsViewModel : ViewModel() {
                             dateA == null && dateB == null -> 0
                             dateA == null -> 1
                             dateB == null -> -1
-                            else -> dateB.compareTo(dateA) // Ordem invertida
+                            else -> dateB.compareTo(dateA)
                         }
                     },
                     lmpDate = lmp,
                     isLoading = false
                 )
             }.collect { combinedState ->
-                _uiState.value = combinedState
+                _uiState.value = combinedState.copy(userMessage = _uiState.value.userMessage)
             }
         }
     }
@@ -127,6 +122,26 @@ class AppointmentsViewModel : ViewModel() {
     fun toggleDone(appointment: Appointment) = viewModelScope.launch {
         if (userId == null) return@launch
         val newDoneStatus = !appointment.done
+
+        // --- INÍCIO DAS VERIFICAÇÕES ---
+        if (newDoneStatus) { // Apenas verifica ao tentar marcar como "concluído"
+            // 1. Verifica se é um ultrassom não agendado
+            if (appointment is UltrasoundAppointment && !appointment.isScheduled) {
+                _uiState.update { it.copy(userMessage = "Adicione uma data ao ultrassom antes de concluí-lo.") }
+                return@launch
+            }
+
+            // 2. Verifica se a data da consulta é no futuro
+            appointment.date?.let { dateString ->
+                val appointmentDate = runCatching { LocalDate.parse(dateString) }.getOrNull()
+                if (appointmentDate != null && appointmentDate.isAfter(LocalDate.now())) {
+                    _uiState.update { it.copy(userMessage = "Não é possível concluir uma consulta futura.") }
+                    return@launch
+                }
+            }
+        }
+        // --- FIM DAS VERIFICAÇÕES ---
+
         try {
             when (appointment) {
                 is ManualAppointment -> {
@@ -150,11 +165,16 @@ class AppointmentsViewModel : ViewModel() {
                 val finalUpdate = mapOf("gestationalProfile" to profileUpdate)
                 docRef.set(finalUpdate, com.google.firebase.firestore.SetOptions.merge())
                     .addOnSuccessListener { Log.d("ViewModel", "Status (com merge) atualizado com sucesso!") }
-                    .addOnFailureListener { fail -> _error.value = "Erro ao mesclar: ${fail.message}" }
+                    .addOnFailureListener { fail -> _uiState.update { it.copy(userMessage = "Erro ao mesclar dados.") } }
             } else {
-                _error.value = "Erro ao atualizar status: ${e.message}"
+                _uiState.update { it.copy(userMessage = "Erro ao atualizar o status.") }
             }
         }
+    }
+
+    // Função para a UI chamar após exibir a mensagem
+    fun userMessageShown() {
+        _uiState.update { it.copy(userMessage = null) }
     }
 
     fun deleteAppointment(appointment: Appointment) = viewModelScope.launch {
@@ -164,7 +184,7 @@ class AppointmentsViewModel : ViewModel() {
                 .collection("appointments").document(appointment.id)
             docRef.delete().await()
         } catch (e: Exception) {
-            _error.value = "Erro ao deletar: ${e.message}"
+            _uiState.update { it.copy(userMessage = "Erro ao deletar consulta.") }
         }
     }
 }

@@ -1,3 +1,4 @@
+// Local: app/src/main/java/br/com/gestahub/ui/home/HomeScreen.kt
 package br.com.gestahub.ui.home
 
 import androidx.compose.foundation.background
@@ -21,9 +22,10 @@ import br.com.gestahub.data.WeeklyInfo
 
 @Composable
 fun HomeScreen(
+    contentPadding: PaddingValues, // Adicione este parâmetro
     homeViewModel: HomeViewModel = viewModel(),
     onAddDataClick: () -> Unit,
-    onEditDataClick: () -> Unit
+    onEditDataClick: () -> Unit,
 ) {
     val uiState by homeViewModel.uiState.collectAsState()
     val dataState = uiState.dataState
@@ -38,11 +40,13 @@ fun HomeScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(contentPadding) // Aplique o padding aqui
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 GestationalInfoDashboard(dataState, onEditDataClick)
+                // O card de atalho foi removido daqui
             }
         }
         is GestationalDataState.NoData -> {
@@ -50,6 +54,9 @@ fun HomeScreen(
         }
     }
 }
+
+// O restante do arquivo (EmptyHomeScreen, GestationalInfoDashboard, etc.) permanece exatamente o mesmo.
+// Apenas o Composable "AppointmentsShortcutCard" foi removido.
 
 @Composable
 fun EmptyHomeScreen(onAddDataClick: () -> Unit) {
@@ -106,10 +113,8 @@ fun GestationalInfoDashboard(state: GestationalDataState.HasData, onEditDataClic
             }
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- CORREÇÃO APLICADA AQUI ---
-            // Usa BoxWithConstraints para detectar a largura da tela
             BoxWithConstraints {
-                if (maxWidth > 600.dp) { // Se for tablet ou tela larga
+                if (maxWidth > 600.dp) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Box(modifier = Modifier.weight(1f)) {
                             InfoCard("Idade Gestacional", "${state.gestationalWeeks}s ${state.gestationalDays}d")
@@ -118,14 +123,13 @@ fun GestationalInfoDashboard(state: GestationalDataState.HasData, onEditDataClic
                             InfoCard("Data Provável do Parto", state.dueDate)
                         }
                     }
-                } else { // Se for celular ou tela estreita
+                } else {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         InfoCard("Idade Gestacional", "${state.gestationalWeeks}s ${state.gestationalDays}d")
                         InfoCard("Data Provável do Parto", state.dueDate)
                     }
                 }
             }
-            // --- FIM DA CORREÇÃO ---
 
             Spacer(modifier = Modifier.height(16.dp))
             CountdownCard(weeks = state.countdownWeeks, days = state.countdownDays)
