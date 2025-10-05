@@ -37,19 +37,17 @@ private val LightColorScheme = lightColorScheme(
 private val DarkColorScheme = darkColorScheme(
     primary = Indigo400,
     onPrimary = Indigo900,
-    primaryContainer = Indigo900,
+    // --- CORREÇÃO APLICADA AQUI ---
+    // Usando a nova cor, mais suave
+    primaryContainer = DarkBlueContainer,
     onPrimaryContainer = Indigo100,
     secondary = Green400,
     onSecondary = Slate900,
-
-    // --- CORREÇÃO APLICADA AQUI ---
-    background = Slate900,      // Fundo principal (o mais escuro: #0F172A)
-    surface = Slate800,         // Fundo dos cards principais (intermediário: #1E293B)
-    surfaceVariant = Slate700,  // Fundo dos cards internos (o menos escuro: #334155)
-    // --- FIM DA CORREÇÃO ---
-
+    background = Slate900,
     onBackground = Slate200,
+    surface = Slate800,
     onSurface = Slate200,
+    surfaceVariant = Slate700,
     onSurfaceVariant = Slate400,
 )
 

@@ -6,12 +6,15 @@ import androidx.compose.ui.graphics.Color
 val Indigo600 = Color(0xFF4F46E5) // Cor primária (light)
 val Indigo400 = Color(0xFF818CF8) // Cor primária (dark)
 val Indigo100 = Color(0xFFE0E7FF) // Container primário (light)
-val Indigo900 = Color(0xFF312E81) // Texto sobre container (light)
+val Indigo900 = Color(0xFF312E81)
 
 val Green600 = Color(0xFF16A34A)  // Cor secundária (light)
 val Green400 = Color(0xFF4ADE80)  // Cor secundária (dark)
 
-val Rose500 = Color(0xFFF43F5E) // <-- COR ADICIONADA
+val Rose500 = Color(0xFFF43F5E)
+
+// --- NOVA COR ADICIONADA ---
+val DarkBlueContainer = Color(0xFF2E3A59) // Um azul mais suave para o modo escuro
 
 // Tons de Cinza/Azul (Slate)
 val Slate50 = Color(0xFFF8FAFC)

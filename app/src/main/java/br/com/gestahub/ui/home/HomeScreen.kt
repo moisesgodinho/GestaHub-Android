@@ -17,27 +17,24 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import br.com.gestahub.data.WeeklyInfo
 
 @Composable
 fun HomeScreen(
     homeViewModel: HomeViewModel = viewModel(),
-    onAddDataClick: () -> Unit, // Renomeado para clareza
+    onAddDataClick: () -> Unit,
     onEditDataClick: () -> Unit
 ) {
     val uiState by homeViewModel.uiState.collectAsState()
     val dataState = uiState.dataState
 
-    // --- LÓGICA DE EXIBIÇÃO CORRIGIDA ---
-    // A tela agora gerencia seus próprios estados internos
     when (dataState) {
         is GestationalDataState.Loading -> {
-            // Mostra um spinner enquanto os dados são carregados
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         }
         is GestationalDataState.HasData -> {
-            // Mostra o dashboard principal quando há dados
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -49,7 +46,6 @@ fun HomeScreen(
             }
         }
         is GestationalDataState.NoData -> {
-            // Mostra a tela de "estado vazio" se não houver dados
             EmptyHomeScreen(onAddDataClick)
         }
     }
@@ -83,7 +79,6 @@ fun EmptyHomeScreen(onAddDataClick: () -> Unit) {
     }
 }
 
-
 @Composable
 fun GestationalInfoDashboard(state: GestationalDataState.HasData, onEditDataClick: () -> Unit) {
     Card(
@@ -110,13 +105,85 @@ fun GestationalInfoDashboard(state: GestationalDataState.HasData, onEditDataClic
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-
             InfoCard("Idade Gestacional", "${state.gestationalWeeks}s ${state.gestationalDays}d")
             Spacer(modifier = Modifier.height(8.dp))
             InfoCard("Data Provável do Parto", state.dueDate)
             Spacer(modifier = Modifier.height(16.dp))
-
             CountdownCard(weeks = state.countdownWeeks, days = state.countdownDays)
+
+            state.weeklyInfo?.let { info ->
+                Spacer(modifier = Modifier.height(16.dp))
+                WeeklyInfoCard(info = info)
+            }
+        }
+    }
+}
+
+@Composable
+fun WeeklyInfoCard(info: WeeklyInfo) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "✨ ${info.title} ✨",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // --- CORREÇÃO APLICADA AQUI ---
+            // Adicionamos o Divider com uma cor personalizada e sutil
+            Divider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "Tamanho comparado a um(a) ${info.size}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = "${info.length} | ${info.weight}",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Column {
+                Text(
+                    text = "Bebê:",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = info.baby,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            Column {
+                Text(
+                    text = "Mamãe:",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = info.mom,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
     }
 }
@@ -131,7 +198,9 @@ fun InfoCard(label: String, value: String) {
         )
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -163,14 +232,17 @@ fun CountdownCard(weeks: Int, days: Int) {
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
             if (weeks >= 0 && days >= 0) {
                 val text = if (weeks == 0 && days == 0) "Hoje é o grande dia!" else "${weeks}s ${days}d"
                 val subtext = if (weeks == 0 && days == 0) "❤️" else "para o grande dia!"
 
                 Text(
                     text = text,
-                    fontSize = if(text.length > 15) 24.sp else 36.sp,
+                    fontSize = if (text.length > 15) 24.sp else 36.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )

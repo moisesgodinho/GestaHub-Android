@@ -1,6 +1,8 @@
 package br.com.gestahub.ui.home
 
 import androidx.lifecycle.ViewModel
+import br.com.gestahub.data.WeeklyInfo
+import br.com.gestahub.data.WeeklyInfoProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -13,7 +15,6 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.*
 
-// --- LÓGICA DE ESTADO REFEITA ---
 sealed class GestationalDataState {
     object Loading : GestationalDataState()
     object NoData : GestationalDataState()
@@ -23,7 +24,8 @@ sealed class GestationalDataState {
         val dueDate: String,
         val countdownWeeks: Int,
         val countdownDays: Int,
-        val gestationalData: GestationalData // Dados brutos para edição
+        val gestationalData: GestationalData,
+        val weeklyInfo: WeeklyInfo?
     ) : GestationalDataState()
 }
 
@@ -34,7 +36,6 @@ data class GestationalData(
     val daysAtExam: String? = null
 )
 
-// O UiState agora contém o estado selado, que é mais robusto
 data class UiState(
     val dataState: GestationalDataState = GestationalDataState.Loading
 )
@@ -100,6 +101,8 @@ class HomeViewModel : ViewModel() {
         val remainingDays = ChronoUnit.DAYS.between(today, dueDate).toInt()
         val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale("pt", "BR"))
 
+        val weeklyInfo = WeeklyInfoProvider.getInfoForWeek(currentWeeks)
+
         _uiState.update {
             it.copy(
                 dataState = GestationalDataState.HasData(
@@ -108,7 +111,8 @@ class HomeViewModel : ViewModel() {
                     dueDate = dueDate.format(dateFormatter),
                     countdownWeeks = if (remainingDays >= 0) remainingDays / 7 else 0,
                     countdownDays = if (remainingDays >= 0) remainingDays % 7 else 0,
-                    gestationalData = data
+                    gestationalData = data,
+                    weeklyInfo = weeklyInfo
                 )
             )
         }

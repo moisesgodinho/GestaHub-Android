@@ -14,8 +14,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MonitorWeight
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.MonitorWeight // <-- ADICIONE ESTE IMPORT
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -63,12 +63,11 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // --- LISTA DE ITENS REORDENADA ---
     val navItems = listOf(
         NavItem("Início", Icons.Default.Home, "home"),
         NavItem("Consultas", Icons.Default.CalendarMonth, "appointments"),
         NavItem("Diário", Icons.Default.Book, "journal"),
-        NavItem("Peso", Icons.Filled.MonitorWeight, "weight"), // <-- NOVO ITEM
+        NavItem("Peso", Icons.Filled.MonitorWeight, "weight"),
         NavItem("Mais", Icons.Default.MoreHoriz, "more")
     )
 
@@ -109,12 +108,22 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
             }
         }
     ) { innerPadding ->
+        // --- CORREÇÃO APLICADA AQUI ---
+        // O NavHost não tem mais o padding. O padding é aplicado seletivamente abaixo.
         NavHost(
             navController = navController,
-            startDestination = "home",
-            modifier = Modifier.padding(innerPadding)
+            startDestination = "home"
         ) {
-            composable("home") {
+            // Função auxiliar para aplicar o padding nas telas principais
+            fun composableWithMainScaffoldPadding(route: String, content: @Composable () -> Unit) {
+                composable(route) {
+                    Box(modifier = Modifier.padding(innerPadding)) {
+                        content()
+                    }
+                }
+            }
+
+            composableWithMainScaffoldPadding("home") {
                 HomeScreen(
                     homeViewModel = homeViewModel,
                     onAddDataClick = { navController.navigate("calculator") },
@@ -128,23 +137,15 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
                         }
                     }
                 )
-
-                LaunchedEffect(homeUiState.dataState) {
-                    if (homeUiState.dataState is GestationalDataState.NoData) {
-                        navController.navigate("calculator") {
-                            popUpTo("home") { inclusive = true }
-                        }
-                    }
-                }
+                // O LaunchedEffect foi removido daqui em correções anteriores e continua removido.
             }
 
-            // Novas rotas
-            composable("appointments") { ComingSoonScreen() }
-            composable("journal") { ComingSoonScreen() }
-            composable("weight") { ComingSoonScreen() } // <-- NOVA ROTA
-            composable("more") { ComingSoonScreen() }
+            composableWithMainScaffoldPadding("appointments") { ComingSoonScreen() }
+            composableWithMainScaffoldPadding("journal") { ComingSoonScreen() }
+            composableWithMainScaffoldPadding("weight") { ComingSoonScreen() }
+            composableWithMainScaffoldPadding("more") { ComingSoonScreen() }
 
-            // Rotas existentes
+            // Telas que NÃO recebem o padding principal
             composable("calculator?lmp={lmp}&examDate={examDate}&weeks={weeks}&days={days}") { backStackEntry ->
                 CalculatorScreen(
                     onSaveSuccess = { navController.navigate("home") { popUpTo("home") { inclusive = true } } },
