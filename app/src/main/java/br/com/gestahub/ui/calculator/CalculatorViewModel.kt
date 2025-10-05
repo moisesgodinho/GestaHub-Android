@@ -1,17 +1,14 @@
-// app/src/main/java/br/com/gestahub/ui/calculator/CalculatorViewModel.kt
 package br.com.gestahub.ui.calculator
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 
-// Estados para a UI saber o que fazer
 sealed class SaveState {
     object Idle : SaveState()
     object Loading : SaveState()
@@ -21,58 +18,63 @@ sealed class SaveState {
 
 class CalculatorViewModel : ViewModel() {
     private val db = Firebase.firestore
-    private val userId = Firebase.auth.currentUser?.uid
+    // --- CORREÇÃO APLICADA AQUI ---
+    // Removemos a propriedade 'userId' daqui para buscá-la em tempo real.
 
     private val _saveState = MutableStateFlow<SaveState>(SaveState.Idle)
     val saveState = _saveState.asStateFlow()
 
-    fun saveLmp(lmpDate: String) {
-        viewModelScope.launch {
-            if (userId == null) {
-                _saveState.value = SaveState.Error("Usuário não autenticado.")
-                return@launch
-            }
-            _saveState.value = SaveState.Loading
-            try {
-                val userDocRef = db.collection("users").document(userId)
-                // Salva a DUM e apaga os dados de ultrassom para evitar conflitos
-                val data = mapOf(
-                    "gestationalProfile.lmp" to lmpDate,
-                    "gestationalProfile.ultrasound" to null
-                )
-                userDocRef.set(data, com.google.firebase.firestore.SetOptions.merge()).await()
-                _saveState.value = SaveState.Success
-            } catch (e: Exception) {
-                _saveState.value = SaveState.Error(e.message ?: "Erro ao salvar DUM.")
-            }
+    fun saveLmp(lmp: String) {
+        val currentUserId = Firebase.auth.currentUser?.uid // Pega o usuário atual
+        if (currentUserId == null) {
+            _saveState.value = SaveState.Error("Usuário não autenticado.")
+            return
         }
+        if (lmp.isBlank()) {
+            _saveState.value = SaveState.Error("A data não pode estar em branco.")
+            return
+        }
+
+        val data = hashMapOf(
+            "lmp" to lmp,
+            "ultrasound" to FieldValue.delete()
+        )
+        saveData(currentUserId, data)
     }
 
     fun saveUltrasound(examDate: String, weeks: String, days: String) {
-        viewModelScope.launch {
-            if (userId == null) {
-                _saveState.value = SaveState.Error("Usuário não autenticado.")
-                return@launch
-            }
-            _saveState.value = SaveState.Loading
-            try {
-                val userDocRef = db.collection("users").document(userId)
-                val ultrasoundData = mapOf(
-                    "examDate" to examDate,
-                    "weeksAtExam" to weeks,
-                    "daysAtExam" to (days.ifEmpty { "0" })
-                )
-                // Salva os dados de ultrassom e apaga a DUM para evitar conflitos
-                val data = mapOf(
-                    "gestationalProfile.ultrasound" to ultrasoundData,
-                    "gestationalProfile.lmp" to null
-                )
-                userDocRef.set(data, com.google.firebase.firestore.SetOptions.merge()).await()
-                _saveState.value = SaveState.Success
-            } catch (e: Exception) {
-                _saveState.value = SaveState.Error(e.message ?: "Erro ao salvar ultrassom.")
-            }
+        val currentUserId = Firebase.auth.currentUser?.uid // Pega o usuário atual
+        if (currentUserId == null) {
+            _saveState.value = SaveState.Error("Usuário não autenticado.")
+            return
         }
+        if (examDate.isBlank() || weeks.isBlank() || days.isBlank()) {
+            _saveState.value = SaveState.Error("Todos os campos devem ser preenchidos.")
+            return
+        }
+
+        val ultrasoundData = hashMapOf(
+            "examDate" to examDate,
+            "weeksAtExam" to weeks,
+            "daysAtExam" to days
+        )
+        val data = hashMapOf("ultrasound" to ultrasoundData)
+        saveData(currentUserId, data)
+    }
+
+    private fun saveData(userId: String, data: Map<String, Any>) {
+        _saveState.value = SaveState.Loading
+
+        val userDocRef = db.collection("users").document(userId)
+        val gestationalProfile = hashMapOf("gestationalProfile" to data)
+
+        userDocRef.set(gestationalProfile, SetOptions.merge())
+            .addOnSuccessListener {
+                _saveState.value = SaveState.Success
+            }
+            .addOnFailureListener { e ->
+                _saveState.value = SaveState.Error(e.message ?: "Erro desconhecido ao salvar.")
+            }
     }
 
     fun resetState() {

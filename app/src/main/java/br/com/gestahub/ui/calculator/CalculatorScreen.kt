@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -56,7 +57,18 @@ fun CalculatorScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Calculadoras Gestacionais") })
+            TopAppBar(
+                title = { Text("Calculadoras Gestacionais") },
+                // --- SETA DE VOLTAR ADICIONADA AQUI ---
+                navigationIcon = {
+                    IconButton(onClick = onCancelClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Voltar"
+                        )
+                    }
+                }
+            )
         }
     ) { innerPadding ->
         Column(
@@ -97,7 +109,6 @@ fun DumCalculator(
             .padding(16.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // --- COMPONENTE DE DATA APLICADO AQUI ---
         DatePickerField(
             label = "Data da Última Menstruação (DUM)",
             dateString = lmp,
@@ -142,7 +153,6 @@ fun UltrasoundCalculator(
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            // --- COMPONENTE DE DATA APLICADO AQUI ---
             DatePickerField(
                 label = "Data do Ultrassom",
                 dateString = examDate,
@@ -184,13 +194,12 @@ fun UltrasoundCalculator(
 }
 
 
-// --- COMPONENTE REUTILIZÁVEL ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DatePickerField(
     label: String,
-    dateString: String, // Data no formato AAAA-MM-DD
-    onDateSelected: (String) -> Unit // Retorna a data no formato AAAA-MM-DD
+    dateString: String,
+    onDateSelected: (String) -> Unit
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
     val displayFormatter = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale("pt", "BR")) }

@@ -105,9 +105,28 @@ fun GestationalInfoDashboard(state: GestationalDataState.HasData, onEditDataClic
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            InfoCard("Idade Gestacional", "${state.gestationalWeeks}s ${state.gestationalDays}d")
-            Spacer(modifier = Modifier.height(8.dp))
-            InfoCard("Data Provável do Parto", state.dueDate)
+
+            // --- CORREÇÃO APLICADA AQUI ---
+            // Usa BoxWithConstraints para detectar a largura da tela
+            BoxWithConstraints {
+                if (maxWidth > 600.dp) { // Se for tablet ou tela larga
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            InfoCard("Idade Gestacional", "${state.gestationalWeeks}s ${state.gestationalDays}d")
+                        }
+                        Box(modifier = Modifier.weight(1f)) {
+                            InfoCard("Data Provável do Parto", state.dueDate)
+                        }
+                    }
+                } else { // Se for celular ou tela estreita
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        InfoCard("Idade Gestacional", "${state.gestationalWeeks}s ${state.gestationalDays}d")
+                        InfoCard("Data Provável do Parto", state.dueDate)
+                    }
+                }
+            }
+            // --- FIM DA CORREÇÃO ---
+
             Spacer(modifier = Modifier.height(16.dp))
             CountdownCard(weeks = state.countdownWeeks, days = state.countdownDays)
 
@@ -141,8 +160,6 @@ fun WeeklyInfoCard(info: WeeklyInfo) {
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // --- CORREÇÃO APLICADA AQUI ---
-            // Adicionamos o Divider com uma cor personalizada e sutil
             Divider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
 
             Column(
