@@ -1,3 +1,4 @@
+// Local: app/src/main/java/br/com/gestahub/MainActivity.kt
 package br.com.gestahub
 
 import android.os.Bundle
@@ -28,6 +29,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import br.com.gestahub.ui.appointment.AppointmentsScreen // Adicionado
 import br.com.gestahub.ui.calculator.CalculatorScreen
 import br.com.gestahub.ui.components.AppHeader
 import br.com.gestahub.ui.home.GestationalDataState
@@ -62,6 +64,7 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val context = LocalContext.current // Contexto para o Toast
 
     val navItems = listOf(
         NavItem("Início", Icons.Default.Home, "home"),
@@ -108,13 +111,10 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
             }
         }
     ) { innerPadding ->
-        // --- CORREÇÃO APLICADA AQUI ---
-        // O NavHost não tem mais o padding. O padding é aplicado seletivamente abaixo.
         NavHost(
             navController = navController,
             startDestination = "home"
         ) {
-            // Função auxiliar para aplicar o padding nas telas principais
             fun composableWithMainScaffoldPadding(route: String, content: @Composable () -> Unit) {
                 composable(route) {
                     Box(modifier = Modifier.padding(innerPadding)) {
@@ -137,15 +137,27 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
                         }
                     }
                 )
-                // O LaunchedEffect foi removido daqui em correções anteriores e continua removido.
             }
 
-            composableWithMainScaffoldPadding("appointments") { ComingSoonScreen() }
+            // --- Tela de Consultas Atualizada ---
+            composableWithMainScaffoldPadding("appointments") {
+                AppointmentsScreen(
+                    onAddClick = {
+                        Toast.makeText(context, "Abrir formulário de nova consulta", Toast.LENGTH_SHORT).show()
+                        // Futuramente: navController.navigate("appointmentForm")
+                    },
+                    onEditClick = { appointment ->
+                        Toast.makeText(context, "Editar: ${appointment.title}", Toast.LENGTH_SHORT).show()
+                        // Futuramente: navController.navigate("appointmentForm/${appointment.id}")
+                    }
+                )
+            }
+            // --- Fim da Atualização ---
+
             composableWithMainScaffoldPadding("journal") { ComingSoonScreen() }
             composableWithMainScaffoldPadding("weight") { ComingSoonScreen() }
             composableWithMainScaffoldPadding("more") { ComingSoonScreen() }
 
-            // Telas que NÃO recebem o padding principal
             composable("calculator?lmp={lmp}&examDate={examDate}&weeks={weeks}&days={days}") { backStackEntry ->
                 CalculatorScreen(
                     onSaveSuccess = { navController.navigate("home") { popUpTo("home") { inclusive = true } } },
