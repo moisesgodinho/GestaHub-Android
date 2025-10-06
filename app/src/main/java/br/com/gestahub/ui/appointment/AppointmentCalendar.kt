@@ -3,37 +3,15 @@ package br.com.gestahub.ui.appointment
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width // <<< --- IMPORTAÇÃO ADICIONADA AQUI ---
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +30,7 @@ import java.util.Locale
 fun AppointmentCalendar(
     appointments: List<Appointment>,
     lmpDate: LocalDate?,
+    isDarkTheme: Boolean,
     onDateClick: (LocalDate, List<Appointment>) -> Unit
 ) {
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
@@ -62,21 +41,36 @@ fun AppointmentCalendar(
             .groupBy { LocalDate.parse(it.date) }
     }
 
-    val windowColors = listOf(
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
-        MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f),
-        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f),
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
-    )
+    // --- CORREÇÃO APLICADA AQUI ---
+    val windowColors = if (isDarkTheme) {
+        // Cores para o Modo Escuro
+        listOf(
+            Color(0xFF312E81), // Indigo 900
+            Color(0xFF065F46), // Green 900
+            Color(0xFF78350F), // <<< NOVA COR: Amber 900
+            Color(0xFF581C87), // Purple 900
+            Color(0xFF155E75)  // Cyan 900
+        )
+    } else {
+        // Cores para o Modo Claro
+        listOf(
+            Color(0xFFE0E7FF), // Indigo 100
+            Color(0xFFD1FAE5), // Green 100
+            Color(0xFFFEF3C7), // <<< NOVA COR: Amber 100
+            Color(0xFFF3E8FF), // Purple 100
+            Color(0xFFCCFBF1)  // Teal 100
+        )
+    }
+
+    val scheduledColor = if(isDarkTheme) Color(0xFF7F1D1D) else Color(0xFFFECACA)
 
     val ultrasoundWindows = remember(lmpDate, windowColors) {
         if (lmpDate == null) return@remember emptyMap()
         val windows = mutableMapOf<LocalDate, Color>()
 
         AppointmentData.ultrasoundSchedule.forEachIndexed { index, exam ->
-            val startDate = lmpDate.plusWeeks(exam.startWeek.toLong())
-            val endDate = lmpDate.plusWeeks(exam.endWeek.toLong()).plusDays(6)
+            val startDate = lmpDate.plusWeeks((exam.startWeek - 1).toLong())
+            val endDate = lmpDate.plusWeeks(exam.endWeek.toLong()).minusDays(1)
             var currentDate = startDate
             while (!currentDate.isAfter(endDate)) {
                 windows[currentDate] = windowColors[index % windowColors.size]
@@ -89,13 +83,18 @@ fun AppointmentCalendar(
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(4.dp),
-        shape = MaterialTheme.shapes.large
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             CalendarHeader(
                 yearMonth = currentMonth,
                 onPrevMonth = { currentMonth = currentMonth.minusMonths(1) },
-                onNextMonth = { currentMonth = currentMonth.plusMonths(1) }
+                onNextMonth = { currentMonth = currentMonth.plusMonths(1) },
+                isPrevEnabled = lmpDate?.let { YearMonth.from(it.minusMonths(2)).isBefore(currentMonth) } ?: true,
+                isNextEnabled = lmpDate?.let { YearMonth.from(it.plusDays(280).plusMonths(2)).isAfter(currentMonth) } ?: true
             )
             Spacer(modifier = Modifier.height(16.dp))
             CalendarGrid(
@@ -103,11 +102,13 @@ fun AppointmentCalendar(
                 today = today,
                 appointmentsByDate = appointmentsByDate,
                 ultrasoundWindows = ultrasoundWindows,
+                scheduledColor = scheduledColor,
+                isDarkTheme = isDarkTheme,
                 onDateClick = onDateClick
             )
             if (lmpDate != null) {
                 Spacer(modifier = Modifier.height(16.dp))
-                CalendarLegend(windowColors = windowColors)
+                CalendarLegend(windowColors = windowColors, scheduledColor = scheduledColor)
             }
         }
     }
@@ -115,11 +116,11 @@ fun AppointmentCalendar(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun CalendarLegend(windowColors: List<Color>) {
+private fun CalendarLegend(windowColors: List<Color>, scheduledColor: Color) {
     Column {
         Divider(modifier = Modifier.padding(bottom = 12.dp))
         Text(
-            text = "Legenda das Janelas Ideais:",
+            text = "Legenda:",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 8.dp)
@@ -130,8 +131,8 @@ private fun CalendarLegend(windowColors: List<Color>) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             LegendItem(
-                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
-                label = "Consultas/Exames Agendados"
+                color = scheduledColor,
+                label = "Dia com Agendamento"
             )
             AppointmentData.ultrasoundSchedule.forEachIndexed { index, ultrasound ->
                 LegendItem(
@@ -165,14 +166,16 @@ private fun LegendItem(color: Color, label: String) {
 private fun CalendarHeader(
     yearMonth: YearMonth,
     onPrevMonth: () -> Unit,
-    onNextMonth: () -> Unit
+    onNextMonth: () -> Unit,
+    isPrevEnabled: Boolean,
+    isNextEnabled: Boolean
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        IconButton(onClick = onPrevMonth) {
+        IconButton(onClick = onPrevMonth, enabled = isPrevEnabled) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Mês Anterior")
         }
         Text(
@@ -180,7 +183,7 @@ private fun CalendarHeader(
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
-        IconButton(onClick = onNextMonth) {
+        IconButton(onClick = onNextMonth, enabled = isNextEnabled) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Próximo Mês")
         }
     }
@@ -192,6 +195,8 @@ private fun CalendarGrid(
     today: LocalDate,
     appointmentsByDate: Map<LocalDate, List<Appointment>>,
     ultrasoundWindows: Map<LocalDate, Color>,
+    scheduledColor: Color,
+    isDarkTheme: Boolean,
     onDateClick: (LocalDate, List<Appointment>) -> Unit
 ) {
     val daysInMonth = yearMonth.lengthOfMonth()
@@ -227,6 +232,8 @@ private fun CalendarGrid(
                             isToday = date.isEqual(today),
                             appointments = appointmentsForDay,
                             windowColor = ultrasoundWindows[date],
+                            scheduledColor = scheduledColor,
+                            isDarkTheme = isDarkTheme,
                             onClick = { onDateClick(date, appointmentsForDay) }
                         )
                     } else {
@@ -244,12 +251,22 @@ private fun RowScope.DayCell(
     isToday: Boolean,
     appointments: List<Appointment>,
     windowColor: Color?,
+    scheduledColor: Color,
+    isDarkTheme: Boolean,
     onClick: () -> Unit
 ) {
     val hasAppointments = appointments.isNotEmpty()
-    var backgroundColor = windowColor ?: Color.Transparent
-    if (hasAppointments) {
-        backgroundColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+
+    val backgroundColor = when {
+        hasAppointments -> scheduledColor
+        windowColor != null -> windowColor
+        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+    }
+
+    val textColor = when {
+        isDarkTheme && (hasAppointments || windowColor != null) -> Color.White.copy(alpha = 0.9f)
+        isToday -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.onSurface
     }
 
     Box(
@@ -270,7 +287,7 @@ private fun RowScope.DayCell(
                 text = date.dayOfMonth.toString(),
                 fontSize = 14.sp,
                 fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                color = textColor
             )
             if (hasAppointments) {
                 Spacer(modifier = Modifier.height(2.dp))
@@ -279,8 +296,8 @@ private fun RowScope.DayCell(
                     modifier = Modifier.padding(horizontal = 4.dp)
                 ) {
                     appointments.take(3).forEach { app ->
-                        val color = if (app.type == AppointmentType.ULTRASOUND) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-                        Box(modifier = Modifier.size(4.dp).background(color, CircleShape))
+                        val dotColor = if (isDarkTheme) Color.White.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface
+                        Box(modifier = Modifier.size(4.dp).background(dotColor, CircleShape))
                     }
                 }
             }

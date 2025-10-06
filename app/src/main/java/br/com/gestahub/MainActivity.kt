@@ -188,6 +188,7 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
                 AppointmentsScreen(
                     contentPadding = innerPadding,
                     uiState = appointmentsUiState,
+                    isDarkTheme = isDarkTheme,
                     onToggleDone = { appointmentsViewModel.toggleDone(it) },
                     onEditClick = { appointment ->
                         navController.navigate("appointmentForm?appointmentId=${appointment.id}&appointmentType=${appointment.type.name}")

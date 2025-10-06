@@ -2,15 +2,24 @@
 package br.com.gestahub.ui.appointment
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.*
 
 private const val INITIAL_VISIBLE_PAST_APPOINTMENTS = 5
 private const val LOAD_MORE_COUNT = 5
@@ -19,12 +28,47 @@ private const val LOAD_MORE_COUNT = 5
 fun AppointmentsScreen(
     contentPadding: PaddingValues,
     uiState: AppointmentsUiState,
+    isDarkTheme: Boolean,
     onToggleDone: (Appointment) -> Unit,
     onEditClick: (Appointment) -> Unit,
     onDeleteRequest: (Appointment) -> Unit,
-    onNavigateToForm: (date: String?) -> Unit // Alterado para aceitar uma data
+    onNavigateToForm: (date: String?) -> Unit
 ) {
     var visiblePastCount by remember { mutableStateOf(INITIAL_VISIBLE_PAST_APPOINTMENTS) }
+
+    var showNewAppointmentDialogForDate by remember { mutableStateOf<LocalDate?>(null) }
+    var appointmentsToShowInDialog by remember { mutableStateOf<List<Appointment>>(emptyList()) }
+    var dialogDate by remember { mutableStateOf<LocalDate?>(null) }
+
+    showNewAppointmentDialogForDate?.let { date ->
+        NewAppointmentDialog(
+            date = date,
+            onDismiss = { showNewAppointmentDialogForDate = null },
+            onConfirm = {
+                onNavigateToForm(it.format(DateTimeFormatter.ISO_LOCAL_DATE))
+                showNewAppointmentDialogForDate = null
+            }
+        )
+    }
+
+    if (appointmentsToShowInDialog.isNotEmpty()) {
+        dialogDate?.let { date ->
+            ViewAppointmentsDialog(
+                date = date,
+                appointments = appointmentsToShowInDialog,
+                onDismiss = { appointmentsToShowInDialog = emptyList() },
+                onEdit = {
+                    onEditClick(it)
+                    appointmentsToShowInDialog = emptyList()
+                },
+                onDelete = {
+                    onDeleteRequest(it)
+                    appointmentsToShowInDialog = appointmentsToShowInDialog.filterNot { item -> item.id == it.id }
+                }
+            )
+        }
+    }
+
 
     if (uiState.isLoading) {
         Box(Modifier.fillMaxSize().padding(contentPadding), contentAlignment = Alignment.Center) {
@@ -44,13 +88,13 @@ fun AppointmentsScreen(
             AppointmentCalendar(
                 appointments = uiState.upcomingAppointments + uiState.pastAppointments,
                 lmpDate = uiState.lmpDate,
+                isDarkTheme = isDarkTheme,
                 onDateClick = { date, appointmentsOnDay ->
                     if (appointmentsOnDay.isNotEmpty()) {
-                        // Se houver consultas, edita a primeira da lista
-                        onEditClick(appointmentsOnDay.first())
+                        dialogDate = date
+                        appointmentsToShowInDialog = appointmentsOnDay.sortedBy { it.time }
                     } else {
-                        // Se o dia estiver vazio, navega para o formulário com a data
-                        onNavigateToForm(date.toString())
+                        showNewAppointmentDialogForDate = date
                     }
                 }
             )
@@ -63,7 +107,6 @@ fun AppointmentsScreen(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
             ) {
-                // ... (o restante do conteúdo do Card permanece o mesmo)
                 Column(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
