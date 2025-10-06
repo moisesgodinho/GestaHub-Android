@@ -35,6 +35,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import br.com.gestahub.ui.appointment.Appointment
 import br.com.gestahub.ui.appointment.AppointmentFormScreen
+import br.com.gestahub.ui.appointment.AppointmentType
 import br.com.gestahub.ui.appointment.AppointmentsScreen
 import br.com.gestahub.ui.appointment.AppointmentsViewModel
 import br.com.gestahub.ui.calculator.CalculatorScreen
@@ -90,8 +91,8 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var appointmentToDelete by remember { mutableStateOf<Appointment?>(null) }
+    var showDeleteDialog by remember { mutableStateOf<Appointment?>(null) }
+    var showClearDialog by remember { mutableStateOf<Appointment?>(null) }
 
     LaunchedEffect(appointmentsUiState.userMessage) {
         appointmentsUiState.userMessage?.let { message ->
@@ -102,23 +103,36 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
         }
     }
 
-    if (showDeleteDialog && appointmentToDelete != null) {
+    showDeleteDialog?.let { appointment ->
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
+            onDismissRequest = { showDeleteDialog = null },
             title = { Text("Confirmar Exclusão") },
-            text = { Text("Tem certeza que deseja apagar a consulta \"${appointmentToDelete!!.title}\"?") },
+            text = { Text("Tem certeza que deseja apagar a consulta \"${appointment.title}\"?") },
             confirmButton = {
                 Button(
                     onClick = {
-                        appointmentsViewModel.deleteAppointment(appointmentToDelete!!)
-                        showDeleteDialog = false
+                        appointmentsViewModel.deleteAppointment(appointment)
+                        showDeleteDialog = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) { Text("Deletar") }
             },
-            dismissButton = {
-                OutlinedButton(onClick = { showDeleteDialog = false }) { Text("Cancelar") }
-            }
+            dismissButton = { OutlinedButton(onClick = { showDeleteDialog = null }) { Text("Cancelar") } }
+        )
+    }
+
+    showClearDialog?.let { appointment ->
+        AlertDialog(
+            onDismissRequest = { showClearDialog = null },
+            title = { Text("Limpar Agendamento") },
+            text = { Text("Tem certeza que deseja limpar os dados do agendamento para \"${appointment.title}\"? O item permanecerá na lista.") },
+            confirmButton = {
+                Button(onClick = {
+                    appointmentsViewModel.clearUltrasoundSchedule(appointment)
+                    showClearDialog = null
+                }) { Text("Limpar") }
+            },
+            dismissButton = { OutlinedButton(onClick = { showClearDialog = null }) { Text("Cancelar") } }
         )
     }
 
@@ -173,6 +187,7 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
                 HomeScreen(
                     contentPadding = innerPadding,
                     homeViewModel = homeViewModel,
+                    isDarkTheme = isDarkTheme,
                     onAddDataClick = { navController.navigate("calculator") },
                     onEditDataClick = {
                         val dataState = homeUiState.dataState
@@ -193,9 +208,12 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
                     onEditClick = { appointment ->
                         navController.navigate("appointmentForm?appointmentId=${appointment.id}&appointmentType=${appointment.type.name}")
                     },
-                    onDeleteRequest = {
-                        appointmentToDelete = it
-                        showDeleteDialog = true
+                    onDeleteOrClearRequest = { appointment ->
+                        if (appointment.type == AppointmentType.MANUAL) {
+                            showDeleteDialog = appointment
+                        } else {
+                            showClearDialog = appointment
+                        }
                     },
                     onNavigateToForm = { date ->
                         navController.navigate("appointmentForm?preselectedDate=$date")

@@ -1,25 +1,34 @@
 // Local: app/src/main/java/br/com/gestahub/ui/appointment/AppointmentsScreen.kt
 package br.com.gestahub.ui.appointment
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.*
 
 private const val INITIAL_VISIBLE_PAST_APPOINTMENTS = 5
 private const val LOAD_MORE_COUNT = 5
@@ -31,15 +40,17 @@ fun AppointmentsScreen(
     isDarkTheme: Boolean,
     onToggleDone: (Appointment) -> Unit,
     onEditClick: (Appointment) -> Unit,
-    onDeleteRequest: (Appointment) -> Unit,
+    onDeleteOrClearRequest: (Appointment) -> Unit,
     onNavigateToForm: (date: String?) -> Unit
 ) {
     var visiblePastCount by remember { mutableStateOf(INITIAL_VISIBLE_PAST_APPOINTMENTS) }
 
+    // Estados para controlar os diálogos
     var showNewAppointmentDialogForDate by remember { mutableStateOf<LocalDate?>(null) }
     var appointmentsToShowInDialog by remember { mutableStateOf<List<Appointment>>(emptyList()) }
     var dialogDate by remember { mutableStateOf<LocalDate?>(null) }
 
+    // Diálogo para dias vazios
     showNewAppointmentDialogForDate?.let { date ->
         NewAppointmentDialog(
             date = date,
@@ -51,6 +62,7 @@ fun AppointmentsScreen(
         )
     }
 
+    // Diálogo para dias com consultas
     if (appointmentsToShowInDialog.isNotEmpty()) {
         dialogDate?.let { date ->
             ViewAppointmentsDialog(
@@ -62,8 +74,13 @@ fun AppointmentsScreen(
                     appointmentsToShowInDialog = emptyList()
                 },
                 onDelete = {
-                    onDeleteRequest(it)
+                    onDeleteOrClearRequest(it)
+                    // Atualiza a lista do diálogo em tempo real ao deletar
                     appointmentsToShowInDialog = appointmentsToShowInDialog.filterNot { item -> item.id == it.id }
+                },
+                onAddNew = {
+                    onNavigateToForm(it.format(DateTimeFormatter.ISO_LOCAL_DATE))
+                    appointmentsToShowInDialog = emptyList()
                 }
             )
         }
@@ -125,9 +142,10 @@ fun AppointmentsScreen(
                                 AppointmentItem(
                                     appointment = appointment,
                                     lmpDate = uiState.lmpDate,
+                                    isDarkTheme = isDarkTheme,
                                     onToggleDone = onToggleDone,
                                     onEdit = onEditClick,
-                                    onDelete = onDeleteRequest
+                                    onDelete = onDeleteOrClearRequest
                                 )
                             }
                         }
@@ -144,9 +162,10 @@ fun AppointmentsScreen(
                                 AppointmentItem(
                                     appointment = appointment,
                                     lmpDate = uiState.lmpDate,
+                                    isDarkTheme = isDarkTheme,
                                     onToggleDone = onToggleDone,
                                     onEdit = onEditClick,
-                                    onDelete = onDeleteRequest
+                                    onDelete = onDeleteOrClearRequest
                                 )
                             }
 

@@ -2,6 +2,7 @@
 package br.com.gestahub.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -22,17 +23,18 @@ import br.com.gestahub.data.WeeklyInfo
 
 @Composable
 fun HomeScreen(
-    contentPadding: PaddingValues, // Adicione este parâmetro
+    contentPadding: PaddingValues,
     homeViewModel: HomeViewModel = viewModel(),
+    isDarkTheme: Boolean,
     onAddDataClick: () -> Unit,
-    onEditDataClick: () -> Unit,
+    onEditDataClick: () -> Unit
 ) {
     val uiState by homeViewModel.uiState.collectAsState()
     val dataState = uiState.dataState
 
     when (dataState) {
         is GestationalDataState.Loading -> {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxSize().padding(contentPadding), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         }
@@ -40,13 +42,16 @@ fun HomeScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(contentPadding) // Aplique o padding aqui
+                    .padding(contentPadding)
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                GestationalInfoDashboard(dataState, onEditDataClick)
-                // O card de atalho foi removido daqui
+                GestationalInfoDashboard(
+                    state = dataState,
+                    onEditDataClick = onEditDataClick,
+                    isDarkTheme = isDarkTheme
+                )
             }
         }
         is GestationalDataState.NoData -> {
@@ -54,9 +59,6 @@ fun HomeScreen(
         }
     }
 }
-
-// O restante do arquivo (EmptyHomeScreen, GestationalInfoDashboard, etc.) permanece exatamente o mesmo.
-// Apenas o Composable "AppointmentsShortcutCard" foi removido.
 
 @Composable
 fun EmptyHomeScreen(onAddDataClick: () -> Unit) {
@@ -87,7 +89,11 @@ fun EmptyHomeScreen(onAddDataClick: () -> Unit) {
 }
 
 @Composable
-fun GestationalInfoDashboard(state: GestationalDataState.HasData, onEditDataClick: () -> Unit) {
+fun GestationalInfoDashboard(
+    state: GestationalDataState.HasData,
+    onEditDataClick: () -> Unit,
+    isDarkTheme: Boolean
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -117,16 +123,32 @@ fun GestationalInfoDashboard(state: GestationalDataState.HasData, onEditDataClic
                 if (maxWidth > 600.dp) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Box(modifier = Modifier.weight(1f)) {
-                            InfoCard("Idade Gestacional", "${state.gestationalWeeks}s ${state.gestationalDays}d")
+                            InfoCard(
+                                label = "Idade Gestacional",
+                                value = "${state.gestationalWeeks}s ${state.gestationalDays}d",
+                                isDarkTheme = isDarkTheme
+                            )
                         }
                         Box(modifier = Modifier.weight(1f)) {
-                            InfoCard("Data Provável do Parto", state.dueDate)
+                            InfoCard(
+                                label = "Data Provável do Parto",
+                                value = state.dueDate,
+                                isDarkTheme = isDarkTheme
+                            )
                         }
                     }
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        InfoCard("Idade Gestacional", "${state.gestationalWeeks}s ${state.gestationalDays}d")
-                        InfoCard("Data Provável do Parto", state.dueDate)
+                        InfoCard(
+                            label = "Idade Gestacional",
+                            value = "${state.gestationalWeeks}s ${state.gestationalDays}d",
+                            isDarkTheme = isDarkTheme
+                        )
+                        InfoCard(
+                            label = "Data Provável do Parto",
+                            value = state.dueDate,
+                            isDarkTheme = isDarkTheme
+                        )
                     }
                 }
             }
@@ -210,12 +232,22 @@ fun WeeklyInfoCard(info: WeeklyInfo) {
 }
 
 @Composable
-fun InfoCard(label: String, value: String) {
+fun InfoCard(
+    label: String,
+    value: String,
+    isDarkTheme: Boolean
+) {
+    val containerColor = if (isDarkTheme) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = containerColor
         )
     ) {
         Column(

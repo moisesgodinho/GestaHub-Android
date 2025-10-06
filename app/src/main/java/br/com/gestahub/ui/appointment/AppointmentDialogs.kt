@@ -31,9 +31,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import br.com.gestahub.ui.theme.Rose500
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -76,39 +80,53 @@ fun ViewAppointmentsDialog(
     appointments: List<Appointment>,
     onDismiss: () -> Unit,
     onEdit: (Appointment) -> Unit,
-    onDelete: (Appointment) -> Unit
+    onDelete: (Appointment) -> Unit,
+    onAddNew: (LocalDate) -> Unit
 ) {
     val formattedDate = remember(date) {
-        date.format(DateTimeFormatter.ofPattern("dd 'de' MMMM", Locale("pt", "BR")))
+        val formatter = DateTimeFormatter.ofPattern("EEEE, dd 'de' MMMM 'de' yyyy", Locale("pt", "BR"))
+        date.format(formatter).replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Consultas para ${formattedDate}") },
+        title = {
+            Text(
+                text = buildAnnotatedString {
+                    append("Compromissos para\n")
+                    withStyle(style = SpanStyle(color = Rose500)) {
+                        append(formattedDate)
+                    }
+                }
+            )
+        },
         text = {
             LazyColumn {
                 items(appointments, key = { it.id + it.type.name }) { appointment ->
                     Column(modifier = Modifier.padding(vertical = 12.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            // O Arrangement foi removido para que o weight funcione corretamente
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Coluna de Texto com weight
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(text = appointment.title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    text = appointment.title,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                                 appointment.time?.takeIf { it.isNotBlank() }?.let {
                                     Text(text = "às $it", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
 
-                            // Botões agora são filhos diretos da Row principal
-                            // e serão empurrados para a direita pelo weight da Column.
+                            val iconColor = MaterialTheme.colorScheme.onSurfaceVariant
+
                             IconButton(onClick = { onEdit(appointment) }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Editar")
+                                Icon(Icons.Default.Edit, contentDescription = "Editar", tint = iconColor)
                             }
                             if (appointment.type == AppointmentType.MANUAL) {
                                 IconButton(onClick = { onDelete(appointment) }) {
-                                    Icon(Icons.Default.Delete, contentDescription = "Deletar", tint = MaterialTheme.colorScheme.error)
+                                    Icon(Icons.Default.Delete, contentDescription = "Deletar", tint = iconColor)
                                 }
                             }
                         }
@@ -134,9 +152,14 @@ fun ViewAppointmentsDialog(
                 }
             }
         },
-        confirmButton = {
+        dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("Fechar")
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onAddNew(date) }) {
+                Text("Adicionar Consulta")
             }
         }
     )

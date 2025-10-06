@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.gestahub.util.GestationalAgeCalculator
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
@@ -30,7 +31,7 @@ class AppointmentsViewModel : ViewModel() {
     private val userId = Firebase.auth.currentUser?.uid
 
     private val _manualAppointments = MutableStateFlow<List<ManualAppointment>>(emptyList())
-    private val _gestationalProfile = MutableStateFlow<Map<*,*>?>(null) // Armazena o perfil completo
+    private val _gestationalProfile = MutableStateFlow<Map<*,*>?>(null)
     private val _isLoading = MutableStateFlow(true)
 
     private val _uiState = MutableStateFlow(AppointmentsUiState())
@@ -62,8 +63,6 @@ class AppointmentsViewModel : ViewModel() {
                     _uiState.update { it.copy(userMessage = "Erro ao buscar perfil.") }
                     return@addSnapshotListener
                 }
-                // --- CORREÇÃO APLICADA AQUI ---
-                // Agora buscamos o perfil gestacional completo, não apenas a DUM.
                 _gestationalProfile.value = snapshot?.get("gestationalProfile") as? Map<*, *>
             }
     }
@@ -71,7 +70,6 @@ class AppointmentsViewModel : ViewModel() {
     private fun observeAndCombineData() {
         viewModelScope.launch {
             combine(_manualAppointments, _gestationalProfile) { manual, profile ->
-                // A DUM estimada é calculada aqui, usando a lógica correta que prioriza o ultrassom
                 val estimatedLmp = GestationalAgeCalculator.getEstimatedLmp(profile)
                 val ultrasoundScheduleMap = profile?.get("ultrasoundSchedule") as? Map<String, Any> ?: emptyMap()
 
@@ -91,27 +89,16 @@ class AppointmentsViewModel : ViewModel() {
                 val (past, upcoming) = allAppointments.partition { it.done }
 
                 AppointmentsUiState(
+                    // --- ORDENAÇÃO CORRIGIDA ---
                     upcomingAppointments = upcoming.sortedWith { a, b ->
-                        val dateA = a.date
-                        val dateB = b.date
-                        when {
-                            dateA == null && dateB == null -> 0
-                            dateA == null -> 1
-                            dateB == null -> -1
-                            else -> dateA.compareTo(dateB)
-                        }
+                        val dateComparison = compareValues(a.date, b.date)
+                        if (dateComparison != 0) dateComparison else compareValues(a.time, b.time)
                     },
                     pastAppointments = past.sortedWith { a, b ->
-                        val dateA = a.date
-                        val dateB = b.date
-                        when {
-                            dateA == null && dateB == null -> 0
-                            dateA == null -> 1
-                            dateB == null -> -1
-                            else -> dateB.compareTo(dateA)
-                        }
+                        val dateComparison = compareValues(b.date, a.date) // Ordem descendente
+                        if (dateComparison != 0) dateComparison else compareValues(b.time, a.time)
                     },
-                    lmpDate = estimatedLmp, // O estado agora reflete a DUM correta
+                    lmpDate = estimatedLmp,
                     isLoading = false
                 )
             }.collect { combinedState ->
@@ -176,11 +163,28 @@ class AppointmentsViewModel : ViewModel() {
     fun deleteAppointment(appointment: Appointment) = viewModelScope.launch {
         if (userId == null || appointment !is ManualAppointment) return@launch
         try {
-            val docRef = db.collection("users").document(userId)
-                .collection("appointments").document(appointment.id)
-            docRef.delete().await()
+            db.collection("users").document(userId).collection("appointments").document(appointment.id)
+                .delete().await()
         } catch (e: Exception) {
             _uiState.update { it.copy(userMessage = "Erro ao deletar consulta.") }
+        }
+    }
+
+    fun clearUltrasoundSchedule(appointment: Appointment) = viewModelScope.launch {
+        if (userId == null || appointment !is UltrasoundAppointment) return@launch
+        try {
+            val docRef = db.collection("users").document(userId)
+            val updates = mapOf(
+                "gestationalProfile.ultrasoundSchedule.${appointment.id}.scheduledDate" to FieldValue.delete(),
+                "gestationalProfile.ultrasoundSchedule.${appointment.id}.time" to FieldValue.delete(),
+                "gestationalProfile.ultrasoundSchedule.${appointment.id}.professional" to FieldValue.delete(),
+                "gestationalProfile.ultrasoundSchedule.${appointment.id}.location" to FieldValue.delete(),
+                "gestationalProfile.ultrasoundSchedule.${appointment.id}.notes" to FieldValue.delete()
+            )
+            docRef.update(updates).await()
+            _uiState.update { it.copy(userMessage = "Agendamento do ultrassom foi limpo.") }
+        } catch (e: Exception) {
+            _uiState.update { it.copy(userMessage = "Erro ao limpar agendamento.") }
         }
     }
 }
