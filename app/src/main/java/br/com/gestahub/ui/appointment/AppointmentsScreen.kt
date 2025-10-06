@@ -1,32 +1,16 @@
 // Local: app/src/main/java/br/com/gestahub/ui/appointment/AppointmentsScreen.kt
 package br.com.gestahub.ui.appointment
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import java.time.LocalDate
 
 private const val INITIAL_VISIBLE_PAST_APPOINTMENTS = 5
 private const val LOAD_MORE_COUNT = 5
@@ -37,7 +21,8 @@ fun AppointmentsScreen(
     uiState: AppointmentsUiState,
     onToggleDone: (Appointment) -> Unit,
     onEditClick: (Appointment) -> Unit,
-    onDeleteRequest: (Appointment) -> Unit
+    onDeleteRequest: (Appointment) -> Unit,
+    onNavigateToForm: (date: String?) -> Unit // Alterado para aceitar uma data
 ) {
     var visiblePastCount by remember { mutableStateOf(INITIAL_VISIBLE_PAST_APPOINTMENTS) }
 
@@ -51,9 +36,25 @@ fun AppointmentsScreen(
                 .fillMaxSize()
                 .padding(contentPadding)
                 .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(0.dp))
+
+            AppointmentCalendar(
+                appointments = uiState.upcomingAppointments + uiState.pastAppointments,
+                lmpDate = uiState.lmpDate,
+                onDateClick = { date, appointmentsOnDay ->
+                    if (appointmentsOnDay.isNotEmpty()) {
+                        // Se houver consultas, edita a primeira da lista
+                        onEditClick(appointmentsOnDay.first())
+                    } else {
+                        // Se o dia estiver vazio, navega para o formulário com a data
+                        onNavigateToForm(date.toString())
+                    }
+                }
+            )
+
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -62,6 +63,7 @@ fun AppointmentsScreen(
                     containerColor = MaterialTheme.colorScheme.surface
                 )
             ) {
+                // ... (o restante do conteúdo do Card permanece o mesmo)
                 Column(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -69,9 +71,7 @@ fun AppointmentsScreen(
                     if (uiState.upcomingAppointments.isEmpty() && uiState.pastAppointments.isEmpty()) {
                         Text(
                             text = "Nenhuma consulta encontrada. Toque no '+' para adicionar a primeira.",
-                            modifier = Modifier
-                                .padding(32.dp)
-                                .fillMaxWidth(),
+                            modifier = Modifier.padding(32.dp).fillMaxWidth(),
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -81,7 +81,7 @@ fun AppointmentsScreen(
                             uiState.upcomingAppointments.forEach { appointment ->
                                 AppointmentItem(
                                     appointment = appointment,
-                                    lmpDate = uiState.lmpDate, // Passando a DUM
+                                    lmpDate = uiState.lmpDate,
                                     onToggleDone = onToggleDone,
                                     onEdit = onEditClick,
                                     onDelete = onDeleteRequest
@@ -100,7 +100,7 @@ fun AppointmentsScreen(
                             pastAppointmentsToShow.forEach { appointment ->
                                 AppointmentItem(
                                     appointment = appointment,
-                                    lmpDate = uiState.lmpDate, // Passando a DUM
+                                    lmpDate = uiState.lmpDate,
                                     onToggleDone = onToggleDone,
                                     onEdit = onEditClick,
                                     onDelete = onDeleteRequest

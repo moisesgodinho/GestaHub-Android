@@ -19,30 +19,8 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MonitorWeight
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -194,11 +172,9 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
             composable("home") {
                 HomeScreen(
                     contentPadding = innerPadding,
+                    homeViewModel = homeViewModel,
                     onAddDataClick = { navController.navigate("calculator") },
                     onEditDataClick = {
-                        // --- CORREÇÃO APLICADA AQUI ---
-                        // Usa a variável 'homeUiState' já coletada no escopo de MainAppScreen,
-                        // em vez de tentar chamar 'collectAsState' novamente aqui dentro.
                         val dataState = homeUiState.dataState
                         if (dataState is GestationalDataState.HasData) {
                             val data = dataState.gestationalData
@@ -219,6 +195,9 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
                     onDeleteRequest = {
                         appointmentToDelete = it
                         showDeleteDialog = true
+                    },
+                    onNavigateToForm = { date ->
+                        navController.navigate("appointmentForm?preselectedDate=$date")
                     }
                 )
             }
@@ -228,16 +207,11 @@ fun MainAppScreen(mainViewModel: MainViewModel, user: FirebaseUser) {
             composable("more") { Box(Modifier.padding(innerPadding)) { ComingSoonScreen() } }
 
             composable(
-                route = "appointmentForm?appointmentId={appointmentId}&appointmentType={appointmentType}",
+                route = "appointmentForm?appointmentId={appointmentId}&appointmentType={appointmentType}&preselectedDate={preselectedDate}",
                 arguments = listOf(
-                    navArgument("appointmentId") {
-                        type = NavType.StringType
-                        nullable = true
-                    },
-                    navArgument("appointmentType") {
-                        type = NavType.StringType
-                        nullable = true
-                    }
+                    navArgument("appointmentId") { type = NavType.StringType; nullable = true },
+                    navArgument("appointmentType") { type = NavType.StringType; nullable = true },
+                    navArgument("preselectedDate") { type = NavType.StringType; nullable = true }
                 )
             ) {
                 AppointmentFormScreen(

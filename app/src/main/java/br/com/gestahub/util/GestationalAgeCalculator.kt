@@ -9,19 +9,12 @@ object GestationalAgeCalculator {
 
     private val displayFormatter = DateTimeFormatter.ofPattern("dd/MM/yy", Locale("pt", "BR"))
 
-    /**
-     * Calcula a DUM (Data da Última Menstruação) estimada, priorizando os dados do ultrassom.
-     * Esta é a função central para obter a data mais precisa para o início da gestação.
-     * @param gestationalProfile Um mapa contendo os dados do perfil gestacional do usuário.
-     * @return A DUM estimada como um objeto LocalDate, ou null se não houver dados suficientes.
-     */
     fun getEstimatedLmp(gestationalProfile: Map<*, *>?): LocalDate? {
         if (gestationalProfile == null) return null
 
         val lmpString = gestationalProfile["lmp"] as? String
         val ultrasoundMap = gestationalProfile["ultrasound"] as? Map<*, *>
 
-        // Tenta calcular a DUM a partir do ultrassom primeiro
         if (ultrasoundMap != null) {
             val examDateString = ultrasoundMap["examDate"] as? String
             val weeksAtExam = (ultrasoundMap["weeksAtExam"] as? String)?.toLongOrNull()
@@ -36,17 +29,33 @@ object GestationalAgeCalculator {
             }
         }
 
-        // Se não houver dados de ultrassom, usa a DUM informada
         return lmpString?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
     }
 
+    /**
+     * Calcula a data de início da janela ideal para um ultrassom.
+     * @param lmp A data da última menstruação.
+     * @param startWeek A semana gestacional em que a janela começa (ex: 8).
+     * @return A data de início formatada como "dd/MM/yy".
+     */
     fun getWindowStartDate(lmp: LocalDate, startWeek: Int): String {
-        val startDate = lmp.plusDays((startWeek * 7).toLong())
+        // --- CORREÇÃO APLICADA AQUI ---
+        // O início da semana N é após (N-1) semanas completas da DUM.
+        val startDate = lmp.plusWeeks((startWeek - 1).toLong())
         return startDate.format(displayFormatter)
     }
 
+    /**
+     * Calcula a data de fim da janela ideal para um ultrassom.
+     * @param lmp A data da última menstruação.
+     * @param endWeek A semana gestacional em que a janela termina (ex: 11).
+     * @return A data de fim formatada como "dd/MM/yy".
+     */
     fun getWindowEndDate(lmp: LocalDate, endWeek: Int): String {
-        val endDate = lmp.plusDays((endWeek * 7 + 6).toLong())
+        // --- CORREÇÃO APLICADA AQUI ---
+        // O fim da semana N é ao final de N semanas completas, menos um dia.
+        // Ex: O fim da semana 11 é DUM + 11 semanas - 1 dia.
+        val endDate = lmp.plusWeeks(endWeek.toLong()).minusDays(1)
         return endDate.format(displayFormatter)
     }
 }

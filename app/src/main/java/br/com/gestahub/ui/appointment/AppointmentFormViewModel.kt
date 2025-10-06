@@ -43,8 +43,8 @@ class AppointmentFormViewModel(
 
     private val appointmentId: String? = savedStateHandle["appointmentId"]
     private val appointmentType: String? = savedStateHandle["appointmentType"]
+    private val preselectedDate: String? = savedStateHandle["preselectedDate"] // Novo
 
-    // Armazena a DUM estimada e a DPP calculada a partir dela
     private var estimatedLmp: LocalDate? = null
     private var dueDate: LocalDate? = null
 
@@ -68,14 +68,18 @@ class AppointmentFormViewModel(
                 val userDoc = db.collection("users").document(userId).get().await()
                 val gestationalProfile = userDoc.get("gestationalProfile") as? Map<*, *>
 
-                // --- USA A FUNÇÃO CENTRALIZADA ---
                 estimatedLmp = GestationalAgeCalculator.getEstimatedLmp(gestationalProfile)
                 dueDate = estimatedLmp?.plusDays(280)
 
                 if (appointmentId != null && appointmentType != null) {
                     loadAppointment(userId, appointmentId, AppointmentType.valueOf(appointmentType))
                 } else {
-                    _uiState.update { it.copy(date = today, time = now, isLoading = false) }
+                    _uiState.update { it.copy(
+                        // Usa a data pré-selecionada se existir, senão usa a data de hoje
+                        date = preselectedDate ?: today,
+                        time = now,
+                        isLoading = false
+                    ) }
                 }
 
             } catch (e: Exception) {

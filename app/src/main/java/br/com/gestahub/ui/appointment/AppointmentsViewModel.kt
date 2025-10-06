@@ -4,6 +4,7 @@ package br.com.gestahub.ui.appointment
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import br.com.gestahub.util.GestationalAgeCalculator
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
@@ -21,7 +22,7 @@ data class AppointmentsUiState(
     val pastAppointments: List<Appointment> = emptyList(),
     val lmpDate: LocalDate? = null,
     val isLoading: Boolean = true,
-    val userMessage: String? = null // Para exibir mensagens de erro/aviso
+    val userMessage: String? = null
 )
 
 class AppointmentsViewModel : ViewModel() {
@@ -29,8 +30,7 @@ class AppointmentsViewModel : ViewModel() {
     private val userId = Firebase.auth.currentUser?.uid
 
     private val _manualAppointments = MutableStateFlow<List<ManualAppointment>>(emptyList())
-    private val _ultrasoundData = MutableStateFlow<Map<String, Any>>(emptyMap())
-    private val _lmpDate = MutableStateFlow<LocalDate?>(null)
+    private val _gestationalProfile = MutableStateFlow<Map<*,*>?>(null) // Armazena o perfil completo
     private val _isLoading = MutableStateFlow(true)
 
     private val _uiState = MutableStateFlow(AppointmentsUiState())
@@ -62,20 +62,21 @@ class AppointmentsViewModel : ViewModel() {
                     _uiState.update { it.copy(userMessage = "Erro ao buscar perfil.") }
                     return@addSnapshotListener
                 }
-                val profile = snapshot?.get("gestationalProfile") as? Map<*, *>
-                val lmpString = profile?.get("lmp") as? String
-                _lmpDate.value = lmpString?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
-
-                val ultrasoundSchedule = profile?.get("ultrasoundSchedule") as? Map<String, Any> ?: emptyMap()
-                _ultrasoundData.value = ultrasoundSchedule
+                // --- CORREÇÃO APLICADA AQUI ---
+                // Agora buscamos o perfil gestacional completo, não apenas a DUM.
+                _gestationalProfile.value = snapshot?.get("gestationalProfile") as? Map<*, *>
             }
     }
 
     private fun observeAndCombineData() {
         viewModelScope.launch {
-            combine(_manualAppointments, _ultrasoundData, _lmpDate) { manual, ultrasoundMap, lmp ->
+            combine(_manualAppointments, _gestationalProfile) { manual, profile ->
+                // A DUM estimada é calculada aqui, usando a lógica correta que prioriza o ultrassom
+                val estimatedLmp = GestationalAgeCalculator.getEstimatedLmp(profile)
+                val ultrasoundScheduleMap = profile?.get("ultrasoundSchedule") as? Map<String, Any> ?: emptyMap()
+
                 val ultrasoundList = AppointmentData.ultrasoundSchedule.map { baseUltrasound ->
-                    val savedData = ultrasoundMap[baseUltrasound.id] as? Map<*, *>
+                    val savedData = ultrasoundScheduleMap[baseUltrasound.id] as? Map<*, *>
                     baseUltrasound.copy(
                         scheduledDate = savedData?.get("scheduledDate") as? String,
                         scheduledTime = savedData?.get("time") as? String,
@@ -110,7 +111,7 @@ class AppointmentsViewModel : ViewModel() {
                             else -> dateB.compareTo(dateA)
                         }
                     },
-                    lmpDate = lmp,
+                    lmpDate = estimatedLmp, // O estado agora reflete a DUM correta
                     isLoading = false
                 )
             }.collect { combinedState ->
@@ -123,15 +124,12 @@ class AppointmentsViewModel : ViewModel() {
         if (userId == null) return@launch
         val newDoneStatus = !appointment.done
 
-        // --- INÍCIO DAS VERIFICAÇÕES ---
-        if (newDoneStatus) { // Apenas verifica ao tentar marcar como "concluído"
-            // 1. Verifica se é um ultrassom não agendado
+        if (newDoneStatus) {
             if (appointment is UltrasoundAppointment && !appointment.isScheduled) {
                 _uiState.update { it.copy(userMessage = "Adicione uma data ao ultrassom antes de concluí-lo.") }
                 return@launch
             }
 
-            // 2. Verifica se a data da consulta é no futuro
             appointment.date?.let { dateString ->
                 val appointmentDate = runCatching { LocalDate.parse(dateString) }.getOrNull()
                 if (appointmentDate != null && appointmentDate.isAfter(LocalDate.now())) {
@@ -140,7 +138,6 @@ class AppointmentsViewModel : ViewModel() {
                 }
             }
         }
-        // --- FIM DAS VERIFICAÇÕES ---
 
         try {
             when (appointment) {
@@ -172,7 +169,6 @@ class AppointmentsViewModel : ViewModel() {
         }
     }
 
-    // Função para a UI chamar após exibir a mensagem
     fun userMessageShown() {
         _uiState.update { it.copy(userMessage = null) }
     }
