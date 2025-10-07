@@ -1,15 +1,18 @@
-// Local: app/src/main/java/br/com/gestahub/ui/home/HomeScreen.kt
 package br.com.gestahub.ui.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -166,6 +169,21 @@ fun GestationalInfoDashboard(
 
 @Composable
 fun WeeklyInfoCard(info: WeeklyInfo) {
+    var showInfoDialog by remember { mutableStateOf(false) }
+
+    if (showInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showInfoDialog = false },
+            title = { Text("Informação Importante", color = MaterialTheme.colorScheme.primary) },
+            text = { Text("Estes valores são médias aproximadas. O tamanho e o peso do seu bebê podem variar. O importante é o acompanhamento contínuo no pré-natal.") },
+            confirmButton = {
+                TextButton(onClick = { showInfoDialog = false }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -197,11 +215,26 @@ fun WeeklyInfoCard(info: WeeklyInfo) {
                     text = "Tamanho comparado a um(a) ${info.size}",
                     style = MaterialTheme.typography.bodyMedium
                 )
-                Text(
-                    text = "${info.length} | ${info.weight}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "${info.length} | ${info.weight}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    IconButton(
+                        onClick = { showInfoDialog = true },
+                        modifier = Modifier.size(20.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = "Mais informações sobre peso e tamanho",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
 
             Column {
