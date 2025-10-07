@@ -206,8 +206,14 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                 )
             }
             composable("journal") {
+                val dataState = homeUiState.dataState
+                var lmp: LocalDate? = null
+                if (dataState is GestationalDataState.HasData) {
+                    lmp = dataState.estimatedLmp
+                }
                 JournalScreen(
                     contentPadding = innerPadding,
+                    estimatedLmp = lmp, // <-- Passe o LMP aqui
                     onNavigateToEntry = { date ->
                         navController.navigate("journalEntry/$date")
                     }

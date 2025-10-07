@@ -2,6 +2,7 @@
 package br.com.gestahub.ui.journal
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import br.com.gestahub.data.JournalRepository
 import com.google.firebase.firestore.ListenerRegistration
@@ -15,7 +16,10 @@ data class JournalUiState(
     val errorMessage: String? = null
 )
 
-class JournalViewModel : ViewModel() {
+class JournalViewModel(
+    // Recebe a data de início da gestação
+    private val estimatedLmp: LocalDate?
+) : ViewModel() {
     private val repository = JournalRepository()
     private var entriesListener: ListenerRegistration? = null
 
@@ -26,6 +30,18 @@ class JournalViewModel : ViewModel() {
 
     private val _selectedMonth = MutableStateFlow(YearMonth.now())
     val selectedMonth = _selectedMonth.asStateFlow()
+
+    // --- LÓGICA DE LIMITES DE NAVEGAÇÃO ---
+    private val maxMonth = YearMonth.now()
+    private val minMonth = estimatedLmp?.let { YearMonth.from(it.minusMonths(2)) }
+
+    val isNextMonthEnabled = selectedMonth.map { it.isBefore(maxMonth) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val isPreviousMonthEnabled = selectedMonth.map {
+        minMonth == null || it.isAfter(minMonth)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
 
     val entriesForSelectedMonth: StateFlow<List<JournalEntry>> =
         combine(_allEntries, _selectedMonth) { entries, month ->
@@ -53,20 +69,22 @@ class JournalViewModel : ViewModel() {
     }
 
     fun selectNextMonth() {
-        _selectedMonth.update { it.plusMonths(1) }
+        if (isNextMonthEnabled.value) {
+            _selectedMonth.update { it.plusMonths(1) }
+        }
     }
 
     fun selectPreviousMonth() {
-        _selectedMonth.update { it.minusMonths(1) }
+        if (isPreviousMonthEnabled.value) {
+            _selectedMonth.update { it.minusMonths(1) }
+        }
     }
 
-    // --- NOVA FUNÇÃO DE EXCLUSÃO ADICIONADA AQUI ---
     fun deleteEntry(entry: JournalEntry) {
         viewModelScope.launch {
             try {
                 repository.deleteJournalEntry(entry)
             } catch (e: Exception) {
-                // Opcional: Tratar erro, como exibir uma mensagem para o usuário
                 _uiState.update { it.copy(errorMessage = "Falha ao excluir o registro.") }
             }
         }
@@ -75,5 +93,13 @@ class JournalViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         entriesListener?.remove()
+    }
+
+    // --- FACTORY PARA CRIAR O VIEWMODEL COM PARÂMETROS ---
+    @Suppress("UNCHECKED_CAST")
+    class Factory(private val estimatedLmp: LocalDate?) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return JournalViewModel(estimatedLmp) as T
+        }
     }
 }

@@ -25,17 +25,20 @@ import java.util.Locale
 @Composable
 fun JournalScreen(
     contentPadding: PaddingValues,
+    estimatedLmp: LocalDate?, // Recebe a data de início da gestação
     onNavigateToEntry: (date: String) -> Unit
 ) {
-    val viewModel: JournalViewModel = viewModel()
+    // --- CRIA O VIEWMODEL USANDO A FACTORY ---
+    val viewModel: JournalViewModel = viewModel(factory = JournalViewModel.Factory(estimatedLmp))
+
     val uiState by viewModel.uiState.collectAsState()
     val selectedMonth by viewModel.selectedMonth.collectAsState()
     val entriesForMonth by viewModel.entriesForSelectedMonth.collectAsState()
+    val isNextMonthEnabled by viewModel.isNextMonthEnabled.collectAsState()
+    val isPreviousMonthEnabled by viewModel.isPreviousMonthEnabled.collectAsState()
 
-    // --- ESTADO PARA CONTROLAR O DIÁLOGO DE EXCLUSÃO ---
     var entryToDelete by remember { mutableStateOf<JournalEntry?>(null) }
 
-    // --- DIÁLOGO DE CONFIRMAÇÃO ---
     entryToDelete?.let { entry ->
         AlertDialog(
             onDismissRequest = { entryToDelete = null },
@@ -68,7 +71,9 @@ fun JournalScreen(
         MonthNavigator(
             selectedMonth = selectedMonth,
             onPreviousClick = { viewModel.selectPreviousMonth() },
-            onNextClick = { viewModel.selectNextMonth() }
+            onNextClick = { viewModel.selectNextMonth() },
+            isPreviousEnabled = isPreviousMonthEnabled, // Passa o estado do botão
+            isNextEnabled = isNextMonthEnabled        // Passa o estado do botão
         )
 
         if (uiState.isLoading) {
@@ -87,7 +92,7 @@ fun JournalScreen(
                         entry = entry,
                         onClick = { onNavigateToEntry(entry.date) },
                         onEditClick = { onNavigateToEntry(entry.date) },
-                        onDeleteClick = { entryToDelete = it } // Mostra o diálogo ao clicar
+                        onDeleteClick = { entryToDelete = it }
                     )
                 }
             }
@@ -99,7 +104,9 @@ fun JournalScreen(
 fun MonthNavigator(
     selectedMonth: YearMonth,
     onPreviousClick: () -> Unit,
-    onNextClick: () -> Unit
+    onNextClick: () -> Unit,
+    isPreviousEnabled: Boolean,
+    isNextEnabled: Boolean
 ) {
     val formatter = DateTimeFormatter.ofPattern("MMMM 'de' yyyy", Locale("pt", "BR"))
     val monthText = selectedMonth.format(formatter)
@@ -116,7 +123,7 @@ fun MonthNavigator(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            IconButton(onClick = onPreviousClick) {
+            IconButton(onClick = onPreviousClick, enabled = isPreviousEnabled) {
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Mês anterior")
             }
             Text(
@@ -124,7 +131,7 @@ fun MonthNavigator(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-            IconButton(onClick = onNextClick) {
+            IconButton(onClick = onNextClick, enabled = isNextEnabled) {
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Próximo mês")
             }
         }
@@ -154,6 +161,7 @@ fun EmptyMonthScreen() {
         )
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
