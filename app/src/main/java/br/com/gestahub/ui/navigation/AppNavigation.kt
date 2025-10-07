@@ -1,3 +1,4 @@
+// Local: app/src/main/java/br/com/gestahub/ui/navigation/AppNavigation.kt
 package br.com.gestahub.ui.navigation
 
 import androidx.compose.foundation.layout.Box
@@ -69,6 +70,7 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
     var showDeleteDialog by remember { mutableStateOf<Appointment?>(null) }
     var showClearDialog by remember { mutableStateOf<Appointment?>(null) }
 
+
     LaunchedEffect(appointmentsUiState.userMessage) {
         appointmentsUiState.userMessage?.let { message ->
             scope.launch {
@@ -122,8 +124,6 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                 )
             }
         },
-        // --- CORREÇÃO APLICADA AQUI ---
-        // Lógica do FloatingActionButton movida para cá
         floatingActionButton = {
             if (currentRoute == "appointments") {
                 FloatingActionButton(onClick = {
@@ -133,6 +133,8 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                 }
             } else if (currentRoute == "journal") {
                 FloatingActionButton(onClick = {
+                    // --- ALTERAÇÃO APLICADA AQUI ---
+                    // Navega diretamente para o formulário com a data de hoje
                     val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
                     navController.navigate("journalEntry/$today")
                 }) {
@@ -259,8 +261,22 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                 route = "journalEntry/{date}",
                 arguments = listOf(navArgument("date") { type = NavType.StringType })
             ) {
+                // --- ALTERAÇÃO APLICADA AQUI ---
+                // Passando os dados necessários para a tela do formulário
+                val dataState = homeUiState.dataState
+                var lmp: LocalDate? = null
+                if (dataState is GestationalDataState.HasData) {
+                    lmp = dataState.estimatedLmp
+                }
+
                 JournalEntryScreen(
-                    onNavigateBack = { navController.popBackStack() }
+                    estimatedLmp = lmp,
+                    onNavigateBack = { navController.popBackStack() },
+                    onDateChange = { newDate ->
+                        // Substitui a tela atual pela nova data
+                        navController.popBackStack()
+                        navController.navigate("journalEntry/$newDate")
+                    }
                 )
             }
         }

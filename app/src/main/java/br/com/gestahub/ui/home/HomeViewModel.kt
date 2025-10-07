@@ -1,3 +1,4 @@
+// Local: app/src/main/java/br/com/gestahub/ui/home/HomeViewModel.kt
 package br.com.gestahub.ui.home
 
 import androidx.lifecycle.ViewModel
@@ -13,8 +14,6 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.*
 
-
-// ... (as classes GestationalDataState, GestationalData e UiState continuam iguais) ...
 sealed class GestationalDataState {
     object Loading : GestationalDataState()
     object NoData : GestationalDataState()
@@ -25,7 +24,9 @@ sealed class GestationalDataState {
         val countdownWeeks: Int,
         val countdownDays: Int,
         val gestationalData: GestationalData,
-        val weeklyInfo: WeeklyInfo?
+        val weeklyInfo: WeeklyInfo?,
+        // --- NOVA PROPRIEDADE ADICIONADA AQUI ---
+        val estimatedLmp: LocalDate?
     ) : GestationalDataState()
 }
 
@@ -41,7 +42,7 @@ data class UiState(
 )
 class HomeViewModel : ViewModel() {
 
-    private val repository = GestationalProfileRepository() // Instancia o repositório
+    private val repository = GestationalProfileRepository()
 
     private val _uiState = MutableStateFlow(UiState())
     val uiState = _uiState.asStateFlow()
@@ -89,7 +90,7 @@ class HomeViewModel : ViewModel() {
             return
         }
 
-        val today = LocalDate.now(ZoneId.systemDefault()) // <-- Alteração aqui
+        val today = LocalDate.now(ZoneId.systemDefault())
         val gestationalAgeInDays = ChronoUnit.DAYS.between(estimatedLmp, today).toInt()
         val currentWeeks = gestationalAgeInDays / 7
         val currentDays = gestationalAgeInDays % 7
@@ -109,7 +110,9 @@ class HomeViewModel : ViewModel() {
                     countdownWeeks = if (remainingDays >= 0) remainingDays / 7 else 0,
                     countdownDays = if (remainingDays >= 0) remainingDays % 7 else 0,
                     gestationalData = data,
-                    weeklyInfo = weeklyInfo
+                    weeklyInfo = weeklyInfo,
+                    // --- VALOR DA NOVA PROPRIEDADE PASSADO AQUI ---
+                    estimatedLmp = estimatedLmp
                 )
             )
         }

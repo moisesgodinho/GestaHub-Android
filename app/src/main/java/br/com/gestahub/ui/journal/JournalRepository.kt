@@ -14,9 +14,8 @@ class JournalRepository {
 
     fun getJournalEntriesListener(onUpdate: (List<JournalEntry>) -> Unit): ListenerRegistration? {
         if (userId == null) return null
-        // --- CORREÇÃO APLICADA AQUI ---
         return db.collection("users").document(userId)
-            .collection("symptomEntries") // Alterado de "journalEntries"
+            .collection("symptomEntries")
             .orderBy("date")
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null) {
@@ -30,21 +29,26 @@ class JournalRepository {
 
     suspend fun saveJournalEntry(entry: JournalEntry) {
         if (userId == null) return
-        // --- CORREÇÃO APLICADA AQUI ---
         val docRef = db.collection("users").document(userId)
-            .collection("symptomEntries").document(entry.date) // Alterado de "journalEntries"
+            .collection("symptomEntries").document(entry.date)
         docRef.set(entry).await()
     }
 
     suspend fun getJournalEntry(date: String): JournalEntry? {
         if (userId == null) return null
         return try {
-            // --- CORREÇÃO APLICADA AQUI ---
             val doc = db.collection("users").document(userId)
-                .collection("symptomEntries").document(date).get().await() // Alterado de "journalEntries"
+                .collection("symptomEntries").document(date).get().await()
             doc.toObject(JournalEntry::class.java)
         } catch (e: Exception) {
             null
         }
+    }
+
+    // --- NOVA FUNÇÃO DE EXCLUSÃO ADICIONADA AQUI ---
+    suspend fun deleteJournalEntry(entry: JournalEntry) {
+        if (userId == null) return
+        db.collection("users").document(userId)
+            .collection("symptomEntries").document(entry.date).delete().await()
     }
 }
