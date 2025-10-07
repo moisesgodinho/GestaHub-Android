@@ -22,12 +22,16 @@ import br.com.gestahub.ui.calculator.CalculatorScreen
 import br.com.gestahub.ui.components.AppHeader
 import br.com.gestahub.ui.home.GestationalDataState
 import br.com.gestahub.ui.home.HomeScreen
+import br.com.gestahub.ui.journal.JournalEntryScreen
+import br.com.gestahub.ui.journal.JournalScreen
 import br.com.gestahub.ui.main.MainViewModel
 import br.com.gestahub.ui.placeholder.ComingSoonScreen
 import br.com.gestahub.ui.profile.EditProfileScreen
 import br.com.gestahub.ui.profile.ProfileScreen
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 data class NavItem(
     val label: String,
@@ -118,12 +122,21 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                 )
             }
         },
+        // --- CORREÇÃO APLICADA AQUI ---
+        // Lógica do FloatingActionButton movida para cá
         floatingActionButton = {
             if (currentRoute == "appointments") {
                 FloatingActionButton(onClick = {
                     navController.navigate("appointmentForm")
                 }) {
                     Icon(Icons.Default.Add, contentDescription = "Adicionar Consulta")
+                }
+            } else if (currentRoute == "journal") {
+                FloatingActionButton(onClick = {
+                    val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+                    navController.navigate("journalEntry/$today")
+                }) {
+                    Icon(Icons.Default.Add, contentDescription = "Adicionar Registro no Diário")
                 }
             }
         },
@@ -190,7 +203,14 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                     }
                 )
             }
-            composable("journal") { Box(Modifier.padding(innerPadding)) { ComingSoonScreen() } }
+            composable("journal") {
+                JournalScreen(
+                    contentPadding = innerPadding,
+                    onNavigateToEntry = { date ->
+                        navController.navigate("journalEntry/$date")
+                    }
+                )
+            }
             composable("weight") { Box(Modifier.padding(innerPadding)) { ComingSoonScreen() } }
             composable("more") { Box(Modifier.padding(innerPadding)) { ComingSoonScreen() } }
             composable(
@@ -205,7 +225,6 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
-            // --- CORREÇÃO APLICADA AQUI ---
             composable(
                 route = "calculator?lmp={lmp}&examDate={examDate}&weeks={weeks}&days={days}",
                 arguments = listOf(
@@ -234,6 +253,14 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                 EditProfileScreen(
                     onSaveSuccess = { navController.popBackStack() },
                     onCancelClick = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = "journalEntry/{date}",
+                arguments = listOf(navArgument("date") { type = NavType.StringType })
+            ) {
+                JournalEntryScreen(
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
         }
