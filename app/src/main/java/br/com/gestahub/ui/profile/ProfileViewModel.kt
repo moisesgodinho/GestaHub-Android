@@ -93,12 +93,7 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    // --- CORREÇÃO APLICADA AQUI ---
     fun signOut() {
-        // Primeiro, terminamos a instância do Firestore para limpar seu cache e estado de permissões.
-        Firebase.firestore.terminate().addOnCompleteListener {
-            // Após a conclusão da terminação, fazemos o logout do serviço de autenticação.
-            Firebase.auth.signOut()
-        }
+        Firebase.auth.signOut()
     }
 }

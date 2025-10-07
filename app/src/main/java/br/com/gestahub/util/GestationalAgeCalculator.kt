@@ -39,8 +39,7 @@ object GestationalAgeCalculator {
      * @return A data de início formatada como "dd/MM/yy".
      */
     fun getWindowStartDate(lmp: LocalDate, startWeek: Int): String {
-        // --- CORREÇÃO APLICADA AQUI ---
-        // O início da semana N é após (N-1) semanas completas da DUM.
+        // CORREÇÃO: O início da semana N é após (N-1) semanas completas.
         val startDate = lmp.plusWeeks((startWeek - 1).toLong())
         return startDate.format(displayFormatter)
     }
@@ -52,9 +51,7 @@ object GestationalAgeCalculator {
      * @return A data de fim formatada como "dd/MM/yy".
      */
     fun getWindowEndDate(lmp: LocalDate, endWeek: Int): String {
-        // --- CORREÇÃO APLICADA AQUI ---
-        // O fim da semana N é ao final de N semanas completas, menos um dia.
-        // Ex: O fim da semana 11 é DUM + 11 semanas - 1 dia.
+        // CORREÇÃO: O fim da semana N é ao final de N semanas, menos um dia.
         val endDate = lmp.plusWeeks(endWeek.toLong()).minusDays(1)
         return endDate.format(displayFormatter)
     }
