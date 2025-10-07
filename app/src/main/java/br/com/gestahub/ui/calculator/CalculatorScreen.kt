@@ -12,7 +12,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.Instant
@@ -59,7 +63,6 @@ fun CalculatorScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Calculadoras Gestacionais") },
-                // --- SETA DE VOLTAR ADICIONADA AQUI ---
                 navigationIcon = {
                     IconButton(onClick = onCancelClick) {
                         Icon(
@@ -86,11 +89,41 @@ fun CalculatorScreen(
                 }
             }
 
+            // Textos informativos adicionados aqui
+            InfoSection()
+
             when (selectedTab) {
                 0 -> DumCalculator(viewModel, saveState is SaveState.Loading, initialLmp, onCancelClick)
                 1 -> UltrasoundCalculator(viewModel, saveState is SaveState.Loading, initialExamDate, initialWeeks, initialDays, onCancelClick)
             }
         }
+    }
+}
+
+@Composable
+fun InfoSection() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = "O cálculo pela data do ultrassom (especialmente o do 1º trimestre) é considerado mais preciso.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = buildAnnotatedString {
+                append("Para a DUM, utilize sempre o ")
+                withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                    append("primeiro dia")
+                }
+                append(" do seu último ciclo menstrual.")
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
