@@ -1,11 +1,9 @@
 package br.com.gestahub.ui.home
 
 import androidx.lifecycle.ViewModel
+import br.com.gestahub.data.GestationalProfileRepository
 import br.com.gestahub.data.WeeklyInfo
 import br.com.gestahub.data.WeeklyInfoProvider
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -15,6 +13,8 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.*
 
+
+// ... (as classes GestationalDataState, GestationalData e UiState continuam iguais) ...
 sealed class GestationalDataState {
     object Loading : GestationalDataState()
     object NoData : GestationalDataState()
@@ -39,10 +39,9 @@ data class GestationalData(
 data class UiState(
     val dataState: GestationalDataState = GestationalDataState.Loading
 )
-
 class HomeViewModel : ViewModel() {
-    private val db = Firebase.firestore
-    private val userId = Firebase.auth.currentUser?.uid
+
+    private val repository = GestationalProfileRepository() // Instancia o repositório
 
     private val _uiState = MutableStateFlow(UiState())
     val uiState = _uiState.asStateFlow()
@@ -52,30 +51,28 @@ class HomeViewModel : ViewModel() {
     }
 
     private fun listenToGestationalData() {
-        if (userId == null) {
-            _uiState.update { it.copy(dataState = GestationalDataState.NoData) }
-            return
-        }
+        try {
+            repository.getGestationalProfileFlow().addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null || !snapshot.exists()) {
+                    _uiState.update { it.copy(dataState = GestationalDataState.NoData) }
+                    return@addSnapshotListener
+                }
 
-        val userDocRef = db.collection("users").document(userId)
-        userDocRef.addSnapshotListener { snapshot, error ->
-            if (error != null || snapshot == null || !snapshot.exists()) {
-                _uiState.update { it.copy(dataState = GestationalDataState.NoData) }
-                return@addSnapshotListener
+                val profile = snapshot.get("gestationalProfile") as? Map<*, *>
+                val lmpString = profile?.get("lmp") as? String
+                val ultrasoundMap = profile?.get("ultrasound") as? Map<*, *>
+
+                val rawData = GestationalData(
+                    lmp = lmpString,
+                    ultrasoundExamDate = ultrasoundMap?.get("examDate") as? String,
+                    weeksAtExam = ultrasoundMap?.get("weeksAtExam") as? String,
+                    daysAtExam = ultrasoundMap?.get("daysAtExam") as? String
+                )
+
+                calculateUiState(rawData)
             }
-
-            val profile = snapshot.get("gestationalProfile") as? Map<*, *>
-            val lmpString = profile?.get("lmp") as? String
-            val ultrasoundMap = profile?.get("ultrasound") as? Map<*, *>
-
-            val rawData = GestationalData(
-                lmp = lmpString,
-                ultrasoundExamDate = ultrasoundMap?.get("examDate") as? String,
-                weeksAtExam = ultrasoundMap?.get("weeksAtExam") as? String,
-                daysAtExam = ultrasoundMap?.get("daysAtExam") as? String
-            )
-
-            calculateUiState(rawData)
+        } catch (e: Exception) {
+            _uiState.update { it.copy(dataState = GestationalDataState.NoData) }
         }
     }
 
