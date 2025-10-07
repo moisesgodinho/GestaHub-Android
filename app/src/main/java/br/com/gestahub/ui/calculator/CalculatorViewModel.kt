@@ -72,7 +72,7 @@ class CalculatorViewModel : ViewModel() {
             val weeksInt = weeks.toIntOrNull()
             val daysInt = days.toIntOrNull()
 
-            if (weeksInt == null || daysInt == null || weeksInt < 0 || daysInt < 0 || daysInt > 6) {
+            if (weeksInt == null || daysInt == null || weeksInt < 0 || daysInt !in 0..6) { // <-- Validação aprimorada
                 _saveState.value = SaveState.Error("Semanas ou dias inválidos.")
                 return@launch
             }

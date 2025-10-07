@@ -51,7 +51,8 @@ class AppointmentsViewModel : ViewModel() {
         db.collection("users").document(userId).collection("appointments")
             .addSnapshotListener { snapshot, e ->
                 if (e != null) {
-                    _uiState.update { it.copy(userMessage = "Erro ao buscar consultas.") }
+                    Log.e("AppointmentsViewModel", "Erro ao buscar consultas", e) // <-- Log detalhado
+                    _uiState.update { it.copy(userMessage = "Ocorreu um erro ao buscar suas consultas.") }
                     return@addSnapshotListener
                 }
                 _manualAppointments.value = snapshot?.documents?.mapNotNull { it.toObject<ManualAppointment>() } ?: emptyList()

@@ -89,7 +89,7 @@ class HomeViewModel : ViewModel() {
             return
         }
 
-        val today = LocalDate.now(ZoneId.of("America/Sao_Paulo"))
+        val today = LocalDate.now(ZoneId.systemDefault()) // <-- Alteração aqui
         val gestationalAgeInDays = ChronoUnit.DAYS.between(estimatedLmp, today).toInt()
         val currentWeeks = gestationalAgeInDays / 7
         val currentDays = gestationalAgeInDays % 7
