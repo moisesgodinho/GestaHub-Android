@@ -30,23 +30,45 @@ fun JournalScreen(
     onNavigateToEntry: (date: String) -> Unit
 ) {
     val viewModel: JournalViewModel = viewModel(factory = JournalViewModel.Factory(estimatedLmp))
-
-    val uiState by viewModel.uiState.collectAsState()
     val allEntries by viewModel.allEntries.collectAsState()
-
-    // Estados para o Calendário
     val calendarMonth by viewModel.calendarMonth.collectAsState()
+    val entriesForHistoryMonth by viewModel.entriesForHistoryMonth.collectAsState()
     val isNextCalendarMonthEnabled by viewModel.isNextCalendarMonthEnabled.collectAsState()
     val isPreviousCalendarMonthEnabled by viewModel.isPreviousCalendarMonthEnabled.collectAsState()
-
-    // Estados para o Histórico
     val historyMonth by viewModel.historyMonth.collectAsState()
-    val entriesForHistoryMonth by viewModel.entriesForHistoryMonth.collectAsState()
     val isNextHistoryMonthEnabled by viewModel.isNextHistoryMonthEnabled.collectAsState()
     val isPreviousHistoryMonthEnabled by viewModel.isPreviousHistoryMonthEnabled.collectAsState()
 
-
+    var entryToShow by remember { mutableStateOf<JournalEntry?>(null) }
+    var dateToAdd by remember { mutableStateOf<LocalDate?>(null) }
     var entryToDelete by remember { mutableStateOf<JournalEntry?>(null) }
+
+    entryToShow?.let {
+        ViewJournalEntryDialog(
+            entry = it,
+            onDismiss = { entryToShow = null },
+            onEdit = { entry ->
+                entryToShow = null
+                onNavigateToEntry(entry.date)
+            },
+            onDelete = { entry ->
+                entryToShow = null
+                entryToDelete = entry
+            }
+        )
+    }
+
+    dateToAdd?.let {
+        NewJournalEntryDialog(
+            date = it,
+            onDismiss = { dateToAdd = null },
+            onConfirm = {
+                val dateString = it.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                dateToAdd = null
+                onNavigateToEntry(dateString)
+            }
+        )
+    }
 
     entryToDelete?.let { entry ->
         AlertDialog(
@@ -75,7 +97,6 @@ fun JournalScreen(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // --- SEÇÃO DO CALENDÁRIO COM NAVEGADOR PRÓPRIO ---
         item {
             MonthNavigator(
                 selectedMonth = calendarMonth,
@@ -89,11 +110,18 @@ fun JournalScreen(
         item {
             JournalCalendar(
                 entries = allEntries,
-                displayMonth = calendarMonth
+                displayMonth = calendarMonth,
+                minDate = viewModel.minMonth?.atDay(1),
+                onDateClick = { date, entry ->
+                    if (entry != null) {
+                        entryToShow = entry
+                    } else {
+                        dateToAdd = date
+                    }
+                }
             )
         }
 
-        // --- SEÇÃO DO HISTÓRICO COM NAVEGADOR PRÓPRIO ---
         item {
             MonthNavigator(
                 selectedMonth = historyMonth,
@@ -104,13 +132,7 @@ fun JournalScreen(
             )
         }
 
-        if (uiState.isLoading) {
-            item {
-                Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            }
-        } else if (entriesForHistoryMonth.isEmpty()) {
+        if (entriesForHistoryMonth.isEmpty()) {
             item {
                 EmptyMonthScreen()
             }
@@ -185,7 +207,7 @@ fun EmptyMonthScreen() {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Não há registros no diário para este mês. Use as setas para navegar.",
+            text = "Não há registros no diário para este mês.",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -194,28 +216,12 @@ fun EmptyMonthScreen() {
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun JournalItem(
     entry: JournalEntry,
     onEditClick: (JournalEntry) -> Unit,
     onDeleteClick: (JournalEntry) -> Unit
 ) {
-    val moodsMap = listOf(
-        "😄 Feliz", "😌 Tranquila", "🥰 Amorosa", "🎉 Animada", "😴 Cansada",
-        "🥱 Sonolenta", "🥺 Sensível", "😟 Ansiosa", "🤔 Preocupada", "😠 Irritada",
-        "🤢 Indisposta", "😖 Com dores"
-    ).associate {
-        val value = it.split(" ").last()
-        val label = it
-        value to label
-    }
-
-    val date = LocalDate.parse(entry.date)
-    val dayFormatter = DateTimeFormatter.ofPattern("EEEE, dd", Locale("pt", "BR"))
-    val formattedDate = date.format(dayFormatter)
-        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-
     val cardColor = if (isSystemInDarkTheme()) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
@@ -227,22 +233,14 @@ fun JournalItem(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = formattedDate,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.weight(1f)
-                )
+                // --- CHAMADA CORRIGIDA: SEM COR DE DESTAQUE ---
+                DialogTitle(date = LocalDate.parse(entry.date))
+                Spacer(modifier = Modifier.weight(1f))
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     IconButton(onClick = { onEditClick(entry) }) {
                         Icon(Icons.Default.Edit, contentDescription = "Editar Registro")
@@ -252,56 +250,8 @@ fun JournalItem(
                     }
                 }
             }
-
-            if (entry.mood.isNotBlank()) {
-                val moodLabel = moodsMap[entry.mood] ?: entry.mood
-                Text(
-                    text = moodLabel,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            if (entry.symptoms.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "Sintomas:",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        entry.symptoms.forEach { symptom ->
-                            SuggestionChip(
-                                onClick = { /* Apenas para exibição */ },
-                                label = { Text(symptom) },
-                                border = null,
-                                colors = SuggestionChipDefaults.suggestionChipColors(
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                    labelColor = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (entry.notes.isNotBlank()) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "Anotações:",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = entry.notes,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.height(8.dp))
+            JournalItemContent(entry = entry)
         }
     }
 }

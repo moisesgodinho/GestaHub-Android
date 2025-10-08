@@ -17,7 +17,7 @@ data class JournalUiState(
 )
 
 class JournalViewModel(
-    private val estimatedLmp: LocalDate?
+    val estimatedLmp: LocalDate?
 ) : ViewModel() {
     private val repository = JournalRepository()
     private var entriesListener: ListenerRegistration? = null
@@ -35,19 +35,20 @@ class JournalViewModel(
     private val _historyMonth = MutableStateFlow(YearMonth.now())
     val historyMonth = _historyMonth.asStateFlow()
 
-    private val maxMonth = YearMonth.now()
-    private val minMonth = estimatedLmp?.let { YearMonth.from(it.minusMonths(2)) }
+
+    val maxMonth: YearMonth = YearMonth.now()
+    val minMonth: YearMonth? = estimatedLmp?.let { YearMonth.from(it.minusMonths(2)) }
 
     // Controlos para o navegador do Calendário
-    val isNextCalendarMonthEnabled = calendarMonth.map { it.isBefore(maxMonth) }
+    val isNextCalendarMonthEnabled: StateFlow<Boolean> = _calendarMonth.map { it.isBefore(maxMonth) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-    val isPreviousCalendarMonthEnabled = calendarMonth.map { minMonth == null || it.isAfter(minMonth) }
+    val isPreviousCalendarMonthEnabled: StateFlow<Boolean> = _calendarMonth.map { minMonth == null || it.isAfter(minMonth) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     // Controlos para o navegador do Histórico
-    val isNextHistoryMonthEnabled = historyMonth.map { it.isBefore(maxMonth) }
+    val isNextHistoryMonthEnabled: StateFlow<Boolean> = _historyMonth.map { it.isBefore(maxMonth) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-    val isPreviousHistoryMonthEnabled = historyMonth.map { minMonth == null || it.isAfter(minMonth) }
+    val isPreviousHistoryMonthEnabled: StateFlow<Boolean> = _historyMonth.map { minMonth == null || it.isAfter(minMonth) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
 
