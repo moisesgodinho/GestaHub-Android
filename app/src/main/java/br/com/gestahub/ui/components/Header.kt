@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Nightlight
+import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.WbSunny
 import androidx.compose.material3.*
@@ -79,7 +79,7 @@ fun ThemeToggleButton(
 ) {
     IconButton(onClick = onToggle, modifier = modifier) {
         Icon(
-            imageVector = if (isDarkTheme) Icons.Outlined.WbSunny else Icons.Outlined.Nightlight,
+            imageVector = if (isDarkTheme) Icons.Outlined.WbSunny else Icons.Outlined.DarkMode,
             contentDescription = "Mudar tema"
         )
     }

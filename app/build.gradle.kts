@@ -79,4 +79,5 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.coroutines.playservices)
+    implementation(libs.androidx.emoji2) // <-- ADICIONE ESTA LINHA
 }

@@ -97,16 +97,7 @@ fun JournalScreen(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item {
-            MonthNavigator(
-                selectedMonth = calendarMonth,
-                onPreviousClick = { viewModel.selectPreviousCalendarMonth() },
-                onNextClick = { viewModel.selectNextCalendarMonth() },
-                isPreviousEnabled = isPreviousCalendarMonthEnabled,
-                isNextEnabled = isNextCalendarMonthEnabled
-            )
-        }
-
+        // --- CHAMADA SIMPLIFICADA PARA O NOVO COMPONENTE DE CALENDÁRIO ---
         item {
             JournalCalendar(
                 entries = allEntries,
@@ -118,7 +109,11 @@ fun JournalScreen(
                     } else {
                         dateToAdd = date
                     }
-                }
+                },
+                onPreviousClick = { viewModel.selectPreviousCalendarMonth() },
+                onNextClick = { viewModel.selectNextCalendarMonth() },
+                isPreviousEnabled = isPreviousCalendarMonthEnabled,
+                isNextEnabled = isNextCalendarMonthEnabled
             )
         }
 
@@ -128,7 +123,7 @@ fun JournalScreen(
                 onPreviousClick = { viewModel.selectPreviousHistoryMonth() },
                 onNextClick = { viewModel.selectNextHistoryMonth() },
                 isPreviousEnabled = isPreviousHistoryMonthEnabled,
-                isNextEnabled = isNextHistoryMonthEnabled
+                isNextEnabled = isNextHistoryMonthEnabled,
             )
         }
 
@@ -154,7 +149,8 @@ fun MonthNavigator(
     onPreviousClick: () -> Unit,
     onNextClick: () -> Unit,
     isPreviousEnabled: Boolean,
-    isNextEnabled: Boolean
+    isNextEnabled: Boolean,
+    title: String? = null // Parâmetro de título opcional
 ) {
     val formatter = DateTimeFormatter.ofPattern("MMMM 'de' yyyy", Locale("pt", "BR"))
     val monthText = selectedMonth.format(formatter)
@@ -171,23 +167,34 @@ fun MonthNavigator(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp, horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            IconButton(onClick = onPreviousClick, enabled = isPreviousEnabled) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Mês anterior")
+        Column {
+            title?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
+                )
+                Divider(modifier = Modifier.padding(horizontal = 16.dp))
             }
-            Text(
-                text = monthText,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            IconButton(onClick = onNextClick, enabled = isNextEnabled) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Próximo mês")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp, horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                IconButton(onClick = onPreviousClick, enabled = isPreviousEnabled) {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Mês anterior")
+                }
+                Text(
+                    text = monthText,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                IconButton(onClick = onNextClick, enabled = isNextEnabled) {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Próximo mês")
+                }
             }
         }
     }
@@ -238,7 +245,6 @@ fun JournalItem(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // --- CHAMADA CORRIGIDA: SEM COR DE DESTAQUE ---
                 DialogTitle(date = LocalDate.parse(entry.date))
                 Spacer(modifier = Modifier.weight(1f))
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {

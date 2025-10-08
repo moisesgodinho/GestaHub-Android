@@ -8,28 +8,36 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun JournalCalendar(
     entries: List<JournalEntry>,
     displayMonth: YearMonth,
     minDate: LocalDate?,
-    onDateClick: (date: LocalDate, entry: JournalEntry?) -> Unit
+    onDateClick: (date: LocalDate, entry: JournalEntry?) -> Unit,
+    // --- PARÂMETROS DE NAVEGAÇÃO ADICIONADOS AQUI ---
+    onPreviousClick: () -> Unit,
+    onNextClick: () -> Unit,
+    isPreviousEnabled: Boolean,
+    isNextEnabled: Boolean
 ) {
     val firstDayOfMonth = displayMonth.atDay(1)
     val firstDayOfWeek = firstDayOfMonth.dayOfWeek.value % 7
@@ -48,6 +56,18 @@ fun JournalCalendar(
         colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // --- NAVEGADOR DO MÊS INTEGRADO AQUI ---
+            MonthNavigator(
+                selectedMonth = displayMonth,
+                onPreviousClick = onPreviousClick,
+                onNextClick = onNextClick,
+                isPreviousEnabled = isPreviousEnabled,
+                isNextEnabled = isNextEnabled
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Cabeçalho com os dias da semana
             Row(modifier = Modifier.fillMaxWidth()) {
                 val daysOfWeek = listOf("D", "S", "T", "Q", "Q", "S", "S")
                 daysOfWeek.forEach { day ->
@@ -63,6 +83,7 @@ fun JournalCalendar(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Grid com os dias do mês
             var dayCounter = 1
             for (week in 0 until 6) {
                 if (dayCounter > daysInMonth) break
@@ -92,6 +113,38 @@ fun JournalCalendar(
         }
     }
 }
+
+@Composable
+private fun MonthNavigator(
+    selectedMonth: YearMonth,
+    onPreviousClick: () -> Unit,
+    onNextClick: () -> Unit,
+    isPreviousEnabled: Boolean,
+    isNextEnabled: Boolean
+) {
+    val formatter = DateTimeFormatter.ofPattern("MMMM 'de' yyyy", Locale("pt", "BR"))
+    val monthText = selectedMonth.format(formatter)
+        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        IconButton(onClick = onPreviousClick, enabled = isPreviousEnabled) {
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Mês anterior")
+        }
+        Text(
+            text = monthText,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        IconButton(onClick = onNextClick, enabled = isNextEnabled) {
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Próximo mês")
+        }
+    }
+}
+
 
 @Composable
 fun RowScope.DayCell(
