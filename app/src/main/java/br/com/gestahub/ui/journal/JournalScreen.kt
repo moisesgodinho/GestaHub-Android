@@ -1,6 +1,7 @@
 // Local: app/src/main/java/br/com/gestahub/ui/journal/JournalScreen.kt
 package br.com.gestahub.ui.journal
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -25,10 +26,9 @@ import java.util.Locale
 @Composable
 fun JournalScreen(
     contentPadding: PaddingValues,
-    estimatedLmp: LocalDate?, // Recebe a data de início da gestação
+    estimatedLmp: LocalDate?,
     onNavigateToEntry: (date: String) -> Unit
 ) {
-    // --- CRIA O VIEWMODEL USANDO A FACTORY ---
     val viewModel: JournalViewModel = viewModel(factory = JournalViewModel.Factory(estimatedLmp))
 
     val uiState by viewModel.uiState.collectAsState()
@@ -72,8 +72,8 @@ fun JournalScreen(
             selectedMonth = selectedMonth,
             onPreviousClick = { viewModel.selectPreviousMonth() },
             onNextClick = { viewModel.selectNextMonth() },
-            isPreviousEnabled = isPreviousMonthEnabled, // Passa o estado do botão
-            isNextEnabled = isNextMonthEnabled        // Passa o estado do botão
+            isPreviousEnabled = isPreviousMonthEnabled,
+            isNextEnabled = isNextMonthEnabled
         )
 
         if (uiState.isLoading) {
@@ -85,12 +85,12 @@ fun JournalScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(entriesForMonth, key = { it.id }) { entry ->
                     JournalItem(
                         entry = entry,
-                        onClick = { onNavigateToEntry(entry.date) },
                         onEditClick = { onNavigateToEntry(entry.date) },
                         onDeleteClick = { entryToDelete = it }
                     )
@@ -112,9 +112,16 @@ fun MonthNavigator(
     val monthText = selectedMonth.format(formatter)
         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
 
+    val cardColor = if (isSystemInDarkTheme()) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Row(
             modifier = Modifier
@@ -167,7 +174,6 @@ fun EmptyMonthScreen() {
 @Composable
 fun JournalItem(
     entry: JournalEntry,
-    onClick: () -> Unit,
     onEditClick: (JournalEntry) -> Unit,
     onDeleteClick: (JournalEntry) -> Unit
 ) {
@@ -186,10 +192,18 @@ fun JournalItem(
     val formattedDate = date.format(dayFormatter)
         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
 
+    val cardColor = if (isSystemInDarkTheme()) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+
+    // --- CORREÇÃO APLICADA AQUI ---
+    // Removido o parâmetro "onClick" do Card para que ele não seja mais clicável
     Card(
-        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -221,7 +235,7 @@ fun JournalItem(
                 val moodLabel = moodsMap[entry.mood] ?: entry.mood
                 Text(
                     text = moodLabel,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -242,9 +256,10 @@ fun JournalItem(
                             SuggestionChip(
                                 onClick = { /* Apenas para exibição */ },
                                 label = { Text(symptom) },
+                                border = null,
                                 colors = SuggestionChipDefaults.suggestionChipColors(
-                                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                                    labelColor = MaterialTheme.colorScheme.onTertiaryContainer
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    labelColor = MaterialTheme.colorScheme.onSecondaryContainer
                                 )
                             )
                         }
