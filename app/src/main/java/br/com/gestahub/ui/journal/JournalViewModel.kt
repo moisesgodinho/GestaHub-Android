@@ -17,7 +17,6 @@ data class JournalUiState(
 )
 
 class JournalViewModel(
-    // Recebe a data de início da gestação
     private val estimatedLmp: LocalDate?
 ) : ViewModel() {
     private val repository = JournalRepository()
@@ -27,34 +26,40 @@ class JournalViewModel(
     val uiState = _uiState.asStateFlow()
 
     private val _allEntries = MutableStateFlow<List<JournalEntry>>(emptyList())
+    val allEntries = _allEntries.asStateFlow()
 
-    private val _selectedMonth = MutableStateFlow(YearMonth.now())
-    val selectedMonth = _selectedMonth.asStateFlow()
+    // --- LÓGICA DE NAVEGAÇÃO DUPLA ---
+    private val _calendarMonth = MutableStateFlow(YearMonth.now())
+    val calendarMonth = _calendarMonth.asStateFlow()
 
-    // --- LÓGICA DE LIMITES DE NAVEGAÇÃO ---
+    private val _historyMonth = MutableStateFlow(YearMonth.now())
+    val historyMonth = _historyMonth.asStateFlow()
+
     private val maxMonth = YearMonth.now()
     private val minMonth = estimatedLmp?.let { YearMonth.from(it.minusMonths(2)) }
 
-    val isNextMonthEnabled = selectedMonth.map { it.isBefore(maxMonth) }
+    // Controlos para o navegador do Calendário
+    val isNextCalendarMonthEnabled = calendarMonth.map { it.isBefore(maxMonth) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val isPreviousCalendarMonthEnabled = calendarMonth.map { minMonth == null || it.isAfter(minMonth) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    val isPreviousMonthEnabled = selectedMonth.map {
-        minMonth == null || it.isAfter(minMonth)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    // Controlos para o navegador do Histórico
+    val isNextHistoryMonthEnabled = historyMonth.map { it.isBefore(maxMonth) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val isPreviousHistoryMonthEnabled = historyMonth.map { minMonth == null || it.isAfter(minMonth) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
 
-    val entriesForSelectedMonth: StateFlow<List<JournalEntry>> =
-        combine(_allEntries, _selectedMonth) { entries, month ->
+    // Filtra os registos para o mês do histórico
+    val entriesForHistoryMonth: StateFlow<List<JournalEntry>> =
+        combine(_allEntries, _historyMonth) { entries, month ->
             entries.filter {
                 val entryDate = LocalDate.parse(it.date)
                 YearMonth.from(entryDate) == month
             }.sortedByDescending { it.date }
         }
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5000),
-                initialValue = emptyList()
-            )
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         loadJournalEntries()
@@ -68,17 +73,22 @@ class JournalViewModel(
         }
     }
 
-    fun selectNextMonth() {
-        if (isNextMonthEnabled.value) {
-            _selectedMonth.update { it.plusMonths(1) }
-        }
+    // Funções para o Calendário
+    fun selectNextCalendarMonth() {
+        if (isNextCalendarMonthEnabled.value) _calendarMonth.update { it.plusMonths(1) }
+    }
+    fun selectPreviousCalendarMonth() {
+        if (isPreviousCalendarMonthEnabled.value) _calendarMonth.update { it.minusMonths(1) }
     }
 
-    fun selectPreviousMonth() {
-        if (isPreviousMonthEnabled.value) {
-            _selectedMonth.update { it.minusMonths(1) }
-        }
+    // Funções para o Histórico
+    fun selectNextHistoryMonth() {
+        if (isNextHistoryMonthEnabled.value) _historyMonth.update { it.plusMonths(1) }
     }
+    fun selectPreviousHistoryMonth() {
+        if (isPreviousHistoryMonthEnabled.value) _historyMonth.update { it.minusMonths(1) }
+    }
+
 
     fun deleteEntry(entry: JournalEntry) {
         viewModelScope.launch {
@@ -95,7 +105,6 @@ class JournalViewModel(
         entriesListener?.remove()
     }
 
-    // --- FACTORY PARA CRIAR O VIEWMODEL COM PARÂMETROS ---
     @Suppress("UNCHECKED_CAST")
     class Factory(private val estimatedLmp: LocalDate?) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

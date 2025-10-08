@@ -133,8 +133,6 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                 }
             } else if (currentRoute == "journal") {
                 FloatingActionButton(onClick = {
-                    // --- ALTERAÇÃO APLICADA AQUI ---
-                    // Navega diretamente para o formulário com a data de hoje
                     val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
                     navController.navigate("journalEntry/$today")
                 }) {
@@ -213,7 +211,7 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                 }
                 JournalScreen(
                     contentPadding = innerPadding,
-                    estimatedLmp = lmp, // <-- Passe o LMP aqui
+                    estimatedLmp = lmp,
                     onNavigateToEntry = { date ->
                         navController.navigate("journalEntry/$date")
                     }
@@ -267,8 +265,6 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                 route = "journalEntry/{date}",
                 arguments = listOf(navArgument("date") { type = NavType.StringType })
             ) {
-                // --- ALTERAÇÃO APLICADA AQUI ---
-                // Passando os dados necessários para a tela do formulário
                 val dataState = homeUiState.dataState
                 var lmp: LocalDate? = null
                 if (dataState is GestationalDataState.HasData) {
@@ -279,7 +275,6 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                     estimatedLmp = lmp,
                     onNavigateBack = { navController.popBackStack() },
                     onDateChange = { newDate ->
-                        // Substitui a tela atual pela nova data
                         navController.popBackStack()
                         navController.navigate("journalEntry/$newDate")
                     }

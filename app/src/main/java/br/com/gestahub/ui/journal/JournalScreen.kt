@@ -32,10 +32,19 @@ fun JournalScreen(
     val viewModel: JournalViewModel = viewModel(factory = JournalViewModel.Factory(estimatedLmp))
 
     val uiState by viewModel.uiState.collectAsState()
-    val selectedMonth by viewModel.selectedMonth.collectAsState()
-    val entriesForMonth by viewModel.entriesForSelectedMonth.collectAsState()
-    val isNextMonthEnabled by viewModel.isNextMonthEnabled.collectAsState()
-    val isPreviousMonthEnabled by viewModel.isPreviousMonthEnabled.collectAsState()
+    val allEntries by viewModel.allEntries.collectAsState()
+
+    // Estados para o Calendário
+    val calendarMonth by viewModel.calendarMonth.collectAsState()
+    val isNextCalendarMonthEnabled by viewModel.isNextCalendarMonthEnabled.collectAsState()
+    val isPreviousCalendarMonthEnabled by viewModel.isPreviousCalendarMonthEnabled.collectAsState()
+
+    // Estados para o Histórico
+    val historyMonth by viewModel.historyMonth.collectAsState()
+    val entriesForHistoryMonth by viewModel.entriesForHistoryMonth.collectAsState()
+    val isNextHistoryMonthEnabled by viewModel.isNextHistoryMonthEnabled.collectAsState()
+    val isPreviousHistoryMonthEnabled by viewModel.isPreviousHistoryMonthEnabled.collectAsState()
+
 
     var entryToDelete by remember { mutableStateOf<JournalEntry?>(null) }
 
@@ -59,42 +68,59 @@ fun JournalScreen(
         )
     }
 
-    Column(
+    LazyColumn(
         modifier = Modifier
             .padding(contentPadding)
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
+            .fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Spacer(modifier = Modifier.height(0.dp))
+        // --- SEÇÃO DO CALENDÁRIO COM NAVEGADOR PRÓPRIO ---
+        item {
+            MonthNavigator(
+                selectedMonth = calendarMonth,
+                onPreviousClick = { viewModel.selectPreviousCalendarMonth() },
+                onNextClick = { viewModel.selectNextCalendarMonth() },
+                isPreviousEnabled = isPreviousCalendarMonthEnabled,
+                isNextEnabled = isNextCalendarMonthEnabled
+            )
+        }
 
-        MonthNavigator(
-            selectedMonth = selectedMonth,
-            onPreviousClick = { viewModel.selectPreviousMonth() },
-            onNextClick = { viewModel.selectNextMonth() },
-            isPreviousEnabled = isPreviousMonthEnabled,
-            isNextEnabled = isNextMonthEnabled
-        )
+        item {
+            JournalCalendar(
+                entries = allEntries,
+                displayMonth = calendarMonth
+            )
+        }
+
+        // --- SEÇÃO DO HISTÓRICO COM NAVEGADOR PRÓPRIO ---
+        item {
+            MonthNavigator(
+                selectedMonth = historyMonth,
+                onPreviousClick = { viewModel.selectPreviousHistoryMonth() },
+                onNextClick = { viewModel.selectNextHistoryMonth() },
+                isPreviousEnabled = isPreviousHistoryMonthEnabled,
+                isNextEnabled = isNextHistoryMonthEnabled
+            )
+        }
 
         if (uiState.isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else if (entriesForMonth.isEmpty()) {
-            EmptyMonthScreen()
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(entriesForMonth, key = { it.id }) { entry ->
-                    JournalItem(
-                        entry = entry,
-                        onEditClick = { onNavigateToEntry(entry.date) },
-                        onDeleteClick = { entryToDelete = it }
-                    )
+            item {
+                Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
+            }
+        } else if (entriesForHistoryMonth.isEmpty()) {
+            item {
+                EmptyMonthScreen()
+            }
+        } else {
+            items(entriesForHistoryMonth, key = { it.id }) { entry ->
+                JournalItem(
+                    entry = entry,
+                    onEditClick = { onNavigateToEntry(entry.date) },
+                    onDeleteClick = { entryToDelete = it }
+                )
             }
         }
     }
@@ -148,9 +174,7 @@ fun MonthNavigator(
 @Composable
 fun EmptyMonthScreen() {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
+        modifier = Modifier.padding(24.dp).fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -161,7 +185,7 @@ fun EmptyMonthScreen() {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Não há registros no diário para este mês. Use as setas para navegar ou adicione um novo registro para hoje.",
+            text = "Não há registros no diário para este mês. Use as setas para navegar.",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -198,8 +222,6 @@ fun JournalItem(
         MaterialTheme.colorScheme.surface
     }
 
-    // --- CORREÇÃO APLICADA AQUI ---
-    // Removido o parâmetro "onClick" do Card para que ele não seja mais clicável
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
