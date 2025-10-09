@@ -13,6 +13,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.*
+import com.google.firebase.firestore.ListenerRegistration // <-- ADICIONE ESTE IMPORT
 
 sealed class GestationalDataState {
     object Loading : GestationalDataState()
@@ -47,13 +48,16 @@ class HomeViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(UiState())
     val uiState = _uiState.asStateFlow()
 
-    init {
-        listenToGestationalData()
-    }
+    // Variável para guardar o listener e poder removê-lo depois
+    private var gestationalDataListener: ListenerRegistration? = null
 
-    private fun listenToGestationalData() {
+    fun listenToGestationalData(userId: String) {
+        // Remove qualquer listener anterior para evitar duplicidade ou vazamento de memória
+        gestationalDataListener?.remove()
+
         try {
-            repository.getGestationalProfileFlow().addSnapshotListener { snapshot, error ->
+            // Usamos o userId recebido para buscar os dados
+            gestationalDataListener = repository.getGestationalProfileFlow(userId).addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null || !snapshot.exists()) {
                     _uiState.update { it.copy(dataState = GestationalDataState.NoData) }
                     return@addSnapshotListener
@@ -124,5 +128,10 @@ class HomeViewModel : ViewModel() {
             return ultrasoundExamDate.minusDays(daysAtExamTotal.toLong())
         }
         return lmp
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        gestationalDataListener?.remove()
     }
 }

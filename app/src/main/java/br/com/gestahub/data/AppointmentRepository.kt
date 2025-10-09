@@ -1,0 +1,12 @@
+package br.com.gestahub.data
+
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+
+class AppointmentRepository {
+    private val db = Firebase.firestore
+
+    // A função agora recebe o userId para montar o caminho correto
+    fun getAppointmentsFlow(userId: String) =
+        db.collection("users").document(userId).collection("appointments")
+}

@@ -112,6 +112,9 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
             dismissButton = { OutlinedButton(onClick = { showClearDialog = null }) { Text("Cancelar") } }
         )
     }
+    LaunchedEffect(key1 = user.uid) {
+        homeViewModel.listenToGestationalData(user.uid)
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
