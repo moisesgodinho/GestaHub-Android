@@ -41,13 +41,12 @@ fun AppointmentCalendar(
             .groupBy { LocalDate.parse(it.date) }
     }
 
-    // --- CORREÇÃO APLICADA AQUI ---
     val windowColors = if (isDarkTheme) {
         // Cores para o Modo Escuro
         listOf(
             Color(0xFF312E81), // Indigo 900
             Color(0xFF065F46), // Green 900
-            Color(0xFF78350F), // <<< NOVA COR: Amber 900
+            Color(0xFF78350F), // Amber 900
             Color(0xFF581C87), // Purple 900
             Color(0xFF155E75)  // Cyan 900
         )
@@ -56,7 +55,7 @@ fun AppointmentCalendar(
         listOf(
             Color(0xFFE0E7FF), // Indigo 100
             Color(0xFFD1FAE5), // Green 100
-            Color(0xFFFEF3C7), // <<< NOVA COR: Amber 100
+            Color(0xFFFEF3C7), // Amber 100
             Color(0xFFF3E8FF), // Purple 100
             Color(0xFFCCFBF1)  // Teal 100
         )
@@ -179,7 +178,8 @@ private fun CalendarHeader(
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Mês Anterior")
         }
         Text(
-            text = "${yearMonth.month.getDisplayName(TextStyle.FULL, Locale("pt", "BR")).replaceFirstChar { it.uppercase() }} ${yearMonth.year}",
+            // --- ALTERAÇÃO APLICADA AQUI ---
+            text = "${yearMonth.month.getDisplayName(TextStyle.FULL, Locale("pt", "BR")).replaceFirstChar { it.uppercase() }} de ${yearMonth.year}",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )

@@ -146,7 +146,6 @@ fun AppointmentFormScreen(
                         singleLine = true
                     )
 
-                    // --- CAMPO DE ANOTAÇÕES ATUALIZADO ---
                     Column {
                         OutlinedTextField(
                             value = uiState.notes,
@@ -203,8 +202,6 @@ fun AppointmentFormScreen(
     }
 }
 
-// ... (O restante do arquivo, com DatePickerField e TimePickerField, permanece o mesmo)
-// ... (O restante do arquivo, com DatePickerField e TimePickerField, permanece o mesmo)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DatePickerField(
@@ -260,7 +257,8 @@ private fun DatePickerField(
                 TextButton(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
-                            val selectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+                            // --- LINHA CORRIGIDA ---
+                            val selectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.of("UTC")).toLocalDate()
                             onDateSelected(selectedDate.format(dbFormatter))
                         }
                         showDatePicker = false

@@ -31,6 +31,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // --- HABILITAR O DESUGARING AQUI ---
+        isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
         jvmTarget = "11"
@@ -40,9 +42,10 @@ android {
     }
 }
 
-// Substitua o bloco dependencies no build.gradle.kts (Module :app) por este:
-
 dependencies {
+    // --- DEPENDÊNCIA DO DESUGARING ADICIONADA AQUI ---
+    coreLibraryDesugaring(libs.android.desugarJdkLibs)
+
     // Firebase Bill of Materials (BOM)
     implementation(platform(libs.firebase.bom))
 
@@ -56,11 +59,14 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.messaging)
 
+    // Dependência do Calendário
+    implementation(libs.kizitonwose.calendar.compose)
+
     // Dependências Padrão do Compose e App
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom)) // Esta linha usa o alias androidx-compose-bom
+    implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
@@ -79,6 +85,5 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.coroutines.playservices)
-    implementation(libs.androidx.emoji2) // <-- ADICIONE ESTA LINHA
-    implementation(libs.androidx.compose.runtime.livedata)
+    implementation(libs.androidx.emoji2)
 }
