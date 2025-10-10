@@ -80,4 +80,5 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.coroutines.playservices)
     implementation(libs.androidx.emoji2) // <-- ADICIONE ESTA LINHA
+    implementation(libs.androidx.compose.runtime.livedata)
 }

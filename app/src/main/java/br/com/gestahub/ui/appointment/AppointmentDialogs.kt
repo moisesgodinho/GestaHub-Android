@@ -85,14 +85,14 @@ fun ViewAppointmentsDialog(
 ) {
     val formattedDate = remember(date) {
         val formatter = DateTimeFormatter.ofPattern("EEEE, dd 'de' MMMM 'de' yyyy", Locale("pt", "BR"))
-        date.format(formatter).replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+        date.format(formatter).lowercase(Locale.getDefault())
     }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
                 text = buildAnnotatedString {
-                    append("Compromissos para\n")
+                    append("Compromissos para ")
                     withStyle(style = SpanStyle(color = Rose500)) {
                         append(formattedDate)
                     }
