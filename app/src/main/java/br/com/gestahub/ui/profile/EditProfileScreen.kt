@@ -155,7 +155,7 @@ fun EditProfileScreen(
                 TextButton(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
-                            val selectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+                            val selectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.of("UTC")).toLocalDate()
                             editProfileViewModel.onBirthDateChange(selectedDate.format(dbFormatter))
                         }
                         showDatePicker = false
