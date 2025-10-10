@@ -213,7 +213,7 @@ fun WeeklyInfoCard(info: WeeklyInfo) {
             ) {
                 Text(
                     text = "Tamanho comparado a um(a) ${info.size}",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyLarge
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -245,7 +245,7 @@ fun WeeklyInfoCard(info: WeeklyInfo) {
                 )
                 Text(
                     text = info.baby,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyLarge
                 )
             }
 
@@ -257,7 +257,7 @@ fun WeeklyInfoCard(info: WeeklyInfo) {
                 )
                 Text(
                     text = info.mom,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyLarge
                 )
             }
         }
