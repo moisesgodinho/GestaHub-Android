@@ -33,7 +33,6 @@ fun JournalCalendar(
     displayMonth: YearMonth,
     minDate: LocalDate?,
     onDateClick: (date: LocalDate, entry: JournalEntry?) -> Unit,
-    // --- PARÂMETROS DE NAVEGAÇÃO ADICIONADOS AQUI ---
     onPreviousClick: () -> Unit,
     onNextClick: () -> Unit,
     isPreviousEnabled: Boolean,
@@ -56,7 +55,6 @@ fun JournalCalendar(
         colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // --- NAVEGADOR DO MÊS INTEGRADO AQUI ---
             MonthNavigator(
                 selectedMonth = displayMonth,
                 onPreviousClick = onPreviousClick,
@@ -76,6 +74,8 @@ fun JournalCalendar(
                         modifier = Modifier.weight(1f),
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.bodySmall,
+                        // --- ALTERAÇÃO APLICADA AQUI ---
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -165,6 +165,8 @@ fun RowScope.DayCell(
         contentColor = contentColor.copy(alpha = 0.38f)
     }
     val borderColor = if (isToday) MaterialTheme.colorScheme.primary else Color.Transparent
+    // --- ALTERAÇÃO APLICADA AQUI ---
+    val backgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
 
     Box(
         modifier = Modifier
@@ -172,6 +174,8 @@ fun RowScope.DayCell(
             .aspectRatio(1f)
             .padding(2.dp)
             .clip(RoundedCornerShape(8.dp))
+            // --- ALTERAÇÃO APLICADA AQUI ---
+            .background(backgroundColor)
             .border(1.dp, borderColor, RoundedCornerShape(8.dp))
             .clickable(enabled = isEnabled, onClick = onClick),
         contentAlignment = Alignment.Center
