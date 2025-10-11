@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class WeightUiState(
+    val profile: WeightProfile? = null,
     val entries: List<WeightEntry> = emptyList(),
     val isLoading: Boolean = true,
     val userMessage: String? = null
@@ -23,6 +24,7 @@ data class WeightUiState(
 class WeightViewModel : ViewModel() {
     private val repository = WeightRepository()
     private var weightListener: ListenerRegistration? = null
+    private var profileListener: ListenerRegistration? = null
     private val authStateListener: FirebaseAuth.AuthStateListener
 
     private val _uiState = MutableStateFlow(WeightUiState())
@@ -33,12 +35,22 @@ class WeightViewModel : ViewModel() {
             val user = firebaseAuth.currentUser
             if (user != null) {
                 listenToWeightHistory(user.uid)
+                listenToWeightProfile(user.uid) // Agora esta chamada funciona
             } else {
                 weightListener?.remove()
-                _uiState.update { it.copy(isLoading = false, entries = emptyList()) }
+                profileListener?.remove()
+                _uiState.update { it.copy(isLoading = false, entries = emptyList(), profile = null) }
             }
         }
         Firebase.auth.addAuthStateListener(authStateListener)
+    }
+
+    private fun listenToWeightProfile(userId: String) {
+        profileListener?.remove()
+        // Chama a função correta do repositório
+        profileListener = repository.addWeightProfileListener(userId) { profile ->
+            _uiState.update { it.copy(profile = profile) }
+        }
     }
 
     private fun listenToWeightHistory(userId: String) {
@@ -49,23 +61,13 @@ class WeightViewModel : ViewModel() {
                 _uiState.update { it.copy(isLoading = false, userMessage = "Erro ao carregar o histórico.") }
                 return@addSnapshotListener
             }
-
-            if (snapshot != null && !snapshot.isEmpty) {
-                val weightEntries = mutableListOf<WeightEntry>()
-                for (document in snapshot.documents) {
-                    try {
-                        // A conversão agora usa o novo modelo WeightEntry
-                        val entry = document.toObject<WeightEntry>()
-                        if (entry != null) {
-                            weightEntries.add(entry)
-                        }
-                    } catch (e: Exception) {
-                        Log.e("WeightViewModel", "Falha ao converter o documento ${document.id}", e)
-                    }
-                }
-                _uiState.update { it.copy(isLoading = false, entries = weightEntries) }
-            } else {
-                _uiState.update { it.copy(isLoading = false, entries = emptyList()) }
+            try {
+                // A conversão agora é feita de forma manual e segura, corrigindo o segundo erro.
+                val entries = snapshot?.documents?.mapNotNull { it.toObject<WeightEntry>() } ?: emptyList()
+                _uiState.update { it.copy(isLoading = false, entries = entries) }
+            } catch (e: Exception) {
+                Log.e("WeightViewModel", "FALHA AO CONVERTER DADOS DO FIREBASE!", e)
+                _uiState.update { it.copy(isLoading = false, userMessage = "Erro ao ler os dados salvos.") }
             }
         }
     }
@@ -74,7 +76,6 @@ class WeightViewModel : ViewModel() {
         val userId = Firebase.auth.currentUser?.uid ?: return
         viewModelScope.launch {
             try {
-                // Agora deleta usando a data como ID
                 repository.deleteWeightEntry(userId, entry.date)
             } catch (e: Exception) {
                 _uiState.update { it.copy(userMessage = "Erro ao excluir o registro.") }
@@ -90,5 +91,6 @@ class WeightViewModel : ViewModel() {
         super.onCleared()
         Firebase.auth.removeAuthStateListener(authStateListener)
         weightListener?.remove()
+        profileListener?.remove()
     }
 }

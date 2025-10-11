@@ -29,6 +29,7 @@ import br.com.gestahub.ui.more.MoreScreen
 import br.com.gestahub.ui.profile.EditProfileScreen
 import br.com.gestahub.ui.profile.ProfileScreen
 import br.com.gestahub.ui.weight.WeightEntryFormScreen
+import br.com.gestahub.ui.weight.WeightProfileFormScreen
 import br.com.gestahub.ui.weight.WeightScreen
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.launch
@@ -131,7 +132,6 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
         },
         floatingActionButton = {
             // --- CORREÇÃO APLICADA AQUI ---
-            // O botão de ação agora é controlado centralmente.
             when (currentRoute) {
                 "appointments" -> {
                     FloatingActionButton(onClick = { navController.navigate("appointmentForm") }) {
@@ -146,7 +146,7 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                         Icon(Icons.Default.Add, contentDescription = "Adicionar Registro no Diário")
                     }
                 }
-                "weight" -> { // Adicionado o caso para a tela de peso
+                "weight" -> {
                     FloatingActionButton(onClick = { navController.navigate("weight_entry_form") }) {
                         Icon(Icons.Default.Add, contentDescription = "Adicionar novo peso")
                     }
@@ -231,9 +231,11 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                 )
             }
             composable("weight") {
+                // A chamada para WeightScreen foi simplificada
                 WeightScreen(
                     contentPadding = innerPadding,
-                    isDarkTheme = isDarkTheme
+                    isDarkTheme = isDarkTheme,
+                    onNavigateToProfileForm = { navController.navigate("weight_profile_form") }
                 )
             }
             composable("more") { Box(Modifier.padding(innerPadding)) { MoreScreen() } }
@@ -298,6 +300,9 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
             }
             composable("weight_entry_form") {
                 WeightEntryFormScreen(onNavigateBack = { navController.popBackStack() })
+            }
+            composable("weight_profile_form") {
+                WeightProfileFormScreen(onNavigateBack = { navController.popBackStack() })
             }
         }
     }
