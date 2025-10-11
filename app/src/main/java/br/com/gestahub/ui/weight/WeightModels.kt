@@ -1,13 +1,16 @@
 package br.com.gestahub.ui.weight
 
-import com.google.firebase.firestore.DocumentId
-import java.util.Date
+// A anotação @DocumentId foi removida, pois agora usaremos a data como ID manual.
+data class WeightEntry(
+    val date: String = "",
+    val weight: Double = 0.0,
+    val bmi: Double = 0.0
+)
 
 /**
- * Representa um único registro de peso no banco de dados.
+ * Representa o perfil de peso do usuário, contendo dados que não mudam com frequência.
  */
-data class WeightEntry(
-    @DocumentId val id: String = "",
-    val date: Date = Date(),
-    val weight: Double = 0.0
+data class WeightProfile(
+    val height: Int = 0,
+    val prePregnancyWeight: Double = 0.0
 )

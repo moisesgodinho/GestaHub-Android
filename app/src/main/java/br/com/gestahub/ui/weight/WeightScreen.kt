@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -22,56 +21,63 @@ import java.util.*
 @Composable
 fun WeightScreen(
     contentPadding: PaddingValues,
-    onNavigateToForm: () -> Unit,
-    // A tela agora cria sua própria instância do ViewModel
+    isDarkTheme: Boolean,
     viewModel: WeightViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Scaffold(
-        modifier = Modifier.padding(contentPadding),
-        floatingActionButton = {
-            FloatingActionButton(onClick = onNavigateToForm) {
-                Icon(Icons.Default.Add, contentDescription = "Adicionar novo peso")
-            }
+    // --- CORREÇÃO APLICADA AQUI ---
+    // A Scaffold foi removida completamente.
+    // O layout principal agora é um Box.
+
+    if (uiState.isLoading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(contentPadding),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
         }
-    ) { innerPadding ->
-        if (uiState.isLoading) {
-            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+    } else if (uiState.entries.isEmpty()) {
+        EmptyState(contentPadding = contentPadding)
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(contentPadding), // O espaçamento da navegação é aplicado aqui
+            contentPadding = PaddingValues(horizontal = 16.dp), // Apenas espaçamento horizontal interno
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                Text(
+                    text = "Histórico de Peso",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                )
             }
-        } else if (uiState.entries.isEmpty()) {
-            EmptyState(contentPadding = innerPadding)
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                item {
-                    Text(
-                        text = "Histórico de Peso",
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                }
-                items(uiState.entries, key = { it.id }) { entry ->
-                    WeightItem(
-                        entry = entry,
-                        onDelete = { viewModel.deleteWeightEntry(entry) }
-                    )
-                }
+            items(uiState.entries, key = { it.date }) { entry ->
+                WeightItem(
+                    entry = entry,
+                    isDarkTheme = isDarkTheme,
+                    onDelete = { viewModel.deleteWeightEntry(entry) }
+                )
             }
         }
     }
 }
 
 @Composable
-fun WeightItem(entry: WeightEntry, onDelete: () -> Unit) {
+fun WeightItem(entry: WeightEntry, isDarkTheme: Boolean, onDelete: () -> Unit) {
+    val containerColor = if (isDarkTheme) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Row(
@@ -83,16 +89,29 @@ fun WeightItem(entry: WeightEntry, onDelete: () -> Unit) {
         ) {
             Column {
                 Text(
-                    text = "${entry.weight} kg",
+                    text = "${String.format("%.1f", entry.weight)} kg",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(entry.date),
+                    text = entry.date.let {
+                        try {
+                            val parser = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                            val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                            formatter.format(parser.parse(it) ?: Date())
+                        } catch (e: Exception) {
+                            it
+                        }
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            Text(
+                text = "IMC: ${String.format("%.1f", entry.bmi)}",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold
+            )
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, contentDescription = "Excluir peso")
             }

@@ -114,7 +114,6 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
         )
     }
 
-    // Apenas a tela inicial precisa ser iniciada aqui.
     LaunchedEffect(key1 = user.uid) {
         homeViewModel.listenToGestationalData(user.uid)
     }
@@ -131,16 +130,26 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
             }
         },
         floatingActionButton = {
-            if (currentRoute == "appointments") {
-                FloatingActionButton(onClick = { navController.navigate("appointmentForm") }) {
-                    Icon(Icons.Default.Add, contentDescription = "Adicionar Consulta")
+            // --- CORREÇÃO APLICADA AQUI ---
+            // O botão de ação agora é controlado centralmente.
+            when (currentRoute) {
+                "appointments" -> {
+                    FloatingActionButton(onClick = { navController.navigate("appointmentForm") }) {
+                        Icon(Icons.Default.Add, contentDescription = "Adicionar Consulta")
+                    }
                 }
-            } else if (currentRoute == "journal") {
-                FloatingActionButton(onClick = {
-                    val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
-                    navController.navigate("journalEntry/$today")
-                }) {
-                    Icon(Icons.Default.Add, contentDescription = "Adicionar Registro no Diário")
+                "journal" -> {
+                    FloatingActionButton(onClick = {
+                        val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+                        navController.navigate("journalEntry/$today")
+                    }) {
+                        Icon(Icons.Default.Add, contentDescription = "Adicionar Registro no Diário")
+                    }
+                }
+                "weight" -> { // Adicionado o caso para a tela de peso
+                    FloatingActionButton(onClick = { navController.navigate("weight_entry_form") }) {
+                        Icon(Icons.Default.Add, contentDescription = "Adicionar novo peso")
+                    }
                 }
             }
         },
@@ -222,10 +231,9 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                 )
             }
             composable("weight") {
-                // Chamada simples, sem passar o ViewModel
                 WeightScreen(
                     contentPadding = innerPadding,
-                    onNavigateToForm = { navController.navigate("weight_entry_form") }
+                    isDarkTheme = isDarkTheme
                 )
             }
             composable("more") { Box(Modifier.padding(innerPadding)) { MoreScreen() } }

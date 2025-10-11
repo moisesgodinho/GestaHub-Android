@@ -7,7 +7,7 @@ import br.com.gestahub.data.WeightRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ListenerRegistration
-import com.google.firebase.firestore.ktx.toObjects
+import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,43 +23,49 @@ data class WeightUiState(
 class WeightViewModel : ViewModel() {
     private val repository = WeightRepository()
     private var weightListener: ListenerRegistration? = null
-    // O "ouvinte" que vai esperar pela confirmação do login
     private val authStateListener: FirebaseAuth.AuthStateListener
 
     private val _uiState = MutableStateFlow(WeightUiState())
     val uiState = _uiState.asStateFlow()
 
     init {
-        // Ponto chave da correção: O ViewModel agora "ouve" o estado de autenticação.
         authStateListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
             val user = firebaseAuth.currentUser
             if (user != null) {
-                // A busca de dados só acontece DEPOIS que o Firebase confirma o usuário.
                 listenToWeightHistory(user.uid)
             } else {
-                // Se o usuário deslogar, limpa a tela e o listener de dados.
                 weightListener?.remove()
                 _uiState.update { it.copy(isLoading = false, entries = emptyList()) }
             }
         }
-        // Ativa o "ouvinte"
         Firebase.auth.addAuthStateListener(authStateListener)
     }
 
     private fun listenToWeightHistory(userId: String) {
         _uiState.update { it.copy(isLoading = true) }
-        weightListener?.remove() // Previne listeners duplicados
+        weightListener?.remove()
         weightListener = repository.getWeightHistoryFlow(userId).addSnapshotListener { snapshot, error ->
             if (error != null) {
                 _uiState.update { it.copy(isLoading = false, userMessage = "Erro ao carregar o histórico.") }
                 return@addSnapshotListener
             }
-            try {
-                val entries = snapshot?.toObjects<WeightEntry>() ?: emptyList()
-                _uiState.update { it.copy(isLoading = false, entries = entries) }
-            } catch (e: Exception) {
-                Log.e("WeightViewModel", "Falha ao converter dados do Firestore!", e)
-                _uiState.update { it.copy(isLoading = false, userMessage = "Erro ao ler os dados salvos.") }
+
+            if (snapshot != null && !snapshot.isEmpty) {
+                val weightEntries = mutableListOf<WeightEntry>()
+                for (document in snapshot.documents) {
+                    try {
+                        // A conversão agora usa o novo modelo WeightEntry
+                        val entry = document.toObject<WeightEntry>()
+                        if (entry != null) {
+                            weightEntries.add(entry)
+                        }
+                    } catch (e: Exception) {
+                        Log.e("WeightViewModel", "Falha ao converter o documento ${document.id}", e)
+                    }
+                }
+                _uiState.update { it.copy(isLoading = false, entries = weightEntries) }
+            } else {
+                _uiState.update { it.copy(isLoading = false, entries = emptyList()) }
             }
         }
     }
@@ -68,7 +74,8 @@ class WeightViewModel : ViewModel() {
         val userId = Firebase.auth.currentUser?.uid ?: return
         viewModelScope.launch {
             try {
-                repository.deleteWeightEntry(userId, entry.id)
+                // Agora deleta usando a data como ID
+                repository.deleteWeightEntry(userId, entry.date)
             } catch (e: Exception) {
                 _uiState.update { it.copy(userMessage = "Erro ao excluir o registro.") }
             }
@@ -81,7 +88,6 @@ class WeightViewModel : ViewModel() {
 
     override fun onCleared() {
         super.onCleared()
-        // Limpa todos os listeners quando o ViewModel é destruído para evitar vazamentos de memória.
         Firebase.auth.removeAuthStateListener(authStateListener)
         weightListener?.remove()
     }
