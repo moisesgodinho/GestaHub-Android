@@ -26,9 +26,11 @@ import br.com.gestahub.ui.home.HomeScreen
 import br.com.gestahub.ui.journal.JournalEntryScreen
 import br.com.gestahub.ui.journal.JournalScreen
 import br.com.gestahub.ui.main.MainViewModel
-import br.com.gestahub.ui.placeholder.ComingSoonScreen
 import br.com.gestahub.ui.profile.EditProfileScreen
 import br.com.gestahub.ui.profile.ProfileScreen
+import br.com.gestahub.ui.weight.WeightScreen
+import br.com.gestahub.ui.more.MoreScreen
+
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -220,8 +222,8 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                     }
                 )
             }
-            composable("weight") { Box(Modifier.padding(innerPadding)) { ComingSoonScreen() } }
-            composable("more") { Box(Modifier.padding(innerPadding)) { ComingSoonScreen() } }
+            composable("weight") { Box(Modifier.padding(innerPadding)) { WeightScreen() } }
+            composable("more") { Box(Modifier.padding(innerPadding)) { MoreScreen() } }
             composable(
                 route = "appointmentForm?appointmentId={appointmentId}&appointmentType={appointmentType}&preselectedDate={preselectedDate}",
                 arguments = listOf(
