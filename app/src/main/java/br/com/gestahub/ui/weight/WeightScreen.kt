@@ -5,7 +5,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -44,7 +43,7 @@ fun WeightScreen(
             } else {
                 ProfileCard(
                     profile = profile!!,
-                    isDarkTheme = isDarkTheme,
+                    isDarkTheme = isDarkTheme, // Passa a informação de tema
                     onEditClick = onNavigateToProfileForm
                 )
             }
@@ -89,16 +88,10 @@ fun WeightScreen(
 
 @Composable
 fun ProfileCard(profile: WeightProfile, isDarkTheme: Boolean, onEditClick: () -> Unit) {
-    val containerColor = if (isDarkTheme) {
-        MaterialTheme.colorScheme.surface
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-    }
-
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -106,31 +99,87 @@ fun ProfileCard(profile: WeightProfile, isDarkTheme: Boolean, onEditClick: () ->
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Seus Dados Iniciais",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold)
-                IconButton(onClick = onEditClick) {
-                    Icon(Icons.Default.Edit, contentDescription = "Editar Perfil de Peso")
+                Text("Seus Dados Iniciais", style = MaterialTheme.typography.titleLarge)
+                TextButton(onClick = onEditClick) {
+                    Text("Alterar dados")
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
+            // --- CORREÇÃO APLICADA AQUI ---
+            // A Row agora contém os novos InfoCard individuais.
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceAround
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                InfoColumn("Altura", "${profile.height} cm")
-                InfoColumn("Peso Inicial", "${profile.prePregnancyWeight} kg")
+                Box(modifier = Modifier.weight(1f)) {
+                    InfoCard(
+                        label = "Altura",
+                        value = "${profile.height} cm",
+                        isDarkTheme = isDarkTheme
+                    )
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    InfoCard(
+                        label = "Peso Inicial",
+                        value = "${profile.prePregnancyWeight} kg",
+                        isDarkTheme = isDarkTheme
+                    )
+                }
             }
         }
     }
 }
 
+/**
+ * Novo componente de card de informação, replicado da HomeScreen para consistência.
+ */
+@Composable
+fun InfoCard(
+    label: String,
+    value: String,
+    isDarkTheme: Boolean
+) {
+    val containerColor = if (isDarkTheme) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.headlineSmall, // Ajustado para 'Small' para melhor encaixe
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+
 @Composable
 fun InitialProfilePrompt(onAddClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier.padding(24.dp),
@@ -156,14 +205,7 @@ fun InitialProfilePrompt(onAddClick: () -> Unit) {
     }
 }
 
-
-@Composable
-private fun InfoColumn(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-    }
-}
+// O InfoColumn não é mais necessário, foi substituído pelo InfoCard.
 
 @Composable
 fun WeightItem(entry: WeightEntry, isDarkTheme: Boolean, onDelete: () -> Unit) {
