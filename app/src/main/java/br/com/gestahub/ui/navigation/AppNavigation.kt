@@ -1,4 +1,3 @@
-// Local: app/src/main/java/br/com/gestahub/ui/navigation/AppNavigation.kt
 package br.com.gestahub.ui.navigation
 
 import androidx.compose.foundation.layout.Box
@@ -26,11 +25,11 @@ import br.com.gestahub.ui.home.HomeScreen
 import br.com.gestahub.ui.journal.JournalEntryScreen
 import br.com.gestahub.ui.journal.JournalScreen
 import br.com.gestahub.ui.main.MainViewModel
+import br.com.gestahub.ui.more.MoreScreen
 import br.com.gestahub.ui.profile.EditProfileScreen
 import br.com.gestahub.ui.profile.ProfileScreen
+import br.com.gestahub.ui.weight.WeightEntryFormScreen
 import br.com.gestahub.ui.weight.WeightScreen
-import br.com.gestahub.ui.more.MoreScreen
-
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -114,6 +113,8 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
             dismissButton = { OutlinedButton(onClick = { showClearDialog = null }) { Text("Cancelar") } }
         )
     }
+
+    // Apenas a tela inicial precisa ser iniciada aqui.
     LaunchedEffect(key1 = user.uid) {
         homeViewModel.listenToGestationalData(user.uid)
     }
@@ -131,9 +132,7 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
         },
         floatingActionButton = {
             if (currentRoute == "appointments") {
-                FloatingActionButton(onClick = {
-                    navController.navigate("appointmentForm")
-                }) {
+                FloatingActionButton(onClick = { navController.navigate("appointmentForm") }) {
                     Icon(Icons.Default.Add, contentDescription = "Adicionar Consulta")
                 }
             } else if (currentRoute == "journal") {
@@ -222,7 +221,13 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                     }
                 )
             }
-            composable("weight") { Box(Modifier.padding(innerPadding)) { WeightScreen() } }
+            composable("weight") {
+                // Chamada simples, sem passar o ViewModel
+                WeightScreen(
+                    contentPadding = innerPadding,
+                    onNavigateToForm = { navController.navigate("weight_entry_form") }
+                )
+            }
             composable("more") { Box(Modifier.padding(innerPadding)) { MoreScreen() } }
             composable(
                 route = "appointmentForm?appointmentId={appointmentId}&appointmentType={appointmentType}&preselectedDate={preselectedDate}",
@@ -232,9 +237,7 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                     navArgument("preselectedDate") { type = NavType.StringType; nullable = true }
                 )
             ) {
-                AppointmentFormScreen(
-                    onNavigateBack = { navController.popBackStack() }
-                )
+                AppointmentFormScreen(onNavigateBack = { navController.popBackStack() })
             }
             composable(
                 route = "calculator?lmp={lmp}&examDate={examDate}&weeks={weeks}&days={days}",
@@ -284,6 +287,9 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                         navController.navigate("journalEntry/$newDate")
                     }
                 )
+            }
+            composable("weight_entry_form") {
+                WeightEntryFormScreen(onNavigateBack = { navController.popBackStack() })
             }
         }
     }
