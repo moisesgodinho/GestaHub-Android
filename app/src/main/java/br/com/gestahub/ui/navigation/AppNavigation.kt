@@ -60,7 +60,7 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
         NavItem("Início", Icons.Default.Home, "home"),
         NavItem("Consultas", Icons.Default.CalendarMonth, "appointments"),
         NavItem("Diário", Icons.Default.Book, "journal"),
-        NavItem("Peso", Icons.Filled.MonitorWeight, "weight"),
+        NavItem("Peso", Icons.Default.BarChart, "weight"),
         NavItem("Mais", Icons.Default.MoreHoriz, "more")
     )
 
