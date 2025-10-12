@@ -20,6 +20,7 @@ navigationCompose = "2.7.7"
 kotlinx-coroutines-playservices = "1.7.3"
 emoji2 = "1.4.0"
 kizitonwoseCalendar = "2.5.1"
+vico = "1.14.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -42,6 +43,10 @@ androidx-emoji2 = { group = "androidx.emoji2", name = "emoji2", version.ref = "e
 androidx-compose-runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata" }
 kizitonwose-calendar-compose = { group = "com.kizitonwose.calendar", name = "compose", version.ref = "kizitonwoseCalendar" }
 android-desugarJdkLibs = { group = "com.android.tools", name = "desugar_jdk_libs", version = "2.0.4" }
+
+# Vico Chart Library
+vico-core = { group = "com.patrykandpatrick.vico", name = "core", version.ref = "vico" }
+vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
 
 # Firebase
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }

@@ -86,4 +86,8 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.coroutines.playservices)
     implementation(libs.androidx.emoji2)
+
+    // Gráfico de Linhas (Vico)
+    implementation(libs.vico.core)
+    implementation(libs.vico.compose.m3)
 }
