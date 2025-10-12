@@ -56,15 +56,11 @@ fun WeightChart(
     var selectedDate by remember { mutableStateOf<String?>(null) }
     var selectedWeight by remember { mutableStateOf<Float?>(null) }
 
-    // ESTRATÉGIA FINAL: Um único produtor que conterá os dois conjuntos de dados.
     val combinedEntryProducer = remember { ChartEntryModelProducer() }
 
-    // ESTRATÉGIA FINAL: Atualiza o modelo do produtor único com as duas listas de entradas.
     LaunchedEffect(selectedIndex, chartEntryModelProducer.getModel()) {
         val mainEntries = chartEntryModelProducer.getModel()?.entries?.firstOrNull() ?: emptyList()
         val selectedEntryList = selectedIndex?.let { mainEntries.getOrNull(it) }?.let { listOf(it) } ?: emptyList()
-
-        // O método setEntries aceita múltiplas listas (vararg)
         combinedEntryProducer.setEntries(mainEntries, selectedEntryList)
     }
 
@@ -80,21 +76,13 @@ fun WeightChart(
         (actualMaxY - actualMinY) / steps
     } else 1f
 
-    // CORREÇÃO: Especificando o tipo <Float> explicitamente para resolver a inferência.
     val yAxisValues = List<Float>(10) { i -> actualMinY + i * stepValue }
-
-    val valueRange = abs(actualMaxY - actualMinY)
-    val decimalPlaces = when {
-        valueRange > 20 -> 0
-        valueRange > 5 -> 1
-        else -> 2
-    }
 
     val yAxisValueFormatter =
         AxisValueFormatter<AxisPosition.Vertical.Start> { value, _ ->
             val closest = yAxisValues.minByOrNull { kotlin.math.abs(it - value) } ?: value
             if (kotlin.math.abs(value - closest) < stepValue / 2) {
-                "%.${decimalPlaces}f kg".format(closest)
+                closest.roundToInt().toString()
             } else ""
         }
 
@@ -114,11 +102,17 @@ fun WeightChart(
         OverlayingComponent(outer = outer, inner = inner)
     }
 
-    Box(modifier = Modifier.fillMaxWidth()) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            // 👇 ADIÇÃO AQUI: Detecta o toque fora do gráfico e limpa a seleção
+            .pointerInput(Unit) {
+                detectTapGestures { selectedIndex = null }
+            }
+    ) {
         Chart(
             chart = lineChart(
                 lines = listOf(
-                    // Linha 1: Mapeada para a primeira lista de entradas no modelo
                     LineChart.LineSpec(
                         lineColor = Rose500.toArgb(),
                         lineThicknessDp = 3f,
@@ -129,7 +123,6 @@ fun WeightChart(
                             ),
                         ),
                     ),
-                    // Linha 2: Mapeada para a segunda lista de entradas (o ponto único)
                     LineChart.LineSpec(
                         lineColor = Color.Transparent.toArgb(),
                         point = selectedPointComponent,
@@ -141,7 +134,6 @@ fun WeightChart(
                     maxY = actualMaxY
                 )
             ),
-            // ESTRATÉGIA FINAL: Usando o produtor único que contém ambos os modelos
             chartModelProducer = combinedEntryProducer,
             startAxis = rememberStartAxis(
                 valueFormatter = yAxisValueFormatter,
