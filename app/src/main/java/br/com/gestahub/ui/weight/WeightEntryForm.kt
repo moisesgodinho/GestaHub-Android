@@ -92,7 +92,12 @@ fun WeightEntryFormScreen(
 @Composable
 private fun DatePickerField(date: Date, onDateChange: (Date) -> Unit) {
     var showDatePicker by remember { mutableStateOf(false) }
-    val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+
+    // --- CORREÇÃO APLICADA AQUI ---
+    // O formatador de data agora é configurado para usar o fuso horário UTC.
+    val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
 
     Box(modifier = Modifier.clickable { showDatePicker = true }) {
         OutlinedTextField(
@@ -107,8 +112,7 @@ private fun DatePickerField(date: Date, onDateChange: (Date) -> Unit) {
             },
             colors = OutlinedTextFieldDefaults.colors(
                 disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                disabledBorderColor = MaterialTheme.colorScheme.outline,
-                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                disabledBorderColor = MaterialTheme.colorScheme.outline
             )
         )
     }

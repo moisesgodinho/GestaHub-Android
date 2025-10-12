@@ -39,7 +39,7 @@ fun CalculatorScreen(
     val saveState by viewModel.saveState.collectAsState()
     val context = LocalContext.current
 
-    val initialTab = if (!initialExamDate.isNullOrEmpty()) 1 else 0
+    val initialTab = if (!initialExamDate.isNullOrEmpty() && initialExamDate != "null") 1 else 0
     var selectedTab by remember { mutableStateOf(initialTab) }
     val tabs = listOf("Calculadora DUM", "Calculadora Ultrassom")
 
@@ -89,7 +89,6 @@ fun CalculatorScreen(
                 }
             }
 
-            // Textos informativos adicionados aqui
             InfoSection()
 
             when (selectedTab) {
@@ -134,7 +133,7 @@ fun DumCalculator(
     initialLmp: String?,
     onCancelClick: () -> Unit
 ) {
-    var lmp by remember { mutableStateOf(initialLmp ?: "") }
+    var lmp by remember { mutableStateOf(initialLmp?.takeIf { it != "null" } ?: "") }
 
     Column(
         modifier = Modifier
@@ -175,9 +174,9 @@ fun UltrasoundCalculator(
     initialDays: String?,
     onCancelClick: () -> Unit
 ) {
-    var examDate by remember { mutableStateOf(initialExamDate ?: "") }
-    var weeks by remember { mutableStateOf(initialWeeks ?: "") }
-    var days by remember { mutableStateOf(initialDays ?: "") }
+    var examDate by remember { mutableStateOf(initialExamDate?.takeIf { it != "null" } ?: "") }
+    var weeks by remember { mutableStateOf(initialWeeks?.takeIf { it != "null" } ?: "") }
+    var days by remember { mutableStateOf(initialDays?.takeIf { it != "null" } ?: "") }
 
     Column(
         modifier = Modifier
@@ -282,7 +281,9 @@ fun DatePickerField(
                 TextButton(
                     onClick = {
                         datePickerState.selectedDateMillis?.let { millis ->
-                            val selectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
+                            // --- CORREÇÃO APLICADA AQUI ---
+                            // Forçamos a conversão da data para o fuso UTC, ignorando o fuso do celular.
+                            val selectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.of("UTC")).toLocalDate()
                             onDateSelected(selectedDate.format(dbFormatter))
                         }
                         showDatePicker = false

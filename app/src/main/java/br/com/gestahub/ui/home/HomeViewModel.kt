@@ -1,19 +1,17 @@
-// Local: app/src/main/java/br/com/gestahub/ui/home/HomeViewModel.kt
 package br.com.gestahub.ui.home
 
 import androidx.lifecycle.ViewModel
 import br.com.gestahub.data.GestationalProfileRepository
 import br.com.gestahub.data.WeeklyInfo
 import br.com.gestahub.data.WeeklyInfoProvider
+import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.*
-import com.google.firebase.firestore.ListenerRegistration // <-- ADICIONE ESTE IMPORT
 
 sealed class GestationalDataState {
     object Loading : GestationalDataState()
@@ -26,7 +24,6 @@ sealed class GestationalDataState {
         val countdownDays: Int,
         val gestationalData: GestationalData,
         val weeklyInfo: WeeklyInfo?,
-        // --- NOVA PROPRIEDADE ADICIONADA AQUI ---
         val estimatedLmp: LocalDate?
     ) : GestationalDataState()
 }
@@ -44,40 +41,31 @@ data class UiState(
 class HomeViewModel : ViewModel() {
 
     private val repository = GestationalProfileRepository()
+    private var gestationalDataListener: ListenerRegistration? = null
 
     private val _uiState = MutableStateFlow(UiState())
     val uiState = _uiState.asStateFlow()
 
-    // Variável para guardar o listener e poder removê-lo depois
-    private var gestationalDataListener: ListenerRegistration? = null
-
     fun listenToGestationalData(userId: String) {
-        // Remove qualquer listener anterior para evitar duplicidade ou vazamento de memória
         gestationalDataListener?.remove()
-
-        try {
-            // Usamos o userId recebido para buscar os dados
-            gestationalDataListener = repository.getGestationalProfileFlow(userId).addSnapshotListener { snapshot, error ->
-                if (error != null || snapshot == null || !snapshot.exists()) {
-                    _uiState.update { it.copy(dataState = GestationalDataState.NoData) }
-                    return@addSnapshotListener
-                }
-
-                val profile = snapshot.get("gestationalProfile") as? Map<*, *>
-                val lmpString = profile?.get("lmp") as? String
-                val ultrasoundMap = profile?.get("ultrasound") as? Map<*, *>
-
-                val rawData = GestationalData(
-                    lmp = lmpString,
-                    ultrasoundExamDate = ultrasoundMap?.get("examDate") as? String,
-                    weeksAtExam = ultrasoundMap?.get("weeksAtExam") as? String,
-                    daysAtExam = ultrasoundMap?.get("daysAtExam") as? String
-                )
-
-                calculateUiState(rawData)
+        gestationalDataListener = repository.getGestationalProfileFlow(userId).addSnapshotListener { snapshot, error ->
+            if (error != null || snapshot == null || !snapshot.exists()) {
+                _uiState.update { it.copy(dataState = GestationalDataState.NoData) }
+                return@addSnapshotListener
             }
-        } catch (e: Exception) {
-            _uiState.update { it.copy(dataState = GestationalDataState.NoData) }
+
+            val profile = snapshot.get("gestationalProfile") as? Map<*, *>
+            val lmpString = profile?.get("lmp") as? String
+            val ultrasoundMap = profile?.get("ultrasound") as? Map<*, *>
+
+            val rawData = GestationalData(
+                lmp = lmpString,
+                ultrasoundExamDate = ultrasoundMap?.get("examDate") as? String,
+                weeksAtExam = ultrasoundMap?.get("weeksAtExam") as? String,
+                daysAtExam = ultrasoundMap?.get("daysAtExam") as? String
+            )
+
+            calculateUiState(rawData)
         }
     }
 
@@ -94,7 +82,11 @@ class HomeViewModel : ViewModel() {
             return
         }
 
-        val today = LocalDate.now(ZoneId.of("UTC"))
+        // --- CORREÇÃO APLICADA AQUI ---
+        // Trocamos 'LocalDate.now(ZoneId.of("UTC"))' por 'LocalDate.now()'
+        // para usar a data local do celular, resolvendo a discrepância.
+        val today = LocalDate.now()
+
         val gestationalAgeInDays = ChronoUnit.DAYS.between(estimatedLmp, today).toInt()
         val currentWeeks = gestationalAgeInDays / 7
         val currentDays = gestationalAgeInDays % 7
@@ -103,7 +95,9 @@ class HomeViewModel : ViewModel() {
         val remainingDays = ChronoUnit.DAYS.between(today, dueDate).toInt()
         val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale("pt", "BR"))
 
-        val weeklyInfo = WeeklyInfoProvider.getInfoForWeek(currentWeeks)
+        // O cálculo da semana para o WeeklyInfo precisa de um ajuste para corresponder à contagem humana (semana 1 a 42)
+        val weekForInfo = if (currentWeeks < 1) 1 else if (currentWeeks > 42) 42 else currentWeeks + 1
+        val weeklyInfo = WeeklyInfoProvider.getInfoForWeek(weekForInfo)
 
         _uiState.update {
             it.copy(
@@ -115,7 +109,6 @@ class HomeViewModel : ViewModel() {
                     countdownDays = if (remainingDays >= 0) remainingDays % 7 else 0,
                     gestationalData = data,
                     weeklyInfo = weeklyInfo,
-                    // --- VALOR DA NOVA PROPRIEDADE PASSADO AQUI ---
                     estimatedLmp = estimatedLmp
                 )
             )
@@ -123,7 +116,7 @@ class HomeViewModel : ViewModel() {
     }
 
     private fun getEstimatedLmp(lmp: LocalDate?, ultrasoundExamDate: LocalDate?, weeksAtExam: Int, daysAtExam: Int): LocalDate? {
-        if (ultrasoundExamDate != null && weeksAtExam > 0) {
+        if (ultrasoundExamDate != null && (weeksAtExam > 0 || daysAtExam > 0)) {
             val daysAtExamTotal = (weeksAtExam * 7) + daysAtExam
             return ultrasoundExamDate.minusDays(daysAtExamTotal.toLong())
         }

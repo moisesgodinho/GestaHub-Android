@@ -13,10 +13,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
-import java.util.*
 import kotlin.math.pow
 
 data class WeightUiState(
@@ -31,7 +29,6 @@ data class WeightUiState(
     val gainGoal: String = ""
 )
 
-// O ViewModel agora recebe a DUM (lmp)
 class WeightViewModel(private val estimatedLmp: LocalDate?) : ViewModel() {
     private val repository = WeightRepository()
     private var weightListener: ListenerRegistration? = null
@@ -77,13 +74,16 @@ class WeightViewModel(private val estimatedLmp: LocalDate?) : ViewModel() {
 
                 val ages = mutableMapOf<String, String>()
                 if (estimatedLmp != null) {
-                    val parser = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                     entries.forEach { entry ->
-                        val entryDate = parser.parse(entry.date)?.toInstant()?.atZone(java.time.ZoneId.systemDefault())?.toLocalDate()
-                        if (entryDate != null) {
-                            // A chamada agora usa a função local, resolvendo o erro
+                        try {
+                            // --- CORREÇÃO APLICADA AQUI ---
+                            // Trocamos o método de conversão de data por um que é
+                            // agnóstico de fuso horário, resolvendo a discrepância de 1 dia.
+                            val entryDate = LocalDate.parse(entry.date)
                             val age = calculateGestationalAge(estimatedLmp, entryDate)
                             ages[entry.date] = "${age.weeks}s ${age.days}d"
+                        } catch (e: Exception) {
+                            // Ignora entradas com data mal formatada
                         }
                     }
                 }
@@ -97,8 +97,6 @@ class WeightViewModel(private val estimatedLmp: LocalDate?) : ViewModel() {
         }
     }
 
-    // --- CORREÇÃO APLICADA AQUI ---
-    // A lógica de cálculo foi movida para dentro deste arquivo para eliminar o erro.
     private data class GestationalAge(val weeks: Int, val days: Int)
     private fun calculateGestationalAge(lmp: LocalDate, targetDate: LocalDate): GestationalAge {
         val daysBetween = ChronoUnit.DAYS.between(lmp, targetDate).toInt()
@@ -107,7 +105,6 @@ class WeightViewModel(private val estimatedLmp: LocalDate?) : ViewModel() {
         val days = daysBetween % 7
         return GestationalAge(weeks, days)
     }
-    // --- FIM DA CORREÇÃO ---
 
     private fun calculateWeightSummary() {
         val profile = _uiState.value.profile
