@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -17,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.abs
 
 @Composable
 fun WeightScreen(
@@ -50,6 +52,16 @@ fun WeightScreen(
         }
 
         if (isProfileFilled) {
+            item {
+                SummaryCard(
+                    initialBmi = uiState.initialBmi,
+                    currentBmi = uiState.currentBmi,
+                    totalGain = uiState.totalGain,
+                    gainGoal = uiState.gainGoal,
+                    isDarkTheme = isDarkTheme
+                )
+            }
+
             item {
                 Text(
                     text = "Histórico de Peso",
@@ -105,8 +117,6 @@ fun ProfileCard(profile: WeightProfile, isDarkTheme: Boolean, onEditClick: () ->
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            // --- CORREÇÃO APLICADA AQUI ---
-            // A Row agora contém os novos InfoCard individuais.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -115,14 +125,14 @@ fun ProfileCard(profile: WeightProfile, isDarkTheme: Boolean, onEditClick: () ->
                     InfoCard(
                         label = "Altura",
                         value = "${profile.height} cm",
-                        isDarkTheme = isDarkTheme
+                        isDarkTheme = isDarkTheme // Passa a informação de tema
                     )
                 }
                 Box(modifier = Modifier.weight(1f)) {
                     InfoCard(
                         label = "Peso Inicial",
                         value = "${profile.prePregnancyWeight} kg",
-                        isDarkTheme = isDarkTheme
+                        isDarkTheme = isDarkTheme // Passa a informação de tema
                     )
                 }
             }
@@ -130,15 +140,60 @@ fun ProfileCard(profile: WeightProfile, isDarkTheme: Boolean, onEditClick: () ->
     }
 }
 
-/**
- * Novo componente de card de informação, replicado da HomeScreen para consistência.
- */
+@Composable
+fun SummaryCard(
+    initialBmi: Double,
+    currentBmi: Double,
+    totalGain: Double,
+    gainGoal: String,
+    isDarkTheme: Boolean
+) {
+    val gainOrLossText = if (totalGain >= 0) "Ganho Total" else "Perda Total"
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    InfoCard(label = "IMC Inicial", value = String.format("%.1f", initialBmi), isDarkTheme = isDarkTheme)
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    InfoCard(label = "IMC Atual", value = String.format("%.1f", currentBmi), isDarkTheme = isDarkTheme)
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    InfoCard(label = gainOrLossText, value = "${String.format("%.1f", abs(totalGain))} kg", isDarkTheme = isDarkTheme)
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    InfoCard(label = "Meta de Ganho", value = gainGoal, isDarkTheme = isDarkTheme)
+                }
+            }
+        }
+    }
+}
+
+
 @Composable
 fun InfoCard(
     label: String,
     value: String,
-    isDarkTheme: Boolean
+    isDarkTheme: Boolean // <-- Recebe a informação de tema
 ) {
+    // --- CORREÇÃO APLICADA AQUI ---
+    // A lógica de cor agora é idêntica à da tela inicial.
     val containerColor = if (isDarkTheme) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
@@ -148,9 +203,7 @@ fun InfoCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = containerColor
-        )
+        colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
         Column(
             modifier = Modifier
@@ -161,13 +214,15 @@ fun InfoCard(
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
             )
             Text(
                 text = value,
-                style = MaterialTheme.typography.headlineSmall, // Ajustado para 'Small' para melhor encaixe
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center
             )
         }
     }
@@ -205,7 +260,6 @@ fun InitialProfilePrompt(onAddClick: () -> Unit) {
     }
 }
 
-// O InfoColumn não é mais necessário, foi substituído pelo InfoCard.
 
 @Composable
 fun WeightItem(entry: WeightEntry, isDarkTheme: Boolean, onDelete: () -> Unit) {
