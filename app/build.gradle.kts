@@ -89,5 +89,6 @@ dependencies {
 
     // Gráfico de Linhas (Vico)
     implementation(libs.vico.core)
+    implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)
 }

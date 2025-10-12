@@ -45,6 +45,7 @@ kizitonwose-calendar-compose = { group = "com.kizitonwose.calendar", name = "com
 android-desugarJdkLibs = { group = "com.android.tools", name = "desugar_jdk_libs", version = "2.0.4" }
 
 # Vico Chart Library
+vico-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico" }
 vico-core = { group = "com.patrykandpatrick.vico", name = "core", version.ref = "vico" }
 vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
 
