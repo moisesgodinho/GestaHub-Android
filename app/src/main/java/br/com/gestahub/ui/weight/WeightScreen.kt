@@ -379,7 +379,8 @@ fun WeightItem(
                             it
                         }
                     },
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = gestationalAge ?: "-",
@@ -393,7 +394,8 @@ fun WeightItem(
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = "${String.format("%.1f", entry.weight)} kg",
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = "IMC: ${String.format("%.1f", entry.bmi)}",
