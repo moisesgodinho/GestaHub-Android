@@ -6,8 +6,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -15,11 +17,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.gestahub.ui.navigation.WeightViewModelFactory
+import br.com.gestahub.ui.theme.Rose500
+import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
+import com.patrykandpatrick.vico.core.entry.FloatEntry
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.util.*
 import kotlin.math.abs
-import br.com.gestahub.ui.theme.Rose500
 
 
 @Composable
@@ -65,8 +69,16 @@ fun WeightScreen(
                 )
             }
 
-            // --- CORREÇÃO APLICADA AQUI ---
-            // O histórico de peso agora está dentro de um Card principal.
+            if (uiState.weightChartEntries.size > 1) {
+                item {
+                    ChartCard(
+                        weightEntries = uiState.weightChartEntries,
+                        dateLabels = uiState.chartDateLabels
+                    )
+                }
+            }
+
+
             item {
                 HistoryCard(
                     uiState = uiState,
@@ -78,9 +90,48 @@ fun WeightScreen(
     }
 }
 
-/**
- * Novo card que envolve todo o histórico de peso.
- */
+// --- ARQUIVO MODIFICADO ---
+@Composable
+fun ChartCard(
+    weightEntries: List<FloatEntry>,
+    dateLabels: List<String>
+) {
+    val chartEntryModelProducer = remember { ChartEntryModelProducer() }
+
+    LaunchedEffect(key1 = weightEntries) {
+        chartEntryModelProducer.setEntries(weightEntries)
+    }
+
+    // --- CORREÇÃO APLICADA AQUI ---
+    // Calculamos os valores mínimo e máximo diretamente da lista de dados
+    val minY = weightEntries.minByOrNull { it.y }?.y?.minus(2)
+    val maxY = weightEntries.maxByOrNull { it.y }?.y?.plus(2)
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = "Evolução do Peso",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            // Passamos os valores calculados para o gráfico
+            WeightChart(
+                chartEntryModelProducer = chartEntryModelProducer,
+                dateLabels = dateLabels,
+                minY = minY,
+                maxY = maxY
+            )
+        }
+    }
+}
+// O restante do arquivo WeightScreen.kt permanece o mesmo...
 @Composable
 fun HistoryCard(
     uiState: WeightUiState,
@@ -300,8 +351,6 @@ fun WeightItem(
     isDarkTheme: Boolean,
     onDelete: () -> Unit
 ) {
-    // --- CORREÇÃO APLICADA AQUI ---
-    // A cor agora é a mesma do InfoCard, para seguir o padrão do "Altura".
     val containerColor = if (isDarkTheme) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
@@ -311,7 +360,7 @@ fun WeightItem(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(0.dp) // Removida a elevação para um visual mais plano dentro do card principal
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Row(
             modifier = Modifier
