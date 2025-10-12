@@ -13,11 +13,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
+import java.util.*
 import kotlin.math.pow
 
 data class WeightUiState(
     val profile: WeightProfile? = null,
     val entries: List<WeightEntry> = emptyList(),
+    val gestationalAges: Map<String, String> = emptyMap(),
     val isLoading: Boolean = true,
     val userMessage: String? = null,
     val initialBmi: Double = 0.0,
@@ -26,7 +31,8 @@ data class WeightUiState(
     val gainGoal: String = ""
 )
 
-class WeightViewModel : ViewModel() {
+// O ViewModel agora recebe a DUM (lmp)
+class WeightViewModel(private val estimatedLmp: LocalDate?) : ViewModel() {
     private val repository = WeightRepository()
     private var weightListener: ListenerRegistration? = null
     private var profileListener: ListenerRegistration? = null
@@ -67,14 +73,22 @@ class WeightViewModel : ViewModel() {
                 return@addSnapshotListener
             }
             try {
-                // --- CORREÇÃO APLICADA AQUI ---
-                // Trocamos a conversão automática 'toObjects<WeightEntry>()' por um loop manual.
-                // Isso é mais seguro e resolve o erro de compilação.
-                val entries = snapshot?.documents?.mapNotNull { doc ->
-                    doc.toObject<WeightEntry>()
-                } ?: emptyList()
+                val entries = snapshot?.documents?.mapNotNull { it.toObject<WeightEntry>() } ?: emptyList()
 
-                _uiState.update { it.copy(isLoading = false, entries = entries) }
+                val ages = mutableMapOf<String, String>()
+                if (estimatedLmp != null) {
+                    val parser = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    entries.forEach { entry ->
+                        val entryDate = parser.parse(entry.date)?.toInstant()?.atZone(java.time.ZoneId.systemDefault())?.toLocalDate()
+                        if (entryDate != null) {
+                            // A chamada agora usa a função local, resolvendo o erro
+                            val age = calculateGestationalAge(estimatedLmp, entryDate)
+                            ages[entry.date] = "${age.weeks}s ${age.days}d"
+                        }
+                    }
+                }
+
+                _uiState.update { it.copy(isLoading = false, entries = entries, gestationalAges = ages) }
                 calculateWeightSummary()
             } catch (e: Exception) {
                 Log.e("WeightViewModel", "FALHA AO CONVERTER DADOS DO FIREBASE!", e)
@@ -82,6 +96,18 @@ class WeightViewModel : ViewModel() {
             }
         }
     }
+
+    // --- CORREÇÃO APLICADA AQUI ---
+    // A lógica de cálculo foi movida para dentro deste arquivo para eliminar o erro.
+    private data class GestationalAge(val weeks: Int, val days: Int)
+    private fun calculateGestationalAge(lmp: LocalDate, targetDate: LocalDate): GestationalAge {
+        val daysBetween = ChronoUnit.DAYS.between(lmp, targetDate).toInt()
+        if (daysBetween < 0) return GestationalAge(0, 0)
+        val weeks = daysBetween / 7
+        val days = daysBetween % 7
+        return GestationalAge(weeks, days)
+    }
+    // --- FIM DA CORREÇÃO ---
 
     private fun calculateWeightSummary() {
         val profile = _uiState.value.profile
@@ -114,7 +140,6 @@ class WeightViewModel : ViewModel() {
             )
         }
     }
-
 
     fun deleteWeightEntry(entry: WeightEntry) {
         val userId = Firebase.auth.currentUser?.uid ?: return

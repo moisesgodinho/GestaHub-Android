@@ -2,10 +2,8 @@ package br.com.gestahub.ui.weight
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -16,17 +14,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import br.com.gestahub.ui.navigation.WeightViewModelFactory
 import java.text.SimpleDateFormat
+import java.time.LocalDate
 import java.util.*
 import kotlin.math.abs
+import br.com.gestahub.ui.theme.Rose500
+
 
 @Composable
 fun WeightScreen(
     contentPadding: PaddingValues,
     isDarkTheme: Boolean,
     onNavigateToProfileForm: () -> Unit,
-    viewModel: WeightViewModel = viewModel()
+    estimatedLmp: LocalDate?
 ) {
+    val viewModel: WeightViewModel = viewModel(factory = WeightViewModelFactory(estimatedLmp))
     val uiState by viewModel.uiState.collectAsState()
     val profile = uiState.profile
 
@@ -45,7 +48,7 @@ fun WeightScreen(
             } else {
                 ProfileCard(
                     profile = profile!!,
-                    isDarkTheme = isDarkTheme, // Passa a informação de tema
+                    isDarkTheme = isDarkTheme,
                     onEditClick = onNavigateToProfileForm
                 )
             }
@@ -62,35 +65,64 @@ fun WeightScreen(
                 )
             }
 
+            // --- CORREÇÃO APLICADA AQUI ---
+            // O histórico de peso agora está dentro de um Card principal.
             item {
-                Text(
-                    text = "Histórico de Peso",
-                    style = MaterialTheme.typography.headlineSmall
+                HistoryCard(
+                    uiState = uiState,
+                    isDarkTheme = isDarkTheme,
+                    onDelete = { entry -> viewModel.deleteWeightEntry(entry) }
                 )
             }
+        }
+    }
+}
+
+/**
+ * Novo card que envolve todo o histórico de peso.
+ */
+@Composable
+fun HistoryCard(
+    uiState: WeightUiState,
+    isDarkTheme: Boolean,
+    onDelete: (WeightEntry) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = "Histórico de Peso",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(16.dp))
 
             if (uiState.isLoading) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
                 }
             } else if (uiState.entries.isEmpty()) {
-                item {
-                    EmptyState()
-                }
+                EmptyState()
             } else {
-                items(uiState.entries, key = { it.date }) { entry ->
-                    WeightItem(
-                        entry = entry,
-                        isDarkTheme = isDarkTheme,
-                        onDelete = { viewModel.deleteWeightEntry(entry) }
-                    )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    uiState.entries.forEach { entry ->
+                        WeightItem(
+                            entry = entry,
+                            gestationalAge = uiState.gestationalAges[entry.date],
+                            isDarkTheme = isDarkTheme,
+                            onDelete = { onDelete(entry) }
+                        )
+                    }
                 }
             }
         }
@@ -111,7 +143,10 @@ fun ProfileCard(profile: WeightProfile, isDarkTheme: Boolean, onEditClick: () ->
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Seus Dados Iniciais", style = MaterialTheme.typography.titleLarge)
+                Text("Seus Dados Iniciais",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
                 TextButton(onClick = onEditClick) {
                     Text("Alterar dados")
                 }
@@ -125,14 +160,14 @@ fun ProfileCard(profile: WeightProfile, isDarkTheme: Boolean, onEditClick: () ->
                     InfoCard(
                         label = "Altura",
                         value = "${profile.height} cm",
-                        isDarkTheme = isDarkTheme // Passa a informação de tema
+                        isDarkTheme = isDarkTheme
                     )
                 }
                 Box(modifier = Modifier.weight(1f)) {
                     InfoCard(
                         label = "Peso Inicial",
                         value = "${profile.prePregnancyWeight} kg",
-                        isDarkTheme = isDarkTheme // Passa a informação de tema
+                        isDarkTheme = isDarkTheme
                     )
                 }
             }
@@ -157,7 +192,7 @@ fun SummaryCard(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -190,10 +225,8 @@ fun SummaryCard(
 fun InfoCard(
     label: String,
     value: String,
-    isDarkTheme: Boolean // <-- Recebe a informação de tema
+    isDarkTheme: Boolean
 ) {
-    // --- CORREÇÃO APLICADA AQUI ---
-    // A lógica de cor agora é idêntica à da tela inicial.
     val containerColor = if (isDarkTheme) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
@@ -260,9 +293,15 @@ fun InitialProfilePrompt(onAddClick: () -> Unit) {
     }
 }
 
-
 @Composable
-fun WeightItem(entry: WeightEntry, isDarkTheme: Boolean, onDelete: () -> Unit) {
+fun WeightItem(
+    entry: WeightEntry,
+    gestationalAge: String?,
+    isDarkTheme: Boolean,
+    onDelete: () -> Unit
+) {
+    // --- CORREÇÃO APLICADA AQUI ---
+    // A cor agora é a mesma do InfoCard, para seguir o padrão do "Altura".
     val containerColor = if (isDarkTheme) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
@@ -272,21 +311,15 @@ fun WeightItem(entry: WeightEntry, isDarkTheme: Boolean, onDelete: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(0.dp) // Removida a elevação para um visual mais plano dentro do card principal
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text(
-                    text = "${String.format("%.1f", entry.weight)} kg",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
                 Text(
                     text = entry.date.let {
                         try {
@@ -297,15 +330,29 @@ fun WeightItem(entry: WeightEntry, isDarkTheme: Boolean, onDelete: () -> Unit) {
                             it
                         }
                     },
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                Text(
+                    text = gestationalAge ?: "-",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Rose500
+                )
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "${String.format("%.1f", entry.weight)} kg",
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                Text(
+                    text = "IMC: ${String.format("%.1f", entry.bmi)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Text(
-                text = "IMC: ${String.format("%.1f", entry.bmi)}",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold
-            )
+
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, contentDescription = "Excluir peso")
             }

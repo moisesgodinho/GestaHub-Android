@@ -9,6 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -31,6 +33,7 @@ import br.com.gestahub.ui.profile.ProfileScreen
 import br.com.gestahub.ui.weight.WeightEntryFormScreen
 import br.com.gestahub.ui.weight.WeightProfileFormScreen
 import br.com.gestahub.ui.weight.WeightScreen
+import br.com.gestahub.ui.weight.WeightViewModel
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -41,6 +44,17 @@ data class NavItem(
     val icon: ImageVector,
     val route: String
 )
+
+// Factory para criar o WeightViewModel com a DUM
+class WeightViewModelFactory(private val estimatedLmp: LocalDate?) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(WeightViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return WeightViewModel(estimatedLmp) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,7 +145,6 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
             }
         },
         floatingActionButton = {
-            // --- CORREÇÃO APLICADA AQUI ---
             when (currentRoute) {
                 "appointments" -> {
                     FloatingActionButton(onClick = { navController.navigate("appointmentForm") }) {
@@ -231,11 +244,15 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                 )
             }
             composable("weight") {
-                // A chamada para WeightScreen foi simplificada
+                val dataState = homeUiState.dataState
+                val estimatedLmp = (dataState as? GestationalDataState.HasData)?.estimatedLmp
+
                 WeightScreen(
                     contentPadding = innerPadding,
                     isDarkTheme = isDarkTheme,
-                    onNavigateToProfileForm = { navController.navigate("weight_profile_form") }
+                    onNavigateToProfileForm = { navController.navigate("weight_profile_form") },
+                    // Passa a DUM para a tela de peso, que usará a Factory
+                    estimatedLmp = estimatedLmp
                 )
             }
             composable("more") { Box(Modifier.padding(innerPadding)) { MoreScreen() } }
