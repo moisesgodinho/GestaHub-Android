@@ -14,7 +14,7 @@ import java.util.*
 import kotlin.math.pow
 
 data class WeightEntryUiState(
-    val date: Date = Date(),
+    val date: Date, // Removido o valor padrão para forçar a inicialização correta
     val weight: String = "",
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
@@ -25,11 +25,22 @@ class WeightEntryViewModel : ViewModel() {
     private val repository = WeightRepository()
     private var userHeightCm: Int? = null
 
-    private val _uiState = MutableStateFlow(WeightEntryUiState())
+    // --- CORREÇÃO APLICADA AQUI ---
+    // A função 'getStartOfToday()' garante que a data inicial seja sempre "hoje"
+    // no fuso horário do celular, e não em UTC.
+    private fun getStartOfToday(): Date {
+        val calendar = Calendar.getInstance() // Pega o calendário no fuso horário local
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        return calendar.time
+    }
+
+    private val _uiState = MutableStateFlow(WeightEntryUiState(date = getStartOfToday()))
     val uiState = _uiState.asStateFlow()
 
     init {
-        // Busca a altura do usuário ao inicializar o ViewModel
         loadUserHeight()
     }
 
@@ -74,12 +85,13 @@ class WeightEntryViewModel : ViewModel() {
         _uiState.update { it.copy(isSaving = true) }
         viewModelScope.launch {
             try {
-                // Cálculo do IMC
                 val heightInMeters = heightInCm / 100.0
                 val bmi = weightValue / heightInMeters.pow(2)
 
-                // Formata a data para "YYYY-MM-DD" para ser usada como ID
-                val dateId = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(_uiState.value.date)
+                val dateIdFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                }
+                val dateId = dateIdFormatter.format(_uiState.value.date)
 
                 val entry = WeightEntry(
                     date = dateId,
