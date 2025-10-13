@@ -89,6 +89,13 @@ fun WeightEntryFormScreen(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+object PastOrPresentSelectableDates: SelectableDates {
+    override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+        return utcTimeMillis <= System.currentTimeMillis()
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DatePickerField(date: Date, onDateChange: (Date) -> Unit) {
     var showDatePicker by remember { mutableStateOf(false) }
@@ -119,7 +126,8 @@ private fun DatePickerField(date: Date, onDateChange: (Date) -> Unit) {
 
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = date.time
+            initialSelectedDateMillis = date.time,
+            selectableDates = PastOrPresentSelectableDates
         )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
