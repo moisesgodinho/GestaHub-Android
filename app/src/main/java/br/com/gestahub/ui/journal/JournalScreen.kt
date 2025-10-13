@@ -1,10 +1,8 @@
 // Local: app/src/main/java/br/com/gestahub/ui/journal/JournalScreen.kt
 package br.com.gestahub.ui.journal
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -27,6 +25,7 @@ import java.util.Locale
 fun JournalScreen(
     contentPadding: PaddingValues,
     estimatedLmp: LocalDate?,
+    isDarkTheme: Boolean,
     onNavigateToEntry: (date: String) -> Unit
 ) {
     val viewModel: JournalViewModel = viewModel(factory = JournalViewModel.Factory(estimatedLmp))
@@ -97,7 +96,6 @@ fun JournalScreen(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // --- CHAMADA SIMPLIFICADA PARA O NOVO COMPONENTE DE CALENDÁRIO ---
         item {
             JournalCalendar(
                 entries = allEntries,
@@ -113,31 +111,56 @@ fun JournalScreen(
                 onPreviousClick = { viewModel.selectPreviousCalendarMonth() },
                 onNextClick = { viewModel.selectNextCalendarMonth() },
                 isPreviousEnabled = isPreviousCalendarMonthEnabled,
-                isNextEnabled = isNextCalendarMonthEnabled
+                isNextEnabled = isNextCalendarMonthEnabled,
+                isDarkTheme = isDarkTheme // Adicione esta linha
+
             )
         }
 
         item {
-            MonthNavigator(
-                selectedMonth = historyMonth,
-                onPreviousClick = { viewModel.selectPreviousHistoryMonth() },
-                onNextClick = { viewModel.selectNextHistoryMonth() },
-                isPreviousEnabled = isPreviousHistoryMonthEnabled,
-                isNextEnabled = isNextHistoryMonthEnabled,
-            )
-        }
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "Histórico do Diário",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
 
-        if (entriesForHistoryMonth.isEmpty()) {
-            item {
-                EmptyMonthScreen()
-            }
-        } else {
-            items(entriesForHistoryMonth, key = { it.id }) { entry ->
-                JournalItem(
-                    entry = entry,
-                    onEditClick = { onNavigateToEntry(entry.date) },
-                    onDeleteClick = { entryToDelete = it }
-                )
+                    MonthNavigator(
+                        selectedMonth = historyMonth,
+                        onPreviousClick = { viewModel.selectPreviousHistoryMonth() },
+                        onNextClick = { viewModel.selectNextHistoryMonth() },
+                        isPreviousEnabled = isPreviousHistoryMonthEnabled,
+                        isNextEnabled = isNextHistoryMonthEnabled,
+                        isDarkTheme = isDarkTheme
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (entriesForHistoryMonth.isEmpty()) {
+                        EmptyMonthScreen()
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            entriesForHistoryMonth.forEach { entry ->
+                                JournalItem(
+                                    entry = entry,
+                                    onEditClick = { onNavigateToEntry(entry.date) },
+                                    onDeleteClick = { entryToDelete = it },
+                                    isDarkTheme = isDarkTheme
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -150,21 +173,22 @@ fun MonthNavigator(
     onNextClick: () -> Unit,
     isPreviousEnabled: Boolean,
     isNextEnabled: Boolean,
-    title: String? = null // Parâmetro de título opcional
+    isDarkTheme: Boolean,
+    title: String? = null
 ) {
     val formatter = DateTimeFormatter.ofPattern("MMMM 'de' yyyy", Locale("pt", "BR"))
     val monthText = selectedMonth.format(formatter)
         .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
 
-    val cardColor = if (isSystemInDarkTheme()) {
+    val cardColor = if (isDarkTheme) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
-        MaterialTheme.colorScheme.surface
+        MaterialTheme.colorScheme.surfaceVariant
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(0.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Column {
@@ -203,7 +227,9 @@ fun MonthNavigator(
 @Composable
 fun EmptyMonthScreen() {
     Column(
-        modifier = Modifier.padding(24.dp).fillMaxWidth(),
+        modifier = Modifier
+            .padding(24.dp)
+            .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -227,17 +253,18 @@ fun EmptyMonthScreen() {
 fun JournalItem(
     entry: JournalEntry,
     onEditClick: (JournalEntry) -> Unit,
-    onDeleteClick: (JournalEntry) -> Unit
+    onDeleteClick: (JournalEntry) -> Unit,
+    isDarkTheme: Boolean
 ) {
-    val cardColor = if (isSystemInDarkTheme()) {
+    val cardColor = if (isDarkTheme) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
-        MaterialTheme.colorScheme.surface
+        MaterialTheme.colorScheme.surfaceVariant
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(0.dp),
         colors = CardDefaults.cardColors(containerColor = cardColor)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {

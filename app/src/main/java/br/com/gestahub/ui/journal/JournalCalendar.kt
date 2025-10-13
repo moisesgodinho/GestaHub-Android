@@ -36,14 +36,15 @@ fun JournalCalendar(
     onPreviousClick: () -> Unit,
     onNextClick: () -> Unit,
     isPreviousEnabled: Boolean,
-    isNextEnabled: Boolean
+    isNextEnabled: Boolean,
+    isDarkTheme: Boolean // Parâmetro adicionado
 ) {
     val firstDayOfMonth = displayMonth.atDay(1)
     val firstDayOfWeek = firstDayOfMonth.dayOfWeek.value % 7
     val daysInMonth = displayMonth.lengthOfMonth()
     val today = LocalDate.now()
 
-    val cardColor = if (isSystemInDarkTheme()) {
+    val cardColor = if (isDarkTheme) { // Lógica alterada
         MaterialTheme.colorScheme.primaryContainer
     } else {
         MaterialTheme.colorScheme.surface
@@ -60,7 +61,9 @@ fun JournalCalendar(
                 onPreviousClick = onPreviousClick,
                 onNextClick = onNextClick,
                 isPreviousEnabled = isPreviousEnabled,
-                isNextEnabled = isNextEnabled
+                isNextEnabled = isNextEnabled,
+                isDarkTheme = isDarkTheme // Passando o parâmetro
+
             )
 
             Spacer(modifier = Modifier.height(16.dp))

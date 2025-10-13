@@ -238,6 +238,7 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
                 JournalScreen(
                     contentPadding = innerPadding,
                     estimatedLmp = lmp,
+                    isDarkTheme = isDarkTheme,
                     onNavigateToEntry = { date ->
                         navController.navigate("journalEntry/$date")
                     }
