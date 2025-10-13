@@ -3,29 +3,20 @@ package br.com.gestahub.ui.appointment
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import br.com.gestahub.ui.appointment.components.AppointmentsListCard
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -81,7 +72,10 @@ fun AppointmentsScreen(
     }
 
     if (uiState.isLoading) {
-        Box(Modifier.fillMaxSize().padding(contentPadding), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(contentPadding), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
     } else {
@@ -146,49 +140,6 @@ fun AppointmentsScreen(
                             onDeleteOrClearRequest = onDeleteOrClearRequest
                         )
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun AppointmentsListCard(
-    title: String,
-    appointments: List<Appointment>,
-    lmpDate: LocalDate?,
-    isDarkTheme: Boolean,
-    onToggleDone: (Appointment) -> Unit,
-    onEditClick: (Appointment) -> Unit,
-    onDeleteOrClearRequest: (Appointment) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier
-                    .fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                appointments.forEach { appointment ->
-                    AppointmentItem(
-                        appointment = appointment,
-                        lmpDate = lmpDate,
-                        isDarkTheme = isDarkTheme,
-                        onToggleDone = onToggleDone,
-                        onEdit = onEditClick,
-                        onDelete = onDeleteOrClearRequest
-                    )
                 }
             }
         }
