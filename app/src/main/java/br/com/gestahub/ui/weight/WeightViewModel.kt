@@ -18,6 +18,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import kotlin.math.pow
+import kotlin.math.roundToInt
 
 data class WeightUiState(
     val profile: WeightProfile? = null,
@@ -29,8 +30,6 @@ data class WeightUiState(
     val currentBmi: Double = 0.0,
     val totalGain: Double = 0.0,
     val gainGoal: String = "",
-    // --- ALTERADO AQUI ---
-    // Uma lista para os pontos (peso) e outra para as legendas (datas)
     val weightChartEntries: List<FloatEntry> = emptyList(),
     val chartDateLabels: List<String> = emptyList()
 )
@@ -102,7 +101,6 @@ class WeightViewModel(private val estimatedLmp: LocalDate?) : ViewModel() {
         }
     }
 
-    // --- LÓGICA DO GRÁFICO ATUALIZADA (BASEADA NO PWA) ---
     private fun updateWeightChartData() {
         val profile = _uiState.value.profile
         val entries = _uiState.value.entries
@@ -116,12 +114,9 @@ class WeightViewModel(private val estimatedLmp: LocalDate?) : ViewModel() {
         val dateLabels = mutableListOf<String>()
         val dateFormatter = DateTimeFormatter.ofPattern("dd/MM")
 
-        // 1. Ponto Inicial
         chartEntries.add(FloatEntry(0f, profile.prePregnancyWeight.toFloat()))
         dateLabels.add("Início")
 
-        // 2. Histórico de Peso
-        // Usamos um índice numérico simples para o eixo X, como no Chart.js
         entries.sortedBy { it.date }.forEachIndexed { index, entry ->
             chartEntries.add(FloatEntry(index + 1f, entry.weight.toFloat()))
             try {
@@ -131,7 +126,6 @@ class WeightViewModel(private val estimatedLmp: LocalDate?) : ViewModel() {
             }
         }
 
-        // 3. Ponto Final (DPP)
         val dueDate = estimatedLmp.plusDays(280)
         if (dueDate.isAfter(LocalDate.now())) {
             val lastWeight = entries.firstOrNull()?.weight?.toFloat() ?: profile.prePregnancyWeight.toFloat()
@@ -165,15 +159,21 @@ class WeightViewModel(private val estimatedLmp: LocalDate?) : ViewModel() {
         val initialWeight = profile.prePregnancyWeight
         val latestWeight = entries.firstOrNull()?.weight ?: initialWeight
 
-        val initialBmi = initialWeight / heightInMeters.pow(2)
+        // --- CORREÇÃO DE PRECISÃO DE PONTO FLUTUANTE ---
+        // 1. Calcula o IMC com precisão total
+        val unroundedInitialBmi = initialWeight / heightInMeters.pow(2)
+        // 2. Arredonda para 1 casa decimal para evitar erros de comparação
+        val initialBmi = (unroundedInitialBmi * 10).roundToInt() / 10.0
+
         val currentBmi = latestWeight / heightInMeters.pow(2)
         val totalGain = latestWeight - initialWeight
 
         val gainGoal = when {
             initialBmi < 18.5 -> "12.5 - 18.0 kg"
-            initialBmi < 25.0 -> "11.5 - 16.0 kg"
-            initialBmi < 30.0 -> "7.0 - 11.5 kg"
-            else -> "5.0 - 9.0 kg"
+            initialBmi >= 18.5 && initialBmi < 25.0 -> "11.5 - 16.0 kg"
+            initialBmi >= 25.0 && initialBmi < 30.0 -> "7.0 - 11.5 kg"
+            initialBmi >= 30.0 -> "5.0 - 9.0 kg"
+            else -> ""
         }
 
         _uiState.update {

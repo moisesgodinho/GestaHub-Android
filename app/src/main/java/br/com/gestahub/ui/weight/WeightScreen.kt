@@ -37,11 +37,12 @@ private enum class BmiCategory {
     LOW, NORMAL, OVERWEIGHT, OBESE
 }
 
+// Lógica correta para os intervalos (receberá um valor já arredondado do ViewModel)
 private fun getBmiCategory(bmi: Double): BmiCategory? {
     return when {
         bmi < 18.5 -> BmiCategory.LOW
-        bmi in 18.5..24.9 -> BmiCategory.NORMAL
-        bmi in 25.0..29.9 -> BmiCategory.OVERWEIGHT
+        bmi >= 18.5 && bmi < 25.0 -> BmiCategory.NORMAL
+        bmi >= 25.0 && bmi < 30.0 -> BmiCategory.OVERWEIGHT
         bmi >= 30.0 -> BmiCategory.OBESE
         else -> null
     }
@@ -120,7 +121,6 @@ fun WeightScreen(
 }
 
 
-// --- CARD DE RECOMENDAÇÕES COM TÍTULO CENTRALIZADO ---
 @Composable
 fun WeightGainRecommendationsCard(initialBmi: Double, isDarkTheme: Boolean) {
     val currentCategory = getBmiCategory(initialBmi)
@@ -244,7 +244,6 @@ private fun RecommendationItem(
 }
 
 
-// --- CARD DO GRÁFICO COM TÍTULO CENTRALIZADO ---
 @Composable
 fun ChartCard(
     weightEntries: List<FloatEntry>,
@@ -285,7 +284,6 @@ fun ChartCard(
     }
 }
 
-// --- CARD DO HISTÓRICO COM TÍTULO CENTRALIZADO ---
 @Composable
 fun HistoryCard(
     uiState: WeightUiState,
