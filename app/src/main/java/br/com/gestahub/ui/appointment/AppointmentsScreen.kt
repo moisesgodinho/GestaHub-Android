@@ -3,12 +3,16 @@ package br.com.gestahub.ui.appointment
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -19,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
@@ -107,7 +112,9 @@ fun AppointmentsScreen(
                 item {
                     Text(
                         text = "Nenhuma consulta encontrada. Toque no '+' para adicionar a primeira.",
-                        modifier = Modifier.padding(32.dp).fillMaxWidth(),
+                        modifier = Modifier
+                            .padding(32.dp)
+                            .fillMaxWidth(),
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -115,32 +122,28 @@ fun AppointmentsScreen(
             } else {
                 if (uiState.upcomingAppointments.isNotEmpty()) {
                     item {
-                        SectionHeader("Próximas Consultas")
-                    }
-                    items(uiState.upcomingAppointments, key = { it.id }) { appointment ->
-                        AppointmentItem(
-                            appointment = appointment,
+                        AppointmentsListCard(
+                            title = "Próximas Consultas",
+                            appointments = uiState.upcomingAppointments,
                             lmpDate = uiState.lmpDate,
                             isDarkTheme = isDarkTheme,
                             onToggleDone = onToggleDone,
-                            onEdit = onEditClick,
-                            onDelete = onDeleteOrClearRequest
+                            onEditClick = onEditClick,
+                            onDeleteOrClearRequest = onDeleteOrClearRequest
                         )
                     }
                 }
 
                 if (uiState.pastAppointments.isNotEmpty()) {
                     item {
-                        SectionHeader("Consultas Passadas")
-                    }
-                    items(uiState.pastAppointments, key = { it.id }) { appointment ->
-                        AppointmentItem(
-                            appointment = appointment,
+                        AppointmentsListCard(
+                            title = "Consultas Passadas",
+                            appointments = uiState.pastAppointments,
                             lmpDate = uiState.lmpDate,
                             isDarkTheme = isDarkTheme,
                             onToggleDone = onToggleDone,
-                            onEdit = onEditClick,
-                            onDelete = onDeleteOrClearRequest
+                            onEditClick = onEditClick,
+                            onDeleteOrClearRequest = onDeleteOrClearRequest
                         )
                     }
                 }
@@ -150,11 +153,44 @@ fun AppointmentsScreen(
 }
 
 @Composable
-fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.headlineSmall,
-        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
-        color = MaterialTheme.colorScheme.onSurface
-    )
+fun AppointmentsListCard(
+    title: String,
+    appointments: List<Appointment>,
+    lmpDate: LocalDate?,
+    isDarkTheme: Boolean,
+    onToggleDone: (Appointment) -> Unit,
+    onEditClick: (Appointment) -> Unit,
+    onDeleteOrClearRequest: (Appointment) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                appointments.forEach { appointment ->
+                    AppointmentItem(
+                        appointment = appointment,
+                        lmpDate = lmpDate,
+                        isDarkTheme = isDarkTheme,
+                        onToggleDone = onToggleDone,
+                        onEdit = onEditClick,
+                        onDelete = onDeleteOrClearRequest
+                    )
+                }
+            }
+        }
+    }
 }

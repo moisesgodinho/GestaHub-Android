@@ -3,7 +3,6 @@ package br.com.gestahub.ui.appointment
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -89,7 +88,7 @@ fun AppointmentItem(
         modifier = Modifier
             .fillMaxWidth()
             .animateContentSize(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
         Row(
@@ -104,7 +103,7 @@ fun AppointmentItem(
 
             Row(
                 modifier = Modifier
-                    .padding(start = 0.dp, end = 4.dp, top = 12.dp, bottom = 12.dp)
+                    .padding(start = 8.dp, end = 4.dp, top = 12.dp, bottom = 12.dp)
                     .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -118,7 +117,11 @@ fun AppointmentItem(
                     modifier = Modifier.scale(1.2f)
                 )
 
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 8.dp)
+                ) {
                     Text(
                         text = appointment.title,
                         style = MaterialTheme.typography.titleMedium,
@@ -213,7 +216,9 @@ private fun NotesWithExpandableLink(
         Icon(
             imageVector = Icons.Default.Description,
             contentDescription = null,
-            modifier = Modifier.size(18.dp).padding(top = 2.dp),
+            modifier = Modifier
+                .size(18.dp)
+                .padding(top = 2.dp),
             tint = textColor
         )
         Spacer(modifier = Modifier.width(8.dp))
@@ -269,7 +274,9 @@ private fun InfoRow(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            modifier = Modifier.size(18.dp).padding(top = 2.dp),
+            modifier = Modifier
+                .size(18.dp)
+                .padding(top = 2.dp),
             tint = textColor
         )
         Spacer(modifier = Modifier.width(8.dp))
