@@ -37,7 +37,6 @@ private enum class BmiCategory {
     LOW, NORMAL, OVERWEIGHT, OBESE
 }
 
-// Lógica correta para os intervalos (receberá um valor já arredondado do ViewModel)
 private fun getBmiCategory(bmi: Double): BmiCategory? {
     return when {
         bmi < 18.5 -> BmiCategory.LOW
@@ -121,6 +120,7 @@ fun WeightScreen(
 }
 
 
+// --- CARD DE RECOMENDAÇÕES COM TÍTULO CENTRALIZADO ---
 @Composable
 fun WeightGainRecommendationsCard(initialBmi: Double, isDarkTheme: Boolean) {
     val currentCategory = getBmiCategory(initialBmi)
@@ -244,6 +244,7 @@ private fun RecommendationItem(
 }
 
 
+// --- CARD DO GRÁFICO COM TÍTULO CENTRALIZADO ---
 @Composable
 fun ChartCard(
     weightEntries: List<FloatEntry>,
@@ -284,6 +285,7 @@ fun ChartCard(
     }
 }
 
+// --- CARD DO HISTÓRICO COM TÍTULO CENTRALIZADO ---
 @Composable
 fun HistoryCard(
     uiState: WeightUiState,
@@ -410,6 +412,7 @@ fun ProfileCard(profile: WeightProfile, isDarkTheme: Boolean, onEditClick: () ->
     }
 }
 
+// --- CARD ATUALIZADO PARA TELAS MAIORES ---
 @Composable
 fun SummaryCard(
     initialBmi: Double,
@@ -426,35 +429,69 @@ fun SummaryCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Box(modifier = Modifier.weight(1f)) {
-                    InfoCard(label = "IMC Inicial", value = String.format("%.1f", initialBmi), isDarkTheme = isDarkTheme)
+        BoxWithConstraints {
+            // Define um ponto de corte. Se a largura for maior que 600dp, usa o layout de linha única.
+            val useSingleRow = maxWidth > 600.dp
+
+            if (useSingleRow) {
+                // Layout para telas grandes (Tablets)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        InfoCard(label = "IMC Inicial", value = String.format("%.1f", initialBmi), isDarkTheme = isDarkTheme)
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        InfoCard(label = "IMC Atual", value = String.format("%.1f", currentBmi), isDarkTheme = isDarkTheme)
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        InfoCard(
+                            label = gainOrLossText,
+                            value = "${String.format("%.1f", abs(totalGain))} kg",
+                            isDarkTheme = isDarkTheme,
+                            valueColor = totalGainColor
+                        )
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        InfoCard(label = "Meta de Ganho", value = gainGoal, isDarkTheme = isDarkTheme)
+                    }
                 }
-                Box(modifier = Modifier.weight(1f)) {
-                    InfoCard(label = "IMC Atual", value = String.format("%.1f", currentBmi), isDarkTheme = isDarkTheme)
-                }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Box(modifier = Modifier.weight(1f)) {
-                    InfoCard(
-                        label = gainOrLossText,
-                        value = "${String.format("%.1f", abs(totalGain))} kg",
-                        isDarkTheme = isDarkTheme,
-                        valueColor = totalGainColor
-                    )
-                }
-                Box(modifier = Modifier.weight(1f)) {
-                    InfoCard(label = "Meta de Ganho", value = gainGoal, isDarkTheme = isDarkTheme)
+            } else {
+                // Layout padrão para telas pequenas (Celulares)
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            InfoCard(label = "IMC Inicial", value = String.format("%.1f", initialBmi), isDarkTheme = isDarkTheme)
+                        }
+                        Box(modifier = Modifier.weight(1f)) {
+                            InfoCard(label = "IMC Atual", value = String.format("%.1f", currentBmi), isDarkTheme = isDarkTheme)
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            InfoCard(
+                                label = gainOrLossText,
+                                value = "${String.format("%.1f", abs(totalGain))} kg",
+                                isDarkTheme = isDarkTheme,
+                                valueColor = totalGainColor
+                            )
+                        }
+                        Box(modifier = Modifier.weight(1f)) {
+                            InfoCard(label = "Meta de Ganho", value = gainGoal, isDarkTheme = isDarkTheme)
+                        }
+                    }
                 }
             }
         }
