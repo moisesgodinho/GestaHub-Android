@@ -1,7 +1,8 @@
 package br.com.gestahub.ui.weight
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -105,10 +106,6 @@ fun WeightChart(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            // 👇 ADIÇÃO AQUI: Detecta o toque fora do gráfico e limpa a seleção
-            .pointerInput(Unit) {
-                detectTapGestures { selectedIndex = null }
-            }
     ) {
         Chart(
             chart = lineChart(
@@ -153,16 +150,45 @@ fun WeightChart(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(300.dp)
+                // 👇 AQUI ESTÁ A LÓGICA ATUALIZADA DE INTERAÇÃO
                 .pointerInput(Unit) {
-                    detectTapGestures { offset ->
-                        val chartWidth = size.width
-                        val xPercent = (offset.x / chartWidth).coerceIn(0f, 1f)
-                        val clickedIndex = (xPercent * (dateLabels.size - 1)).roundToInt()
+                    forEachGesture {
+                        awaitPointerEventScope {
+                            // Espera o primeiro toque
+                            val down = awaitFirstDown(requireUnconsumed = false)
 
-                        if (clickedIndex in dateLabels.indices) {
-                            selectedIndex = clickedIndex
-                            selectedDate = dateLabels[clickedIndex]
-                            selectedWeight = chartEntryModelProducer.getModel()?.entries?.firstOrNull()?.getOrNull(clickedIndex)?.y
+                            var pointerId = down.id
+
+                            // Função para atualizar a seleção
+                            val updateSelection = { x: Float ->
+                                val chartWidth = size.width
+                                val xPercent = (x / chartWidth).coerceIn(0f, 1f)
+                                val clickedIndex = (xPercent * (dateLabels.size - 1)).roundToInt()
+
+                                if (clickedIndex in dateLabels.indices) {
+                                    selectedIndex = clickedIndex
+                                    selectedDate = dateLabels[clickedIndex]
+                                    selectedWeight = chartEntryModelProducer.getModel()?.entries?.firstOrNull()?.getOrNull(clickedIndex)?.y
+                                }
+                            }
+
+                            // Atualiza a seleção no toque inicial
+                            updateSelection(down.position.x)
+
+                            // Loop para rastrear o movimento de arrastar
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val dragChange = event.changes.find { it.id == pointerId }
+
+                                if (dragChange == null || !dragChange.pressed) {
+                                    // Dedo levantado ou gesto cancelado
+                                    selectedIndex = null
+                                    break // Sai do loop
+                                }
+
+                                // Atualiza a seleção durante o arraste
+                                updateSelection(dragChange.position.x)
+                            }
                         }
                     }
                 }
