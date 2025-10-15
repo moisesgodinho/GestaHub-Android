@@ -24,6 +24,7 @@ import br.com.gestahub.ui.home.HomeViewModel
 import br.com.gestahub.ui.journal.JournalEntryScreen
 import br.com.gestahub.ui.journal.JournalScreen
 import br.com.gestahub.ui.more.MoreScreen
+import br.com.gestahub.ui.more.movementcounter.MovementCounterScreen
 import br.com.gestahub.ui.profile.EditProfileScreen
 import br.com.gestahub.ui.profile.ProfileScreen
 import br.com.gestahub.ui.weight.WeightEntryFormScreen
@@ -111,7 +112,16 @@ fun AppNavGraph(
                 estimatedLmp = estimatedLmp
             )
         }
-        composable("more") { Box(Modifier.padding(innerPadding)) { MoreScreen() } }
+        composable("more") {
+            Box(Modifier.padding(innerPadding)) {
+                MoreScreen(
+                    onNavigateToMovementCounter = { navController.navigate("movement_counter") }
+                )
+            }
+        }
+        composable("movement_counter") {
+            MovementCounterScreen()
+        }
         composable(
             route = "appointmentForm?appointmentId={appointmentId}&appointmentType={appointmentType}&preselectedDate={preselectedDate}",
             arguments = listOf(
