@@ -14,8 +14,8 @@ import br.com.gestahub.ui.components.Header
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import java.time.LocalDate
-import br.com.gestahub.ui.theme.Rose500
 import androidx.compose.material.icons.Icons
+import br.com.gestahub.ui.theme.Rose500
 import androidx.compose.material.icons.filled.Delete
 
 @Composable
@@ -164,7 +164,6 @@ fun HistoryItem(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(horizontal = 16.dp)
             ) {
-                // --- MUDANÇA APLICADA AQUI ---
                 Text(
                     text = "${session.kicks} movimentos",
                     style = MaterialTheme.typography.bodyLarge,

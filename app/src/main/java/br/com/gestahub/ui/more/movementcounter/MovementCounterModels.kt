@@ -1,22 +1,24 @@
 package br.com.gestahub.ui.more.movementcounter
 
+import br.com.gestahub.util.GestationalAge
 import br.com.gestahub.util.GestationalAgeCalculator
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.Exclude
 import com.google.firebase.firestore.PropertyName
 import java.text.SimpleDateFormat
+import java.time.Duration
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 data class KickSession(
     val id: String = "",
     val timestamp: Any? = null,
     val kicks: Int = 0,
+    // Renomeamos para 'durationInSeconds' para maior clareza
     @get:PropertyName("duration") @set:PropertyName("duration")
-    var durationInMillis: Long = 0,
+    var durationInSeconds: Long = 0,
     @get:Exclude
     val date: String? = null
 ) {
@@ -28,12 +30,18 @@ data class KickSession(
             else -> 0L
         }
 
-    // --- NOVAS PROPRIEDADES ---
+    // --- CORREÇÃO APLICADA AQUI ---
+    // Multiplicamos por 1000 para converter para milissegundos
+    @get:Exclude
+    private val durationInMillis: Long
+        get() = durationInSeconds * 1000
+
     val dateFormatted: String
         get() = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(timestampAsLong))
 
     val startTimeFormatted: String
         get() {
+            // Usamos o valor corrigido em milissegundos
             val startTime = timestampAsLong - durationInMillis
             return SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(startTime))
         }
@@ -43,9 +51,12 @@ data class KickSession(
 
     val durationFormatted: String
         get() {
-            val minutes = TimeUnit.MILLISECONDS.toMinutes(durationInMillis)
-            val seconds = TimeUnit.MILLISECONDS.toSeconds(durationInMillis) % 60
-            return String.format("%02d:%02d", minutes, seconds)
+            if (durationInMillis < 0) return "00:00"
+            // Usamos o valor corrigido em milissegundos
+            val duration = Duration.ofMillis(durationInMillis)
+            val minutes = duration.toMinutes()
+            val seconds = duration.minusMinutes(minutes).seconds
+            return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
         }
 
     fun getGestationalAge(lmp: LocalDate?): String {
