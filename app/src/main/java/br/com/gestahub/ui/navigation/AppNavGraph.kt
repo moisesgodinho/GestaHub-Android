@@ -195,7 +195,8 @@ fun AppNavGraph(
 
             MovementCounterScreen(
                 onNavigateBack = { navController.popBackStack() },
-                estimatedLmp = lmp
+                estimatedLmp = lmp,
+                isDarkTheme = isDarkTheme // Adicione esta linha
             )
         }
     }

@@ -2,9 +2,6 @@ package br.com.gestahub.ui.more.movementcounter
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,12 +14,15 @@ import br.com.gestahub.ui.components.Header
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import java.time.LocalDate
+import br.com.gestahub.ui.theme.Rose500
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 
 @Composable
 fun MovementCounterScreen(
     onNavigateBack: () -> Unit,
-    // Precisamos da DUM (LMP) para calcular a idade gestacional
-    estimatedLmp: LocalDate?
+    estimatedLmp: LocalDate?,
+    isDarkTheme: Boolean
 ) {
     val viewModel: MovementCounterViewModel = viewModel(
         factory = MovementCounterViewModelFactory(
@@ -42,19 +42,13 @@ fun MovementCounterScreen(
             title = { Text("Confirmar Exclusão") },
             text = { Text("Você tem certeza que deseja apagar esta sessão?") },
             confirmButton = {
-                Button(
-                    onClick = {
-                        sessionToDelete?.let { viewModel.deleteSession(it) }
-                        sessionToDelete = null
-                    }
-                ) {
-                    Text("Apagar")
-                }
+                Button(onClick = {
+                    sessionToDelete?.let { viewModel.deleteSession(it) }
+                    sessionToDelete = null
+                }) { Text("Apagar") }
             },
             dismissButton = {
-                TextButton(onClick = { sessionToDelete = null }) {
-                    Text("Cancelar")
-                }
+                TextButton(onClick = { sessionToDelete = null }) { Text("Cancelar") }
             }
         )
     }
@@ -68,57 +62,59 @@ fun MovementCounterScreen(
             )
         }
     ) { innerPadding ->
-        Box(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            contentAlignment = Alignment.Center
+            contentPadding = PaddingValues(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            when {
-                uiState.isLoading -> CircularProgressIndicator()
-                uiState.error != null -> Text(
-                    text = uiState.error!!,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    textAlign = TextAlign.Center
-                )
-                else -> HistoryList(
-                    sessions = uiState.sessions,
-                    lmp = estimatedLmp,
-                    onDeleteRequest = { sessionToDelete = it }
-                )
-            }
-        }
-    }
-}
+            item {
+                when {
+                    uiState.isLoading -> CircularProgressIndicator(modifier = Modifier.padding(32.dp))
+                    uiState.error != null -> Text(
+                        text = uiState.error!!,
+                        modifier = Modifier.padding(16.dp),
+                        textAlign = TextAlign.Center
+                    )
+                    else -> {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "Histórico de Sessões",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
 
-@Composable
-fun HistoryList(
-    sessions: List<KickSession>,
-    lmp: LocalDate?,
-    onDeleteRequest: (KickSession) -> Unit
-) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item {
-            Text(
-                text = "Histórico de Sessões",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        }
-
-        if (sessions.isEmpty()) {
-            item { Text("Nenhuma sessão registrada ainda.") }
-        } else {
-            items(sessions) { session ->
-                HistoryItem(
-                    session = session,
-                    lmp = lmp,
-                    onDeleteClick = { onDeleteRequest(session) }
-                )
+                                if (uiState.sessions.isEmpty()) {
+                                    Text(
+                                        "Nenhuma sessão registrada ainda.",
+                                        modifier = Modifier.padding(vertical = 16.dp).align(Alignment.CenterHorizontally)
+                                    )
+                                } else {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        uiState.sessions.forEach { session ->
+                                            HistoryItem(
+                                                session = session,
+                                                lmp = estimatedLmp,
+                                                isDarkTheme = isDarkTheme,
+                                                onDeleteClick = { sessionToDelete = session }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -128,16 +124,25 @@ fun HistoryList(
 fun HistoryItem(
     session: KickSession,
     lmp: LocalDate?,
+    isDarkTheme: Boolean,
     onDeleteClick: () -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    val containerColor = if (isDarkTheme) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = containerColor)
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Coluna da Esquerda
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = session.dateFormatted,
@@ -151,18 +156,18 @@ fun HistoryItem(
                 Text(
                     text = session.getGestationalAge(lmp),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = Rose500
                 )
             }
 
-            // Coluna da Direita
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(horizontal = 16.dp)
             ) {
+                // --- MUDANÇA APLICADA AQUI ---
                 Text(
-                    text = session.kicks.toString(),
-                    style = MaterialTheme.typography.titleLarge,
+                    text = "${session.kicks} movimentos",
+                    style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -172,12 +177,10 @@ fun HistoryItem(
                 )
             }
 
-            // Botão de Deletar
             IconButton(onClick = onDeleteClick) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Apagar Sessão",
-                    tint = MaterialTheme.colorScheme.error
+                    contentDescription = "Apagar Sessão"
                 )
             }
         }
