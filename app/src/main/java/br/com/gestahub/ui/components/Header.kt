@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.WbSunny
@@ -19,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import br.com.gestahub.ui.theme.Rose500
 
+// SEU HEADER ORIGINAL DA TELA PRINCIPAL (NÃO FOI ALTERADO)
 @Composable
 fun AppHeader(
     isDarkTheme: Boolean,
@@ -51,15 +53,12 @@ fun AppHeader(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // --- CORREÇÃO APLICADA AQUI ---
-                // Adicionamos o offset para mover este botão para a direita
                 ThemeToggleButton(
                     isDarkTheme = isDarkTheme,
                     onToggle = onThemeToggle,
                     modifier = Modifier.offset(x = 8.dp)
                 )
 
-                // O botão de perfil permanece sem alterações para manter seu alinhamento
                 IconButton(onClick = onProfileClick) {
                     Icon(
                         imageVector = Icons.Outlined.Person,
@@ -71,6 +70,7 @@ fun AppHeader(
     }
 }
 
+// BOTÃO DE TEMA (NÃO FOI ALTERADO)
 @Composable
 fun ThemeToggleButton(
     isDarkTheme: Boolean,
@@ -83,4 +83,29 @@ fun ThemeToggleButton(
             contentDescription = "Mudar tema"
         )
     }
+}
+
+
+// --- NOVO HEADER PARA TELAS INTERNAS ---
+// ADICIONE ESTA FUNÇÃO AO FINAL DO ARQUIVO
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun Header(
+    title: String,
+    onNavigateBack: () -> Unit,
+    showBackButton: Boolean = false
+) {
+    TopAppBar(
+        title = { Text(text = title) },
+        navigationIcon = {
+            if (showBackButton) {
+                IconButton(onClick = onNavigateBack) {
+                    Icon(
+                        imageVector = Icons.Filled.ArrowBack,
+                        contentDescription = "Voltar"
+                    )
+                }
+            }
+        }
+    )
 }

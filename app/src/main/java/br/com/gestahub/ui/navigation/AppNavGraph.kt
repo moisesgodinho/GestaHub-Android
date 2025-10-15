@@ -120,7 +120,9 @@ fun AppNavGraph(
             }
         }
         composable("movement_counter") {
-            MovementCounterScreen()
+            MovementCounterScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
         composable(
             route = "appointmentForm?appointmentId={appointmentId}&appointmentType={appointmentType}&preselectedDate={preselectedDate}",
