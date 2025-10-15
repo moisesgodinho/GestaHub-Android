@@ -1,13 +1,31 @@
-// Local: app/src/main/java/br/com/gestahub/util/GestationalAgeCalculator.kt
 package br.com.gestahub.util
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Locale
+
+// Classe de dados para guardar o resultado do cálculo
+data class GestationalAge(val weeks: Long, val days: Long)
 
 object GestationalAgeCalculator {
 
     private val displayFormatter = DateTimeFormatter.ofPattern("dd/MM/yy", Locale("pt", "BR"))
+
+    // --- FUNÇÃO ADICIONADA ---
+    /**
+     * Calcula a idade gestacional em semanas e dias.
+     * @param lmp A data da última menstruação.
+     * @param currentDate A data para a qual a idade gestacional deve ser calculada.
+     * @return Um objeto GestationalAge contendo semanas e dias.
+     */
+    fun calculateGestationalAge(lmp: LocalDate, currentDate: LocalDate): GestationalAge {
+        val totalDays = ChronoUnit.DAYS.between(lmp, currentDate)
+        if (totalDays < 0) return GestationalAge(0, 0)
+        val weeks = totalDays / 7
+        val days = totalDays % 7
+        return GestationalAge(weeks, days)
+    }
 
     fun getEstimatedLmp(gestationalProfile: Map<*, *>?): LocalDate? {
         if (gestationalProfile == null) return null
@@ -39,7 +57,6 @@ object GestationalAgeCalculator {
      * @return A data de início formatada como "dd/MM/yy".
      */
     fun getWindowStartDate(lmp: LocalDate, startWeek: Int): String {
-        // CORREÇÃO: O início da semana N é após (N-1) semanas completas.
         val startDate = lmp.plusWeeks((startWeek - 1).toLong())
         return startDate.format(displayFormatter)
     }
@@ -51,7 +68,6 @@ object GestationalAgeCalculator {
      * @return A data de fim formatada como "dd/MM/yy".
      */
     fun getWindowEndDate(lmp: LocalDate, endWeek: Int): String {
-        // CORREÇÃO: O fim da semana N é ao final de N semanas, menos um dia.
         val endDate = lmp.plusWeeks(endWeek.toLong()).minusDays(1)
         return endDate.format(displayFormatter)
     }

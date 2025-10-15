@@ -119,11 +119,6 @@ fun AppNavGraph(
                 )
             }
         }
-        composable("movement_counter") {
-            MovementCounterScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
-        }
         composable(
             route = "appointmentForm?appointmentId={appointmentId}&appointmentType={appointmentType}&preselectedDate={preselectedDate}",
             arguments = listOf(
@@ -188,6 +183,20 @@ fun AppNavGraph(
         }
         composable("weight_profile_form") {
             WeightProfileFormScreen(onNavigateBack = { navController.popBackStack() })
+        }
+
+        // --- NOVA ROTA ADICIONADA ---
+        composable("movement_counter") {
+            val dataState = homeUiState.dataState
+            var lmp: LocalDate? = null
+            if (dataState is GestationalDataState.HasData) {
+                lmp = dataState.estimatedLmp
+            }
+
+            MovementCounterScreen(
+                onNavigateBack = { navController.popBackStack() },
+                estimatedLmp = lmp
+            )
         }
     }
 }

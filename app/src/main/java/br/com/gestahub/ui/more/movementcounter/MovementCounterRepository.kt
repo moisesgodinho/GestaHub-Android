@@ -50,4 +50,10 @@ class MovementCounterRepository(
         // Isso é chamado quando o fluxo é cancelado, e remove o listener
         awaitClose { listener.remove() }
     }
+    fun deleteKickSession(sessionId: String) {
+        val userId = auth.currentUser?.uid ?: return
+        firestore.collection("users").document(userId)
+            .collection("kickSessions").document(sessionId)
+            .delete()
+    }
 }

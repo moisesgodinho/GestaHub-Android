@@ -44,6 +44,9 @@ class MovementCounterViewModel(
                 }
         }
     }
+    fun deleteSession(session: KickSession) {
+        repository.deleteKickSession(session.id)
+    }
 }
 
 class MovementCounterViewModelFactory(
