@@ -69,6 +69,18 @@ class MovementCounterViewModel(
         }
     }
 
+    // --- NOVA FUNÇÃO ADICIONADA ---
+    fun discardSession() {
+        timerJob?.cancel()
+        // Apenas reseta o estado da UI sem salvar
+        _uiState.value = _uiState.value.copy(
+            isSessionActive = false,
+            kickCount = 0,
+            elapsedTimeInSeconds = 0L,
+            sessionStartTime = null
+        )
+    }
+
     fun incrementKickCount() {
         if (_uiState.value.isSessionActive) {
             _uiState.value = _uiState.value.copy(

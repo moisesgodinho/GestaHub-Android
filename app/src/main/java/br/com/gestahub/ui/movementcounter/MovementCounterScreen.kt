@@ -1,25 +1,30 @@
-// app/src/main/java/br/com/gestahub/ui/movementcounter/MovementCounterScreen.kt
+package br.com.gestahub.ui.movementcounter
 
-package br.com.gestahub.ui.movementcounter // <-- CORRIGIDO
-
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import br.com.gestahub.ui.components.ConfirmationDialog
 import br.com.gestahub.ui.components.Header
+import br.com.gestahub.ui.theme.Rose500
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import java.time.LocalDate
-import androidx.compose.material.icons.Icons
-import br.com.gestahub.ui.theme.Rose500
-import androidx.compose.material.icons.filled.Delete
-import br.com.gestahub.ui.components.ConfirmationDialog
 
 @Composable
 fun MovementCounterScreen(
@@ -29,7 +34,7 @@ fun MovementCounterScreen(
 ) {
     val viewModel: MovementCounterViewModel = viewModel(
         factory = MovementCounterViewModelFactory(
-            repository = MovementCounterRepository( // <-- A importação disso agora está correta
+            repository = MovementCounterRepository(
                 firestore = FirebaseFirestore.getInstance(),
                 auth = FirebaseAuth.getInstance()
             )
@@ -37,8 +42,39 @@ fun MovementCounterScreen(
     )
 
     val uiState by viewModel.uiState.collectAsState()
-    var sessionToDelete by remember { mutableStateOf<KickSession?>(null) } // <-- E disso também
+    var sessionToDelete by remember { mutableStateOf<KickSession?>(null) }
+    var showExitConfirmationDialog by remember { mutableStateOf(false) }
 
+    val onBackPress: () -> Unit = {
+        if (uiState.isSessionActive) {
+            showExitConfirmationDialog = true
+        } else {
+            onNavigateBack()
+        }
+    }
+
+    // Intercepta o botão "voltar" do sistema Android
+    BackHandler(enabled = uiState.isSessionActive) {
+        onBackPress()
+    }
+
+    // Diálogo de confirmação para sair da sessão
+    if (showExitConfirmationDialog) {
+        ConfirmationDialog(
+            onDismissRequest = { showExitConfirmationDialog = false },
+            onConfirm = {
+                viewModel.discardSession()
+                showExitConfirmationDialog = false
+                onNavigateBack()
+            },
+            title = "Sair da Sessão?",
+            text = "Você tem certeza que deseja sair? A contagem atual será perdida.",
+            confirmButtonText = "Sair",
+            dismissButtonText = "Cancelar"
+        )
+    }
+
+    // Diálogo para apagar um item do histórico
     if (sessionToDelete != null) {
         ConfirmationDialog(
             onDismissRequest = { sessionToDelete = null },
@@ -56,58 +92,222 @@ fun MovementCounterScreen(
         topBar = {
             Header(
                 title = "Contador de Movimentos",
-                onNavigateBack = onNavigateBack,
+                onNavigateBack = onBackPress, // Usa a nova lógica de voltar
                 showBackButton = true
             )
         }
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item {
-                MovementTrackerCard(
-                    uiState = uiState,
-                    onStartClick = { viewModel.startSession() },
-                    onStopClick = { viewModel.stopSession() },
-                    onIncrementClick = { viewModel.incrementKickCount() }
+        if (uiState.isSessionActive) {
+            ActiveSessionScreen(
+                modifier = Modifier.padding(innerPadding),
+                uiState = uiState,
+                onIncrementClick = { viewModel.incrementKickCount() },
+                onStopClick = { viewModel.stopSession() }
+            )
+        } else {
+            InitialScreenLayout(
+                modifier = Modifier.padding(innerPadding),
+                uiState = uiState,
+                estimatedLmp = estimatedLmp,
+                isDarkTheme = isDarkTheme,
+                onStartClick = { viewModel.startSession() },
+                onDeleteClick = { sessionToDelete = it }
+            )
+        }
+    }
+}
+
+@Composable
+fun InitialScreenLayout(
+    modifier: Modifier = Modifier,
+    uiState: MovementCounterUiState,
+    estimatedLmp: LocalDate?,
+    isDarkTheme: Boolean,
+    onStartClick: () -> Unit,
+    onDeleteClick: (KickSession) -> Unit
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            MovementTrackerCard(onStartClick = onStartClick)
+        }
+        item {
+            WhyCountMovementsCard()
+        }
+        item {
+            when {
+                uiState.isLoading -> CircularProgressIndicator(modifier = Modifier.padding(32.dp))
+                uiState.error != null -> Text(
+                    text = uiState.error!!,
+                    modifier = Modifier.padding(16.dp),
+                    textAlign = TextAlign.Center
                 )
-            }
-            item {
-                when {
-                    uiState.isLoading -> CircularProgressIndicator(modifier = Modifier.padding(32.dp))
-                    uiState.error != null -> Text(
-                        text = uiState.error!!,
-                        modifier = Modifier.padding(16.dp),
-                        textAlign = TextAlign.Center
+                else -> {
+                    HistoryCard(
+                        sessions = uiState.sessions,
+                        lmp = estimatedLmp,
+                        isDarkTheme = isDarkTheme,
+                        onDeleteClick = onDeleteClick
                     )
-                    else -> {
-                        HistoryCard(
-                            sessions = uiState.sessions,
-                            lmp = estimatedLmp,
-                            isDarkTheme = isDarkTheme,
-                            onDeleteClick = { sessionToDelete = it }
-                        )
-                    }
                 }
             }
         }
     }
 }
 
-// O restante do arquivo permanece o mesmo, pois as outras dependências
-// e a lógica da UI não são afetadas pela mudança de pacote.
+// --- CARD INFORMATIVO COM A CORREÇÃO FINAL ---
+@Composable
+fun WhyCountMovementsCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(Modifier.height(IntrinsicSize.Min)) {
+            // A Borda Azul
+            Box(
+                modifier = Modifier
+                    .width(6.dp)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.primary) // Cor azul do tema
+            )
+
+            // Conteúdo
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Por que contar os movimentos?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Esta é uma ferramenta importante para monitorar o bem-estar do seu bebê, especialmente no terceiro trimestre (a partir da 28ª semana). Movimentos fetais regulares são um forte sinal de que o bebê está saudável. Uma mudança no padrão pode ser um sinal de alerta precoce, permitindo que você e seu médico ajam rapidamente.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = "Como fazer a contagem?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    style = MaterialTheme.typography.bodyMedium,
+                    text = buildAnnotatedString {
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append("Escolha um horário: ")
+                        }
+                        append("Dê preferência a um momento em que seu bebê costuma estar mais ativo (geralmente à noite ou após uma refeição).")
+                    }
+                )
+                Text(
+                    style = MaterialTheme.typography.bodyMedium,
+                    text = buildAnnotatedString {
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append("Fique confortável: ")
+                        }
+                        append("Deite-se de lado (preferencialmente o esquerdo, para melhorar a circulação) ou sente-se com os pés para cima.")
+                    }
+                )
+                Text(
+                    style = MaterialTheme.typography.bodyMedium,
+                    text = buildAnnotatedString {
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append("Conte os movimentos: ")
+                        }
+                        append("Inicie a sessão e registre cada movimento que sentir (chutes, giros, vibrações). O objetivo comum é sentir ")
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append("10 movimentos em até 2 horas.")
+                        }
+                    }
+                )
+                Text(
+                    text = "Quando devo procurar meu médico?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    style = MaterialTheme.typography.bodyMedium,
+                    text = buildAnnotatedString {
+                        append("O mais importante é conhecer o padrão ")
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append("normal ")
+                        }
+                        append("do seu bebê. Se você notar uma diminuição significativa e prolongada na atividade dele, ou se o tempo para atingir 10 movimentos aumentar muito, entre em contato com seu obstetra. ")
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append("Confie no seu instinto.")
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ActiveSessionScreen(
+    modifier: Modifier = Modifier,
+    uiState: MovementCounterUiState,
+    onIncrementClick: () -> Unit,
+    onStopClick: () -> Unit
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(
+                text = "${uiState.kickCount}",
+                style = MaterialTheme.typography.displayLarge.copy(fontSize = 120.sp),
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = if (uiState.kickCount == 1) "movimento" else "movimentos",
+                style = MaterialTheme.typography.titleLarge
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = formatElapsedTime(uiState.elapsedTimeInSeconds),
+                style = MaterialTheme.typography.headlineLarge
+            )
+        }
+
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Button(
+                onClick = onIncrementClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                Text("Movimentou!", style = MaterialTheme.typography.headlineMedium)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            TextButton(onClick = onStopClick) {
+                Text("Finalizar e Salvar Sessão")
+            }
+        }
+    }
+}
 
 @Composable
 fun MovementTrackerCard(
-    uiState: MovementCounterUiState,
-    onStartClick: () -> Unit,
-    onStopClick: () -> Unit,
-    onIncrementClick: () -> Unit,
+    onStartClick: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -116,57 +316,19 @@ fun MovementTrackerCard(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
-        if (!uiState.isSessionActive) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Monitore o padrão de movimentos do seu bebê. Pressione \"Iniciar\" e, a cada movimento (chute, giro ou vibração), clique em \"Movimentou!\".",
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = onStartClick) {
-                    Text("Iniciar Sessão")
-                }
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "${uiState.kickCount}",
-                    style = MaterialTheme.typography.displayLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "movimentos",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = formatElapsedTime(uiState.elapsedTimeInSeconds),
-                    style = MaterialTheme.typography.headlineMedium
-                )
-                Spacer(modifier = Modifier.height(32.dp))
-                Button(
-                    onClick = onIncrementClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(60.dp)
-                ) {
-                    Text("Movimentou!", style = MaterialTheme.typography.titleLarge)
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                TextButton(onClick = onStopClick) {
-                    Text("Finalizar e Salvar Sessão")
-                }
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Monitore o padrão de movimentos do seu bebê. Pressione \"Iniciar\" e, a cada movimento (chute, giro ou vibração), clique em \"Movimentou!\".",
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onStartClick) {
+                Text("Iniciar Sessão")
             }
         }
     }
