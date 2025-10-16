@@ -1,10 +1,8 @@
-// Local: app/src/main/java/br/com/gestahub/ui/journal/JournalCalendar.kt
 package br.com.gestahub.ui.journal
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 import java.util.Locale
 
 @Composable
@@ -37,38 +35,38 @@ fun JournalCalendar(
     onNextClick: () -> Unit,
     isPreviousEnabled: Boolean,
     isNextEnabled: Boolean,
-    isDarkTheme: Boolean // Parâmetro adicionado
+    isDarkTheme: Boolean
 ) {
     val firstDayOfMonth = displayMonth.atDay(1)
     val firstDayOfWeek = firstDayOfMonth.dayOfWeek.value % 7
     val daysInMonth = displayMonth.lengthOfMonth()
     val today = LocalDate.now()
 
-    val cardColor = if (isDarkTheme) { // Lógica alterada
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        MaterialTheme.colorScheme.surface
-    }
-
+    // O Card agora envolve todo o conteúdo, incluindo o navegador do mês.
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = cardColor)
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDarkTheme) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // 1. Navegador do Mês (Título e setas) - AGORA DENTRO DO CARD
             MonthNavigator(
                 selectedMonth = displayMonth,
                 onPreviousClick = onPreviousClick,
                 onNextClick = onNextClick,
                 isPreviousEnabled = isPreviousEnabled,
-                isNextEnabled = isNextEnabled,
-                isDarkTheme = isDarkTheme // Passando o parâmetro
-
+                isNextEnabled = isNextEnabled
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Cabeçalho com os dias da semana
+            // 2. Cabeçalho com os dias da semana
             Row(modifier = Modifier.fillMaxWidth()) {
                 val daysOfWeek = listOf("D", "S", "T", "Q", "Q", "S", "S")
                 daysOfWeek.forEach { day ->
@@ -77,7 +75,6 @@ fun JournalCalendar(
                         modifier = Modifier.weight(1f),
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.bodySmall,
-                        // --- ALTERAÇÃO APLICADA AQUI ---
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -86,7 +83,7 @@ fun JournalCalendar(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Grid com os dias do mês
+            // 3. Grid com os dias do mês
             var dayCounter = 1
             for (week in 0 until 6) {
                 if (dayCounter > daysInMonth) break
@@ -125,10 +122,6 @@ private fun MonthNavigator(
     isPreviousEnabled: Boolean,
     isNextEnabled: Boolean
 ) {
-    val formatter = DateTimeFormatter.ofPattern("MMMM 'de' yyyy", Locale("pt", "BR"))
-    val monthText = selectedMonth.format(formatter)
-        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -138,7 +131,7 @@ private fun MonthNavigator(
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Mês anterior")
         }
         Text(
-            text = monthText,
+            text = "${selectedMonth.month.getDisplayName(TextStyle.FULL, Locale("pt", "BR")).replaceFirstChar { it.uppercase() }} de ${selectedMonth.year}",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
@@ -168,7 +161,6 @@ fun RowScope.DayCell(
         contentColor = contentColor.copy(alpha = 0.38f)
     }
     val borderColor = if (isToday) MaterialTheme.colorScheme.primary else Color.Transparent
-    // --- ALTERAÇÃO APLICADA AQUI ---
     val backgroundColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
 
     Box(
@@ -177,7 +169,6 @@ fun RowScope.DayCell(
             .aspectRatio(1f)
             .padding(2.dp)
             .clip(RoundedCornerShape(8.dp))
-            // --- ALTERAÇÃO APLICADA AQUI ---
             .background(backgroundColor)
             .border(1.dp, borderColor, RoundedCornerShape(8.dp))
             .clickable(enabled = isEnabled, onClick = onClick),
