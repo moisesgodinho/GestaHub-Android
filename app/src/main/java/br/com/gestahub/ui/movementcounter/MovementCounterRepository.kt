@@ -1,4 +1,4 @@
-package br.com.gestahub.ui.more.movementcounter
+package br.com.gestahub.ui.movementcounter
 
 import android.util.Log
 import com.google.firebase.auth.FirebaseAuth

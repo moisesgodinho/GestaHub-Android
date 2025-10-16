@@ -1,4 +1,4 @@
-package br.com.gestahub.ui.more.movementcounter
+package br.com.gestahub.ui.movementcounter
 
 import br.com.gestahub.util.GestationalAge
 import br.com.gestahub.util.GestationalAgeCalculator

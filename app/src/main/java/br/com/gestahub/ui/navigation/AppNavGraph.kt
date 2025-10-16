@@ -24,7 +24,7 @@ import br.com.gestahub.ui.home.HomeViewModel
 import br.com.gestahub.ui.journal.JournalEntryScreen
 import br.com.gestahub.ui.journal.JournalScreen
 import br.com.gestahub.ui.more.MoreScreen
-import br.com.gestahub.ui.more.movementcounter.MovementCounterScreen
+import br.com.gestahub.ui.movementcounter.MovementCounterScreen
 import br.com.gestahub.ui.profile.EditProfileScreen
 import br.com.gestahub.ui.profile.ProfileScreen
 import br.com.gestahub.ui.weight.WeightEntryFormScreen

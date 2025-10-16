@@ -1,4 +1,4 @@
-package br.com.gestahub.ui.more.movementcounter
+package br.com.gestahub.ui.movementcounter
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider

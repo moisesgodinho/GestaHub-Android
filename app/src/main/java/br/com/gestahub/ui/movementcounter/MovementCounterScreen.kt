@@ -1,4 +1,4 @@
-package br.com.gestahub.ui.more.movementcounter
+package br.com.gestahub.ui.movementcounter
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
