@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import br.com.gestahub.ui.theme.Rose500
 import br.com.gestahub.ui.weight.WeightEntry
 import br.com.gestahub.ui.weight.WeightUiState
+import br.com.gestahub.ui.components.ConfirmationDialog
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -26,26 +27,16 @@ fun HistoryCard(
     var entryToDelete by remember { mutableStateOf<WeightEntry?>(null) }
 
     if (showDialog && entryToDelete != null) {
-        AlertDialog(
+        ConfirmationDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text("Confirmar Exclusão") },
-            text = { Text("Tem certeza de que deseja excluir este registro de peso?") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        entryToDelete?.let(onDelete)
-                        showDialog = false
-                        entryToDelete = null
-                    }
-                ) {
-                    Text("Excluir")
-                }
+            onConfirm = {
+                entryToDelete?.let(onDelete)
+                showDialog = false
+                entryToDelete = null
             },
-            dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
-                    Text("Cancelar")
-                }
-            }
+            title = "Confirmar Exclusão",
+            text = "Tem certeza de que deseja excluir este registro de peso?",
+            confirmButtonText = "Excluir"
         )
     }
 

@@ -17,6 +17,7 @@ import java.time.LocalDate
 import androidx.compose.material.icons.Icons
 import br.com.gestahub.ui.theme.Rose500
 import androidx.compose.material.icons.filled.Delete
+import br.com.gestahub.ui.components.ConfirmationDialog
 
 @Composable
 fun MovementCounterScreen(
@@ -37,19 +38,15 @@ fun MovementCounterScreen(
     var sessionToDelete by remember { mutableStateOf<KickSession?>(null) }
 
     if (sessionToDelete != null) {
-        AlertDialog(
+        ConfirmationDialog(
             onDismissRequest = { sessionToDelete = null },
-            title = { Text("Confirmar Exclusão") },
-            text = { Text("Você tem certeza que deseja apagar esta sessão?") },
-            confirmButton = {
-                Button(onClick = {
-                    sessionToDelete?.let { viewModel.deleteSession(it) }
-                    sessionToDelete = null
-                }) { Text("Apagar") }
+            onConfirm = {
+                sessionToDelete?.let { viewModel.deleteSession(it) }
+                sessionToDelete = null
             },
-            dismissButton = {
-                TextButton(onClick = { sessionToDelete = null }) { Text("Cancelar") }
-            }
+            title = "Confirmar Exclusão",
+            text = "Você tem certeza que deseja apagar esta sessão?",
+            confirmButtonText = "Apagar"
         )
     }
 
