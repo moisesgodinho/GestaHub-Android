@@ -1,3 +1,5 @@
+// app/src/main/java/br/com/gestahub/ui/movementcounter/MovementCounterRepository.kt
+
 package br.com.gestahub.ui.movementcounter
 
 import android.util.Log
@@ -7,6 +9,7 @@ import com.google.firebase.firestore.Query
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await // <-- IMPORTAÇÃO QUE FALTAVA
 
 class MovementCounterRepository(
     private val firestore: FirebaseFirestore,
@@ -15,7 +18,7 @@ class MovementCounterRepository(
     fun getKickSessions(): Flow<List<KickSession>> = callbackFlow {
         val userId = auth.currentUser?.uid
         if (userId == null) {
-            trySend(emptyList()) // Envia lista vazia se não há usuário
+            trySend(emptyList())
             awaitClose()
             return@callbackFlow
         }
@@ -24,32 +27,39 @@ class MovementCounterRepository(
         val query = sessionsRef.orderBy("timestamp", Query.Direction.DESCENDING)
 
         val listener = query.addSnapshotListener { snapshot, error ->
-            // --- MUDANÇA IMPORTANTE AQUI ---
             if (error != null) {
-                // Logamos o erro para ver no Logcat o que aconteceu
                 Log.w("FirestoreError", "Listen failed.", error)
-                // Fechamos o fluxo com a exceção para que o ViewModel possa tratá-la
                 close(error)
                 return@addSnapshotListener
             }
 
             if (snapshot != null) {
-                // Usamos um bloco try-catch para proteger contra erros de conversão de dados
                 try {
                     val sessions = snapshot.documents.mapNotNull { doc ->
                         doc.toObject(KickSession::class.java)?.copy(id = doc.id)
                     }
-                    trySend(sessions) // Envia os dados com sucesso
+                    trySend(sessions)
                 } catch (e: Exception) {
                     Log.e("FirestoreError", "Error converting documents", e)
-                    close(e) // Fecha o fluxo se a conversão falhar
+                    close(e)
                 }
             }
         }
-
-        // Isso é chamado quando o fluxo é cancelado, e remove o listener
         awaitClose { listener.remove() }
     }
+
+    suspend fun addKickSession(session: KickSession) {
+        val userId = auth.currentUser?.uid ?: return
+        try {
+            firestore.collection("users").document(userId)
+                .collection("kickSessions")
+                .add(session)
+                .await() // Agora esta linha vai funcionar
+        } catch (e: Exception) {
+            Log.e("FirestoreError", "Error adding kick session", e)
+        }
+    }
+
     fun deleteKickSession(sessionId: String) {
         val userId = auth.currentUser?.uid ?: return
         firestore.collection("users").document(userId)
