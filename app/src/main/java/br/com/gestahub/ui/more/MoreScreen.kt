@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.TouchApp // Ícone de exemplo
+import androidx.compose.material.icons.filled.BusinessCenter // Ícone de mala
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -23,11 +24,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import br.com.gestahub.ui.maternitybag.MaternityBagScreen // Import da nova tela
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoreScreen(
-    onNavigateToMovementCounter: () -> Unit
+    onNavigateToMovementCounter: () -> Unit,
+    onNavigateToMaternityBag: () -> Unit // Adicionado novo callback de navegação
 ) {
     Column(
         modifier = Modifier
@@ -42,6 +45,11 @@ fun MoreScreen(
                 onClick = onNavigateToMovementCounter,
                 icon = Icons.Default.TouchApp,
                 text = "Contador de Movimentos"
+            )
+            MoreFunctionCard(
+                onClick = onNavigateToMaternityBag, // Navega para a nova tela
+                icon = Icons.Default.BusinessCenter, // Ícone de mala
+                text = "Mala Maternidade"
             )
             // Adicione mais MoreFunctionCard aqui conforme necessário
         }

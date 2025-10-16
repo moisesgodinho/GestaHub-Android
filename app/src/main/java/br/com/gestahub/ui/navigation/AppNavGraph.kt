@@ -23,6 +23,7 @@ import br.com.gestahub.ui.home.HomeScreen
 import br.com.gestahub.ui.home.HomeViewModel
 import br.com.gestahub.ui.journal.JournalEntryScreen
 import br.com.gestahub.ui.journal.JournalScreen
+import br.com.gestahub.ui.maternitybag.MaternityBagScreen // <-- ADICIONE ESTA LINHA
 import br.com.gestahub.ui.more.MoreScreen
 import br.com.gestahub.ui.movementcounter.MovementCounterScreen
 import br.com.gestahub.ui.profile.EditProfileScreen
@@ -115,7 +116,8 @@ fun AppNavGraph(
         composable("more") {
             Box(Modifier.padding(innerPadding)) {
                 MoreScreen(
-                    onNavigateToMovementCounter = { navController.navigate("movement_counter") }
+                    onNavigateToMovementCounter = { navController.navigate("movement_counter") },
+                    onNavigateToMaternityBag = { navController.navigate("maternity_bag") }
                 )
             }
         }
@@ -185,7 +187,6 @@ fun AppNavGraph(
             WeightProfileFormScreen(onNavigateBack = { navController.popBackStack() })
         }
 
-        // --- NOVA ROTA ADICIONADA ---
         composable("movement_counter") {
             val dataState = homeUiState.dataState
             var lmp: LocalDate? = null
@@ -196,8 +197,13 @@ fun AppNavGraph(
             MovementCounterScreen(
                 onNavigateBack = { navController.popBackStack() },
                 estimatedLmp = lmp,
-                isDarkTheme = isDarkTheme // Adicione esta linha
+                isDarkTheme = isDarkTheme
             )
+        }
+
+        // --- NOVA ROTA PARA MALA MATERNIDADE ---
+        composable("maternity_bag") {
+            MaternityBagScreen()
         }
     }
 }
