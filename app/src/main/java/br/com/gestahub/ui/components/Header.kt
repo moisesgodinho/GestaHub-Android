@@ -98,13 +98,12 @@ fun Header(
     TopAppBar(
         title = { Text(text = title) },
         navigationIcon = {
-            if (showBackButton) {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(
-                        imageVector = Icons.Filled.ArrowBack,
-                        contentDescription = "Voltar"
-                    )
-                }
+            // O botão de voltar agora é exibido diretamente
+            IconButton(onClick = onNavigateBack) {
+                Icon(
+                    imageVector = Icons.Filled.ArrowBack,
+                    contentDescription = "Voltar"
+                )
             }
         }
     )

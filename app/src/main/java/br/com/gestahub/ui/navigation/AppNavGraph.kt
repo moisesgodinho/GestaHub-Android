@@ -31,6 +31,7 @@ import br.com.gestahub.ui.profile.ProfileScreen
 import br.com.gestahub.ui.weight.WeightEntryFormScreen
 import br.com.gestahub.ui.weight.WeightProfileFormScreen
 import br.com.gestahub.ui.weight.WeightScreen
+import br.com.gestahub.ui.maternitybag.MaternityBagScreen
 import java.time.LocalDate
 
 @Composable
@@ -202,8 +203,12 @@ fun AppNavGraph(
         }
 
         // --- NOVA ROTA PARA MALA MATERNIDADE ---
+
         composable("maternity_bag") {
-            MaternityBagScreen()
+            MaternityBagScreen(
+                onNavigateBack = { navController.popBackStack() }, // Passa a função para voltar
+                isDarkTheme = isDarkTheme // Passa o estado do tema do app
+            )
         }
     }
 }
