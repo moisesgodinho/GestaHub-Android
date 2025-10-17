@@ -16,7 +16,6 @@ import java.util.Locale
 
 data class HydrationUiState(
     val todayData: WaterIntakeEntry = WaterIntakeEntry(),
-    val history: List<WaterIntakeEntry> = emptyList(),
     val isLoading: Boolean = true,
     val error: String? = null
 )
@@ -30,26 +29,17 @@ class HydrationViewModel : ViewModel() {
     val uiState: StateFlow<HydrationUiState> = _uiState.asStateFlow()
 
     init {
-        // A lógica agora espelha a do MovementCounterViewModel, com listeners separados e independentes.
         listenToTodayData()
-        listenToHistory()
     }
 
-    /**
-     * Ouve em tempo real APENAS os dados de hoje.
-     * É responsável por parar o "load infinito".
-     */
     private fun listenToTodayData() {
         viewModelScope.launch {
             repository.listenToTodayWaterIntake().collect { result ->
                 result.fold(
                     onSuccess = { todayEntry ->
                         if (todayEntry != null) {
-                            // Se o registro de hoje já existe, usa ele.
                             _uiState.update { it.copy(todayData = todayEntry, isLoading = false) }
                         } else {
-                            // Se não existe, busca as configs do perfil para criar um novo.
-                            // Isso acontece em segundo plano, mas o 'isLoading' já será falso.
                             viewModelScope.launch {
                                 val profileGoal = getProfileWaterGoal()
                                 val profileCupSize = getProfileWaterCupSize()
@@ -66,27 +56,6 @@ class HydrationViewModel : ViewModel() {
                     },
                     onFailure = { error ->
                         _uiState.update { it.copy(error = error.message, isLoading = false) }
-                    }
-                )
-            }
-        }
-    }
-
-    /**
-     * Ouve em tempo real o HISTÓRICO COMPLETO.
-     * Esta função agora é independente e não interfere com os dados de "hoje".
-     */
-    private fun listenToHistory() {
-        viewModelScope.launch {
-            repository.getWaterHistory().collect { result ->
-                result.fold(
-                    onSuccess = { fullHistory ->
-                        // Este listener agora SÓ atualiza a lista de histórico.
-                        _uiState.update { it.copy(history = fullHistory) }
-                    },
-                    onFailure = { error ->
-                        // Atualiza o erro, se houver, sem mexer no resto do estado.
-                        _uiState.update { it.copy(error = error.message) }
                     }
                 )
             }

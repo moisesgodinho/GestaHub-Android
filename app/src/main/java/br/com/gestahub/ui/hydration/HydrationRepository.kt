@@ -19,35 +19,6 @@ class HydrationRepository {
     private fun getWaterIntakeCollection() =
         auth.currentUser?.uid?.let { db.collection("users").document(it).collection("waterIntake") }
 
-    fun getWaterHistory(): Flow<Result<List<WaterIntakeEntry>>> = callbackFlow {
-        getWaterIntakeCollection()?.let { collection ->
-            val listener = collection
-                .orderBy(com.google.firebase.firestore.FieldPath.documentId(), Query.Direction.DESCENDING)
-                .addSnapshotListener { snapshot, error ->
-                    if (error != null) { /* ... */ }
-                    if (snapshot != null) {
-                        val entries = snapshot.documents.mapNotNull { doc ->
-                            try {
-                                val id = doc.id
-                                val goal = (doc.getLong("goal") ?: 2500L).toInt()
-                                val current = (doc.getLong("current") ?: 0L).toInt()
-                                val cupSize = (doc.getLong("cupSize") ?: 250L).toInt()
-                                val dateString = doc.getString("date") ?: id
-                                @Suppress("UNCHECKED_CAST")
-                                val history = (doc.get("history") as? List<Long> ?: emptyList()).map { it.toInt() }
-                                WaterIntakeEntry(id, goal, current, cupSize, history, dateString)
-                            } catch (e: Exception) {
-                                e.printStackTrace()
-                                null
-                            }
-                        }
-                        trySend(Result.success(entries))
-                    }
-                }
-            awaitClose { listener.remove() }
-        } ?: trySend(Result.failure(Exception("Usuário não autenticado.")))
-    }
-
     fun listenToTodayWaterIntake(): Flow<Result<WaterIntakeEntry?>> = callbackFlow {
         getWaterIntakeCollection()?.let { collection ->
             val todayId = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
