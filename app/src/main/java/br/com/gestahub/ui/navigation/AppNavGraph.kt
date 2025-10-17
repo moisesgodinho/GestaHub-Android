@@ -213,7 +213,10 @@ fun AppNavGraph(
             )
         }
         composable("hydration_tracker") {
-            HydrationTrackerScreen()
+            HydrationTrackerScreen(
+                onNavigateBack = { navController.popBackStack() },
+                isDarkTheme = isDarkTheme // Passa o estado do tema
+            )
         }
     }
 }
