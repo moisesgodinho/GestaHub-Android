@@ -55,42 +55,52 @@ fun HydrationTrackerScreen(
             )
         }
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item {
-                HydrationTodayCard(
-                    todayData = uiState.todayData,
-                    onAddWater = viewModel::addWater,
-                    onUndo = viewModel::undoLastWater,
-                    onAddCustomAmount = viewModel::addCustomAmount,
-                    onEditSettings = { showSettingsDialog = true },
-                    isDarkTheme = isDarkTheme
-                )
+        // --- CORREÇÃO APLICADA AQUI ---
+        // Verifica o estado de 'isLoading' antes de mostrar o conteúdo
+        if (uiState.isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
             }
-
-            item {
-                InfoCardWithLeftBorder()
-            }
-
-            if (uiState.history.isNotEmpty()) {
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 item {
-                    HistoryCard(
-                        history = uiState.history,
-                        isLoading = uiState.isLoading,
+                    HydrationTodayCard(
+                        todayData = uiState.todayData,
+                        onAddWater = viewModel::addWater,
+                        onUndo = viewModel::undoLastWater,
+                        onAddCustomAmount = viewModel::addCustomAmount,
+                        onEditSettings = { showSettingsDialog = true },
                         isDarkTheme = isDarkTheme
                     )
+                }
+
+                item {
+                    InfoCardWithLeftBorder()
+                }
+
+                if (uiState.history.isNotEmpty()) {
+                    item {
+                        HistoryCard(
+                            history = uiState.history,
+                            isLoading = uiState.isLoading,
+                            isDarkTheme = isDarkTheme
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-// --- CÓDIGO CORRIGIDO AQUI ---
 @Composable
 fun InfoCardWithLeftBorder() {
     Card(
@@ -101,17 +111,13 @@ fun InfoCardWithLeftBorder() {
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
-        // A Row agora tem sua altura definida pelo conteúdo mais alto,
-        // garantindo que o Spacer da borda se estique corretamente.
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-            // Borda Esquerda
             Spacer(
                 modifier = Modifier
                     .width(5.dp)
-                    .fillMaxHeight() // Isso agora funciona
+                    .fillMaxHeight()
                     .background(MaterialTheme.colorScheme.primary)
             )
-            // Conteúdo do Card
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     "A Importância da Hidratação na Gestação",
@@ -309,6 +315,8 @@ fun HistoryCard(history: List<WaterIntakeEntry>, isLoading: Boolean, isDarkTheme
             )
             Spacer(modifier = Modifier.height(16.dp))
 
+            // A verificação de isLoading aqui é uma redundância segura,
+            // mas a principal está no nível da tela.
             when {
                 isLoading -> {
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {

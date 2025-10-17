@@ -30,28 +30,39 @@ class HydrationViewModel : ViewModel() {
     val uiState: StateFlow<HydrationUiState> = _uiState.asStateFlow()
 
     init {
+        // A lógica agora espelha a do MovementCounterViewModel, com listeners separados e independentes.
         listenToTodayData()
         listenToHistory()
     }
 
+    /**
+     * Ouve em tempo real APENAS os dados de hoje.
+     * É responsável por parar o "load infinito".
+     */
     private fun listenToTodayData() {
         viewModelScope.launch {
-            val profileGoal = getProfileWaterGoal()
-            val profileCupSize = getProfileWaterCupSize()
-
             repository.listenToTodayWaterIntake().collect { result ->
                 result.fold(
                     onSuccess = { todayEntry ->
-                        val todayId = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-                        val currentData = todayEntry ?: WaterIntakeEntry(
-                            id = todayId,
-                            goal = profileGoal,
-                            cupSize = profileCupSize,
-                            current = 0,
-                            history = emptyList(),
-                            date = todayId
-                        )
-                        _uiState.update { it.copy(todayData = currentData, isLoading = false) }
+                        if (todayEntry != null) {
+                            // Se o registro de hoje já existe, usa ele.
+                            _uiState.update { it.copy(todayData = todayEntry, isLoading = false) }
+                        } else {
+                            // Se não existe, busca as configs do perfil para criar um novo.
+                            // Isso acontece em segundo plano, mas o 'isLoading' já será falso.
+                            viewModelScope.launch {
+                                val profileGoal = getProfileWaterGoal()
+                                val profileCupSize = getProfileWaterCupSize()
+                                val todayId = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                                val newTodayEntry = WaterIntakeEntry(
+                                    id = todayId,
+                                    goal = profileGoal,
+                                    cupSize = profileCupSize,
+                                    date = todayId
+                                )
+                                _uiState.update { it.copy(todayData = newTodayEntry, isLoading = false) }
+                            }
+                        }
                     },
                     onFailure = { error ->
                         _uiState.update { it.copy(error = error.message, isLoading = false) }
@@ -61,15 +72,20 @@ class HydrationViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Ouve em tempo real o HISTÓRICO COMPLETO.
+     * Esta função agora é independente e não interfere com os dados de "hoje".
+     */
     private fun listenToHistory() {
         viewModelScope.launch {
             repository.getWaterHistory().collect { result ->
                 result.fold(
                     onSuccess = { fullHistory ->
-                        // O filtro foi removido para que o dia de hoje sempre apareça no histórico.
+                        // Este listener agora SÓ atualiza a lista de histórico.
                         _uiState.update { it.copy(history = fullHistory) }
                     },
                     onFailure = { error ->
+                        // Atualiza o erro, se houver, sem mexer no resto do estado.
                         _uiState.update { it.copy(error = error.message) }
                     }
                 )
@@ -77,13 +93,14 @@ class HydrationViewModel : ViewModel() {
         }
     }
 
+
     fun addWater() {
         val currentData = _uiState.value.todayData
         addCustomAmount(currentData.cupSize)
     }
 
     fun addCustomAmount(amount: Int) {
-        if (amount <= 0) return
+        if (amount <= 0 || _uiState.value.isLoading || _uiState.value.todayData.id.isBlank()) return
         val currentData = _uiState.value.todayData
         val newAmount = currentData.current + amount
         val newHistory = currentData.history + amount
@@ -93,6 +110,7 @@ class HydrationViewModel : ViewModel() {
     }
 
     fun undoLastWater() {
+        if (_uiState.value.isLoading || _uiState.value.todayData.id.isBlank()) return
         val currentData = _uiState.value.todayData
         if (currentData.history.isEmpty()) return
         val lastAmount = currentData.history.last()
@@ -105,12 +123,9 @@ class HydrationViewModel : ViewModel() {
 
     fun setWaterSettings(newGoal: Int, newCupSize: Int) {
         if (newGoal <= 0 || newCupSize <= 0) return
-
         val currentData = _uiState.value.todayData
         val newData = currentData.copy(goal = newGoal, cupSize = newCupSize)
-
         _uiState.update { it.copy(todayData = newData) }
-
         viewModelScope.launch {
             repository.updateWaterData(newData)
             repository.updateProfileWaterSettings(newGoal, newCupSize)
