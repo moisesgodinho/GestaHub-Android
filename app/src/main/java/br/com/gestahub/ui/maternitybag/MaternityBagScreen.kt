@@ -17,8 +17,8 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import br.com.gestahub.ui.components.ConfirmationDialog
 
-// Enum para os tipos de restauração
 private enum class RestoreType {
     RESTORE_MISSING,
     RESET_ALL
@@ -33,6 +33,8 @@ fun MaternityBagScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showRestoreDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var itemToDelete by remember { mutableStateOf<Triple<String, String, String>?>(null) }
 
     if (showRestoreDialog) {
         RestoreDialog(
@@ -45,6 +47,23 @@ fun MaternityBagScreen(
                 }
                 showRestoreDialog = false
             }
+        )
+    }
+
+    if (showDeleteDialog && itemToDelete != null) {
+        // --- CORREÇÃO APLICADA AQUI ---
+        ConfirmationDialog(
+            title = "Confirmar Exclusão",
+            text = "Tem certeza que deseja remover o item \"${itemToDelete!!.third}\"?",
+            confirmButtonText = "Excluir",
+            onConfirm = {
+                itemToDelete?.let { (categoryId, itemId, _) ->
+                    viewModel.removeItem(categoryId, itemId)
+                }
+                showDeleteDialog = false
+            },
+            // O nome do parâmetro foi corrigido de 'onDismiss' para 'onDismissRequest'
+            onDismissRequest = { showDeleteDialog = false }
         )
     }
 
@@ -89,7 +108,10 @@ fun MaternityBagScreen(
                         isDarkTheme = isDarkTheme,
                         onToggleItem = viewModel::toggleItem,
                         onAddItem = viewModel::addItem,
-                        onRemoveItem = viewModel::removeItem
+                        onRemoveRequest = { categoryId, itemId, itemLabel ->
+                            itemToDelete = Triple(categoryId, itemId, itemLabel)
+                            showDeleteDialog = true
+                        }
                     )
                 }
             }
@@ -104,7 +126,7 @@ fun MaternityBagContent(
     isDarkTheme: Boolean,
     onToggleItem: (String) -> Unit,
     onAddItem: (categoryId: String, label: String) -> Unit,
-    onRemoveItem: (categoryId: String, itemId: String) -> Unit
+    onRemoveRequest: (categoryId: String, itemId: String, itemLabel: String) -> Unit
 ) {
     val categories = mapOf(
         "mom" to listData.mom,
@@ -126,7 +148,7 @@ fun MaternityBagContent(
                 isDarkTheme = isDarkTheme,
                 onToggleItem = onToggleItem,
                 onAddItem = onAddItem,
-                onRemoveItem = onRemoveItem
+                onRemoveRequest = onRemoveRequest
             )
         }
     }
@@ -140,7 +162,7 @@ fun CategoryCard(
     isDarkTheme: Boolean,
     onToggleItem: (String) -> Unit,
     onAddItem: (categoryId: String, label: String) -> Unit,
-    onRemoveItem: (categoryId: String, itemId: String) -> Unit
+    onRemoveRequest: (categoryId: String, itemId: String, itemLabel: String) -> Unit
 ) {
     var showAddItemDialog by remember { mutableStateOf(false) }
     var newItemText by remember { mutableStateOf("") }
@@ -200,7 +222,7 @@ fun CategoryCard(
                     item = item,
                     isChecked = checkedItems.contains(item.id),
                     onToggle = { onToggleItem(item.id) },
-                    onRemove = { onRemoveItem(categoryId, item.id) }
+                    onRemove = { onRemoveRequest(categoryId, item.id, item.label) }
                 )
             }
         }
@@ -215,7 +237,9 @@ fun ChecklistItem(
     onRemove: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
@@ -234,7 +258,11 @@ fun ChecklistItem(
             modifier = Modifier.weight(1f)
         )
         IconButton(onClick = onRemove) {
-            Icon(Icons.Default.Delete, contentDescription = "Remover Item", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Remover Item",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
