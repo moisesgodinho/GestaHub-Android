@@ -1,8 +1,10 @@
 package br.com.gestahub.ui.hydration
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -10,9 +12,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.gestahub.ui.components.Header
@@ -68,6 +73,10 @@ fun HydrationTrackerScreen(
                 )
             }
 
+            item {
+                InfoCardWithLeftBorder()
+            }
+
             if (uiState.history.isNotEmpty()) {
                 item {
                     HistoryCard(
@@ -80,6 +89,62 @@ fun HydrationTrackerScreen(
         }
     }
 }
+
+// --- CÓDIGO CORRIGIDO AQUI ---
+@Composable
+fun InfoCardWithLeftBorder() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        // A Row agora tem sua altura definida pelo conteúdo mais alto,
+        // garantindo que o Spacer da borda se estique corretamente.
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            // Borda Esquerda
+            Spacer(
+                modifier = Modifier
+                    .width(5.dp)
+                    .fillMaxHeight() // Isso agora funciona
+                    .background(MaterialTheme.colorScheme.primary)
+            )
+            // Conteúdo do Card
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    "A Importância da Hidratação na Gestação",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Manter-se bem hidratada durante a gravidez é fundamental para a sua saúde e para o desenvolvimento do bebê. A água ajuda a formar o líquido amniótico, produzir mais volume sanguíneo, construir novos tecidos, transportar nutrientes e eliminar toxinas.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "Recomendação",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    buildAnnotatedString {
+                        append("A recomendação geral é consumir de ")
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append("2 a 3 litros")
+                        }
+                        append(" de líquidos por dia, o que equivale a cerca de 8 a 12 copos. No entanto, essa necessidade pode variar. Converse sempre com seu médico para entender a quantidade ideal para você.")
+                    },
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+    }
+}
+
 
 @Composable
 fun HydrationTodayCard(
