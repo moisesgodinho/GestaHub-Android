@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.TouchApp // Ícone de exemplo
 import androidx.compose.material.icons.filled.BusinessCenter // Ícone de mala
+import androidx.compose.material.icons.filled.WaterDrop // Ícone de gota d'água
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,7 +31,8 @@ import br.com.gestahub.ui.maternitybag.MaternityBagScreen // Import da nova tela
 @Composable
 fun MoreScreen(
     onNavigateToMovementCounter: () -> Unit,
-    onNavigateToMaternityBag: () -> Unit // Adicionado novo callback de navegação
+    onNavigateToMaternityBag: () -> Unit, // Adicionado novo callback de navegação
+    onNavigateToHydrationTracker: () -> Unit // Adicionado novo callback
 ) {
     Column(
         modifier = Modifier
@@ -50,6 +52,11 @@ fun MoreScreen(
                 onClick = onNavigateToMaternityBag, // Navega para a nova tela
                 icon = Icons.Default.BusinessCenter, // Ícone de mala
                 text = "Mala Maternidade"
+            )
+            MoreFunctionCard(
+                onClick = onNavigateToHydrationTracker, // Adicionada a navegação
+                icon = Icons.Default.WaterDrop, // Ícone de gota
+                text = "Controle de Hidratação"
             )
             // Adicione mais MoreFunctionCard aqui conforme necessário
         }

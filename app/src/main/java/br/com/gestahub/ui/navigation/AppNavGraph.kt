@@ -31,6 +31,7 @@ import br.com.gestahub.ui.profile.ProfileScreen
 import br.com.gestahub.ui.weight.WeightEntryFormScreen
 import br.com.gestahub.ui.weight.WeightProfileFormScreen
 import br.com.gestahub.ui.weight.WeightScreen
+import br.com.gestahub.ui.hydration.HydrationTrackerScreen // Import da nova tela
 import br.com.gestahub.ui.maternitybag.MaternityBagScreen
 import java.time.LocalDate
 
@@ -118,7 +119,8 @@ fun AppNavGraph(
             Box(Modifier.padding(innerPadding)) {
                 MoreScreen(
                     onNavigateToMovementCounter = { navController.navigate("movement_counter") },
-                    onNavigateToMaternityBag = { navController.navigate("maternity_bag") }
+                    onNavigateToMaternityBag = { navController.navigate("maternity_bag") },
+                    onNavigateToHydrationTracker = { navController.navigate("hydration_tracker") } // Adicionada a navegação
                 )
             }
         }
@@ -209,6 +211,9 @@ fun AppNavGraph(
                 onNavigateBack = { navController.popBackStack() }, // Passa a função para voltar
                 isDarkTheme = isDarkTheme // Passa o estado do tema do app
             )
+        }
+        composable("hydration_tracker") {
+            HydrationTrackerScreen()
         }
     }
 }
