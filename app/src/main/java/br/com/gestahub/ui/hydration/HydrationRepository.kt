@@ -48,13 +48,41 @@ class HydrationRepository {
         } ?: trySend(Result.failure(Exception("Usuário não autenticado.")))
     }
 
+    // --- NOVA FUNÇÃO ADICIONADA ---
+    fun getWaterIntakeHistory(): Flow<Result<List<WaterIntakeEntry>>> = callbackFlow {
+        getWaterIntakeCollection()?.let { collection ->
+            val listener = collection.orderBy("date", Query.Direction.DESCENDING)
+                .addSnapshotListener { snapshots, error ->
+                    if (error != null) {
+                        trySend(Result.failure(error))
+                        return@addSnapshotListener
+                    }
+                    val historyList = snapshots?.mapNotNull { doc ->
+                        try {
+                            val id = doc.id
+                            val goal = (doc.getLong("goal") ?: 2500L).toInt()
+                            val current = (doc.getLong("current") ?: 0L).toInt()
+                            val cupSize = (doc.getLong("cupSize") ?: 250L).toInt()
+                            val dateString = doc.getString("date") ?: id
+                            @Suppress("UNCHECKED_CAST")
+                            val history = (doc.get("history") as? List<Long> ?: emptyList()).map { it.toInt() }
+                            WaterIntakeEntry(id, goal, current, cupSize, history, dateString)
+                        } catch (e: Exception) {
+                            null
+                        }
+                    } ?: emptyList()
+                    trySend(Result.success(historyList))
+                }
+            awaitClose { listener.remove() }
+        } ?: trySend(Result.failure(Exception("Usuário não autenticado.")))
+    }
+
     suspend fun updateWaterData(entry: WaterIntakeEntry) {
         getWaterIntakeCollection()?.let { collection ->
             collection.document(entry.id).set(entry, SetOptions.merge()).await()
         }
     }
 
-    // --- NOVA FUNÇÃO ADICIONADA ---
     suspend fun updateProfileWaterSettings(goal: Int, cupSize: Int) {
         auth.currentUser?.uid?.let { userId ->
             val userDocRef = db.collection("users").document(userId)

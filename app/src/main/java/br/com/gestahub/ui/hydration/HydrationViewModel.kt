@@ -16,6 +16,7 @@ import java.util.Locale
 
 data class HydrationUiState(
     val todayData: WaterIntakeEntry = WaterIntakeEntry(),
+    val history: List<WaterIntakeEntry> = emptyList(), // --- NOVA PROPRIEDADE ---
     val isLoading: Boolean = true,
     val error: String? = null
 )
@@ -30,6 +31,7 @@ class HydrationViewModel : ViewModel() {
 
     init {
         listenToTodayData()
+        listenToHistoryData() // --- NOVA CHAMADA ---
     }
 
     private fun listenToTodayData() {
@@ -56,6 +58,22 @@ class HydrationViewModel : ViewModel() {
                     },
                     onFailure = { error ->
                         _uiState.update { it.copy(error = error.message, isLoading = false) }
+                    }
+                )
+            }
+        }
+    }
+
+    // --- NOVA FUNÇÃO ---
+    private fun listenToHistoryData() {
+        viewModelScope.launch {
+            repository.getWaterIntakeHistory().collect { result ->
+                result.fold(
+                    onSuccess = { historyList ->
+                        _uiState.update { it.copy(history = historyList) }
+                    },
+                    onFailure = { error ->
+                        _uiState.update { it.copy(error = error.message) }
                     }
                 )
             }

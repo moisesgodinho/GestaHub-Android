@@ -55,8 +55,6 @@ fun HydrationTrackerScreen(
             )
         }
     ) { innerPadding ->
-        // --- CORREÇÃO APLICADA AQUI ---
-        // Verifica o estado de 'isLoading' antes de mostrar o conteúdo
         if (uiState.isLoading) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
@@ -86,10 +84,86 @@ fun HydrationTrackerScreen(
                 item {
                     InfoCardWithLeftBorder()
                 }
+
+                if (uiState.history.isNotEmpty()) {
+                    item {
+                        HydrationHistoryCard(
+                            history = uiState.history,
+                            isDarkTheme = isDarkTheme
+                        )
+                    }
+                }
             }
         }
     }
 }
+
+// --- COMPOSABLE ATUALIZADO ---
+@Composable
+fun HydrationHistoryCard(history: List<WaterIntakeEntry>, isDarkTheme: Boolean) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Histórico",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Mostra apenas os últimos 7 dias, por exemplo
+            history.forEach { entry ->
+                HydrationHistoryItem(entry = entry, isDarkTheme = isDarkTheme)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+    }
+}
+
+// --- NOVO COMPOSABLE PARA O ITEM DO HISTÓRICO ---
+@Composable
+fun HydrationHistoryItem(entry: WaterIntakeEntry, isDarkTheme: Boolean) {
+    val formattedDate = try {
+        val parser = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        parser.parse(entry.date ?: "")?.let { formatter.format(it) } ?: entry.date
+    } catch (e: Exception) {
+        entry.date // fallback
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDarkTheme) MaterialTheme.colorScheme.primaryContainer
+            else MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = formattedDate ?: "Data desconhecida",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = "${entry.current} ml",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
 
 @Composable
 fun InfoCardWithLeftBorder() {
