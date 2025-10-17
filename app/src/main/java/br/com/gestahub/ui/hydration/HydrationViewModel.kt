@@ -2,13 +2,20 @@ package br.com.gestahub.ui.hydration
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 data class HydrationUiState(
+    val todayData: WaterIntakeEntry = WaterIntakeEntry(),
     val history: List<WaterIntakeEntry> = emptyList(),
     val isLoading: Boolean = true,
     val error: String? = null
@@ -16,26 +23,98 @@ data class HydrationUiState(
 
 class HydrationViewModel : ViewModel() {
     private val repository = HydrationRepository()
+    private val auth = FirebaseAuth.getInstance()
+    private val db = FirebaseFirestore.getInstance()
 
     private val _uiState = MutableStateFlow(HydrationUiState())
     val uiState: StateFlow<HydrationUiState> = _uiState.asStateFlow()
 
     init {
-        fetchHistory()
+        listenToTodayData()
+        listenToHistory()
     }
 
-    private fun fetchHistory() {
+    private fun listenToTodayData() {
         viewModelScope.launch {
-            repository.getWaterHistory().collect { result ->
+            val profileGoal = getProfileWaterGoal()
+            val profileCupSize = getProfileWaterCupSize()
+
+            repository.listenToTodayWaterIntake().collect { result ->
                 result.fold(
-                    onSuccess = { history ->
-                        _uiState.update { it.copy(history = history, isLoading = false) }
+                    onSuccess = { todayEntry ->
+                        val todayId = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                        val currentData = todayEntry ?: WaterIntakeEntry(
+                            id = todayId,
+                            goal = profileGoal,
+                            cupSize = profileCupSize,
+                            current = 0,
+                            history = emptyList(),
+                            date = todayId
+                        )
+                        _uiState.update { it.copy(todayData = currentData, isLoading = false) }
                     },
                     onFailure = { error ->
                         _uiState.update { it.copy(error = error.message, isLoading = false) }
                     }
                 )
             }
+        }
+    }
+
+    private fun listenToHistory() {
+        viewModelScope.launch {
+            repository.getWaterHistory().collect { result ->
+                result.fold(
+                    onSuccess = { fullHistory ->
+                        // --- ALTERAÇÃO APLICADA AQUI ---
+                        // Agora, o histórico completo (incluindo hoje) é exibido.
+                        _uiState.update { it.copy(history = fullHistory) }
+                    },
+                    onFailure = { error ->
+                        _uiState.update { it.copy(error = error.message) }
+                    }
+                )
+            }
+        }
+    }
+
+    fun addWater() {
+        val currentData = _uiState.value.todayData
+        val newAmount = currentData.current + currentData.cupSize
+        val newHistory = currentData.history + currentData.cupSize
+        val newData = currentData.copy(current = newAmount, history = newHistory, date = currentData.id)
+        _uiState.update { it.copy(todayData = newData) }
+        viewModelScope.launch { repository.updateWaterData(newData) }
+    }
+
+    fun undoLastWater() {
+        val currentData = _uiState.value.todayData
+        if (currentData.history.isEmpty()) return
+        val lastAmount = currentData.history.last()
+        val newAmount = (currentData.current - lastAmount).coerceAtLeast(0)
+        val newHistory = currentData.history.dropLast(1)
+        val newData = currentData.copy(current = newAmount, history = newHistory, date = currentData.id)
+        _uiState.update { it.copy(todayData = newData) }
+        viewModelScope.launch { repository.updateWaterData(newData) }
+    }
+
+    private suspend fun getProfileWaterGoal(): Int {
+        return try {
+            val docRef = auth.currentUser?.uid?.let { db.collection("users").document(it) }
+            val document = docRef?.get()?.await()
+            (document?.get("gestationalProfile.waterGoal") as? Long)?.toInt() ?: 2500
+        } catch (e: Exception) {
+            2500
+        }
+    }
+
+    private suspend fun getProfileWaterCupSize(): Int {
+        return try {
+            val docRef = auth.currentUser?.uid?.let { db.collection("users").document(it) }
+            val document = docRef?.get()?.await()
+            (document?.get("gestationalProfile.waterCupSize") as? Long)?.toInt() ?: 250
+        } catch (e: Exception) {
+            250
         }
     }
 }
