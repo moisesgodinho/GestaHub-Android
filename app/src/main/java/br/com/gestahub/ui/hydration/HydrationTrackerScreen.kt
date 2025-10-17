@@ -98,7 +98,6 @@ fun HydrationTrackerScreen(
     }
 }
 
-// --- COMPOSABLE ATUALIZADO ---
 @Composable
 fun HydrationHistoryCard(history: List<WaterIntakeEntry>, isDarkTheme: Boolean) {
     Card(
@@ -114,7 +113,6 @@ fun HydrationHistoryCard(history: List<WaterIntakeEntry>, isDarkTheme: Boolean) 
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Mostra apenas os últimos 7 dias, por exemplo
             history.forEach { entry ->
                 HydrationHistoryItem(entry = entry, isDarkTheme = isDarkTheme)
                 Spacer(modifier = Modifier.height(8.dp))
@@ -123,7 +121,7 @@ fun HydrationHistoryCard(history: List<WaterIntakeEntry>, isDarkTheme: Boolean) 
     }
 }
 
-// --- NOVO COMPOSABLE PARA O ITEM DO HISTÓRICO ---
+// --- COMPOSABLE ATUALIZADO ---
 @Composable
 fun HydrationHistoryItem(entry: WaterIntakeEntry, isDarkTheme: Boolean) {
     val formattedDate = try {
@@ -154,8 +152,9 @@ fun HydrationHistoryItem(entry: WaterIntakeEntry, isDarkTheme: Boolean) {
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium
             )
+            // --- ALTERAÇÃO APLICADA AQUI ---
             Text(
-                text = "${entry.current} ml",
+                text = "${entry.current}/${entry.goal} ml",
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
