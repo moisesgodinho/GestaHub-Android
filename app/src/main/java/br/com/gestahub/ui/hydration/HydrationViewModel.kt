@@ -66,8 +66,7 @@ class HydrationViewModel : ViewModel() {
             repository.getWaterHistory().collect { result ->
                 result.fold(
                     onSuccess = { fullHistory ->
-                        // --- ALTERAÇÃO APLICADA AQUI ---
-                        // Agora, o histórico completo (incluindo hoje) é exibido.
+                        // O filtro foi removido para que o dia de hoje sempre apareça no histórico.
                         _uiState.update { it.copy(history = fullHistory) }
                     },
                     onFailure = { error ->
@@ -80,8 +79,14 @@ class HydrationViewModel : ViewModel() {
 
     fun addWater() {
         val currentData = _uiState.value.todayData
-        val newAmount = currentData.current + currentData.cupSize
-        val newHistory = currentData.history + currentData.cupSize
+        addCustomAmount(currentData.cupSize)
+    }
+
+    fun addCustomAmount(amount: Int) {
+        if (amount <= 0) return
+        val currentData = _uiState.value.todayData
+        val newAmount = currentData.current + amount
+        val newHistory = currentData.history + amount
         val newData = currentData.copy(current = newAmount, history = newHistory, date = currentData.id)
         _uiState.update { it.copy(todayData = newData) }
         viewModelScope.launch { repository.updateWaterData(newData) }
@@ -96,6 +101,20 @@ class HydrationViewModel : ViewModel() {
         val newData = currentData.copy(current = newAmount, history = newHistory, date = currentData.id)
         _uiState.update { it.copy(todayData = newData) }
         viewModelScope.launch { repository.updateWaterData(newData) }
+    }
+
+    fun setWaterSettings(newGoal: Int, newCupSize: Int) {
+        if (newGoal <= 0 || newCupSize <= 0) return
+
+        val currentData = _uiState.value.todayData
+        val newData = currentData.copy(goal = newGoal, cupSize = newCupSize)
+
+        _uiState.update { it.copy(todayData = newData) }
+
+        viewModelScope.launch {
+            repository.updateWaterData(newData)
+            repository.updateProfileWaterSettings(newGoal, newCupSize)
+        }
     }
 
     private suspend fun getProfileWaterGoal(): Int {

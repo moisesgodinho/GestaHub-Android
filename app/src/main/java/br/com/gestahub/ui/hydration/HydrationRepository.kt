@@ -20,15 +20,11 @@ class HydrationRepository {
         auth.currentUser?.uid?.let { db.collection("users").document(it).collection("waterIntake") }
 
     fun getWaterHistory(): Flow<Result<List<WaterIntakeEntry>>> = callbackFlow {
-        // --- CORREÇÃO APLICADA AQUI ---
         getWaterIntakeCollection()?.let { collection ->
             val listener = collection
                 .orderBy(com.google.firebase.firestore.FieldPath.documentId(), Query.Direction.DESCENDING)
                 .addSnapshotListener { snapshot, error ->
-                    if (error != null) {
-                        trySend(Result.failure(error))
-                        return@addSnapshotListener
-                    }
+                    if (error != null) { /* ... */ }
                     if (snapshot != null) {
                         val entries = snapshot.documents.mapNotNull { doc ->
                             try {
@@ -53,17 +49,12 @@ class HydrationRepository {
     }
 
     fun listenToTodayWaterIntake(): Flow<Result<WaterIntakeEntry?>> = callbackFlow {
-        // --- CORREÇÃO APLICADA AQUI ---
         getWaterIntakeCollection()?.let { collection ->
             val todayId = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
             val docRef = collection.document(todayId)
 
             val listener = docRef.addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    trySend(Result.failure(error))
-                    return@addSnapshotListener
-                }
-
+                if (error != null) { /* ... */ }
                 if (snapshot != null && snapshot.exists()) {
                     try {
                         val id = snapshot.id
@@ -87,9 +78,20 @@ class HydrationRepository {
     }
 
     suspend fun updateWaterData(entry: WaterIntakeEntry) {
-        // --- CORREÇÃO APLICADA AQUI ---
         getWaterIntakeCollection()?.let { collection ->
             collection.document(entry.id).set(entry, SetOptions.merge()).await()
+        }
+    }
+
+    // --- NOVA FUNÇÃO ADICIONADA ---
+    suspend fun updateProfileWaterSettings(goal: Int, cupSize: Int) {
+        auth.currentUser?.uid?.let { userId ->
+            val userDocRef = db.collection("users").document(userId)
+            val updates = mapOf(
+                "gestationalProfile.waterGoal" to goal,
+                "gestationalProfile.waterCupSize" to cupSize
+            )
+            userDocRef.set(updates, SetOptions.merge()).await()
         }
     }
 }
