@@ -6,6 +6,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+// --- 1. ADICIONE A IMPORTAÇÃO DO ÍCONE REPLAY ---
+import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -122,8 +126,6 @@ fun HydrationHistoryCard(history: List<WaterIntakeEntry>, isDarkTheme: Boolean) 
         }
     }
 }
-
-// --- COMPOSABLE CORRIGIDO USANDO SUA LÓGICA ---
 @Composable
 fun HydrationHistoryItem(entry: WaterIntakeEntry, isDarkTheme: Boolean) {
     val formattedDate = try {
@@ -171,7 +173,7 @@ fun HydrationHistoryItem(entry: WaterIntakeEntry, isDarkTheme: Boolean) {
                 LinearProgressIndicator(
                     progress = progress,
                     modifier = Modifier
-                        .width(100.dp) // Largura fixa, como no seu exemplo
+                        .width(100.dp)
                         .height(8.dp)
                         .clip(CircleShape),
                     color = waterColor,
@@ -286,10 +288,7 @@ fun HydrationTodayCard(
 
             LinearProgressIndicator(
                 progress = progress,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(12.dp)
-                    .clip(CircleShape),
+                modifier = Modifier.fillMaxWidth().height(12.dp).clip(CircleShape),
                 color = waterColor,
                 trackColor = trackWaterColor
             )
@@ -300,16 +299,23 @@ fun HydrationTodayCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedButton(
+                IconButton(
                     onClick = onUndo,
                     enabled = todayData.history.isNotEmpty(),
-                    modifier = Modifier.weight(1f)
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
                 ) {
-                    Text("Remover último")
+                    Icon(
+                        // --- 2. SUBSTITUA O ÍCONE AQUI ---
+                        imageVector = Icons.Default.Replay,
+                        contentDescription = "Remover último"
+                    )
                 }
                 Button(
                     onClick = onAddWater,
-                    modifier = Modifier.weight(2f)
+                    modifier = Modifier.weight(1f)
                 ) {
                     Text("Adicionar um copo (${todayData.cupSize} ml)")
                 }

@@ -16,7 +16,7 @@ import java.util.Locale
 
 data class HydrationUiState(
     val todayData: WaterIntakeEntry = WaterIntakeEntry(),
-    val history: List<WaterIntakeEntry> = emptyList(), // --- NOVA PROPRIEDADE ---
+    val history: List<WaterIntakeEntry> = emptyList(),
     val isLoading: Boolean = true,
     val error: String? = null
 )
@@ -31,7 +31,7 @@ class HydrationViewModel : ViewModel() {
 
     init {
         listenToTodayData()
-        listenToHistoryData() // --- NOVA CHAMADA ---
+        listenToHistoryData()
     }
 
     private fun listenToTodayData() {
@@ -64,13 +64,19 @@ class HydrationViewModel : ViewModel() {
         }
     }
 
-    // --- NOVA FUNÇÃO ---
+    // --- FUNÇÃO ATUALIZADA ---
     private fun listenToHistoryData() {
         viewModelScope.launch {
             repository.getWaterIntakeHistory().collect { result ->
                 result.fold(
                     onSuccess = { historyList ->
-                        _uiState.update { it.copy(history = historyList) }
+                        // Pega a data de hoje no formato do banco de dados
+                        val todayId = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+                        // Filtra a lista para incluir apenas datas de hoje ou anteriores
+                        val filteredHistory = historyList.filter { entry ->
+                            entry.date != null && entry.date <= todayId
+                        }
+                        _uiState.update { it.copy(history = filteredHistory) }
                     },
                     onFailure = { error ->
                         _uiState.update { it.copy(error = error.message) }
