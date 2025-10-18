@@ -146,15 +146,23 @@ private fun MonthlyHydrationChart(
             .pointerInput(daysInMonth) {
                 detectTapGestures(
                     onTap = { offset ->
-                        // --- ESPAÇAMENTO DO EIXO Y CORRIGIDO AQUI ---
                         val yAxisAreaWidth = 40.dp.toPx()
-                        val chartAreaWidth = size.width - yAxisAreaWidth
-                        val stepX = chartAreaWidth / (daysInMonth - 1).coerceAtLeast(1)
+                        val xAxisAreaHeight = 20.dp.toPx()
+                        val chartHeight = size.height - xAxisAreaHeight
+                        val chartWidth = size.width - yAxisAreaWidth
 
-                        val tappedIndex = ((offset.x - yAxisAreaWidth) / stepX).roundToInt().coerceIn(0, daysInMonth - 1)
+                        // Verifica se o toque foi dentro da área interativa do gráfico
+                        val isInsideChartArea = offset.x >= yAxisAreaWidth && offset.y <= chartHeight
 
-                        // Alterna a visibilidade da tooltip
-                        selectedDayIndex = if (selectedDayIndex == tappedIndex) null else tappedIndex
+                        if (isInsideChartArea) {
+                            // Se o toque foi dentro, calcula o dia e alterna a tooltip
+                            val stepX = chartWidth / (daysInMonth - 1).coerceAtLeast(1)
+                            val tappedIndex = ((offset.x - yAxisAreaWidth) / stepX).roundToInt().coerceIn(0, daysInMonth - 1)
+                            selectedDayIndex = if (selectedDayIndex == tappedIndex) null else tappedIndex
+                        } else {
+                            // Se o toque foi fora, esconde a tooltip
+                            selectedDayIndex = null
+                        }
                     }
                 )
             }
@@ -221,8 +229,25 @@ private fun MonthlyHydrationChart(
                     val p2 = points[i + 1]
                     val p3 = points.getOrElse(i + 2) { p2 }
 
-                    val controlPoint1 = Offset(p1.x + (p2.x - p0.x) / 6f, (p1.y + (p2.y - p0.y) / 6f).coerceAtMost(chartHeight))
-                    val controlPoint2 = Offset(p2.x - (p3.x - p1.x) / 6f, (p2.y - (p3.y - p1.y) / 6f).coerceAtMost(chartHeight))
+                    // Calcula a posição X dos pontos de controle
+                    val controlPoint1X = p1.x + (p2.x - p0.x) / 6f
+                    val controlPoint2X = p2.x - (p3.x - p1.x) / 6f
+
+                    // Calcula a posição Y original dos pontos de controle
+                    val controlPoint1Y = (p1.y + (p2.y - p0.y) / 6f)
+                    val controlPoint2Y = (p2.y - (p3.y - p1.y) / 6f)
+
+                    // Define os limites mínimo e máximo para a curva
+                    val minY = minOf(p1.y, p2.y)
+                    val maxY = maxOf(p1.y, p2.y)
+
+                    // Limita ("clampa") a posição Y dos pontos de controle para evitar o "overshoot"
+                    val clampedControlPoint1Y = controlPoint1Y.coerceIn(minY, maxY)
+                    val clampedControlPoint2Y = controlPoint2Y.coerceIn(minY, maxY)
+
+                    // Cria os novos pontos de controle com os valores Y ajustados
+                    val controlPoint1 = Offset(controlPoint1X, clampedControlPoint1Y.coerceAtMost(chartHeight))
+                    val controlPoint2 = Offset(controlPoint2X, clampedControlPoint2Y.coerceAtMost(chartHeight))
 
                     linePath.cubicTo(controlPoint1, controlPoint2, p2)
                     fillPath.cubicTo(controlPoint1, controlPoint2, p2)
