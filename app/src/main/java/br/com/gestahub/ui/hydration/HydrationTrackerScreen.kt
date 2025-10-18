@@ -57,7 +57,9 @@ fun HydrationTrackerScreen(
     ) { innerPadding ->
         if (uiState.isLoading) {
             Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
@@ -121,7 +123,7 @@ fun HydrationHistoryCard(history: List<WaterIntakeEntry>, isDarkTheme: Boolean) 
     }
 }
 
-// --- COMPOSABLE ATUALIZADO ---
+// --- COMPOSABLE CORRIGIDO USANDO SUA LÓGICA ---
 @Composable
 fun HydrationHistoryItem(entry: WaterIntakeEntry, isDarkTheme: Boolean) {
     val formattedDate = try {
@@ -129,8 +131,12 @@ fun HydrationHistoryItem(entry: WaterIntakeEntry, isDarkTheme: Boolean) {
         val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
         parser.parse(entry.date ?: "")?.let { formatter.format(it) } ?: entry.date
     } catch (e: Exception) {
-        entry.date // fallback
+        entry.date
     }
+
+    val progress = if (entry.goal > 0) min(entry.current.toFloat() / entry.goal.toFloat(), 1f) else 0f
+    val waterColor = Color(0xFF64B5F6)
+    val trackWaterColor = Color(0xFFBBDEFB)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -144,7 +150,6 @@ fun HydrationHistoryItem(entry: WaterIntakeEntry, isDarkTheme: Boolean) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -152,13 +157,27 @@ fun HydrationHistoryItem(entry: WaterIntakeEntry, isDarkTheme: Boolean) {
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium
             )
-            // --- ALTERAÇÃO APLICADA AQUI ---
-            Text(
-                text = "${entry.current}/${entry.goal} ml",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            Spacer(modifier = Modifier.weight(1f))
+            Column(
+                horizontalAlignment = Alignment.End
+            ) {
+                Text(
+                    text = "${entry.current}/${entry.goal} ml",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                LinearProgressIndicator(
+                    progress = progress,
+                    modifier = Modifier
+                        .width(100.dp) // Largura fixa, como no seu exemplo
+                        .height(8.dp)
+                        .clip(CircleShape),
+                    color = waterColor,
+                    trackColor = trackWaterColor
+                )
+            }
         }
     }
 }
@@ -267,7 +286,10 @@ fun HydrationTodayCard(
 
             LinearProgressIndicator(
                 progress = progress,
-                modifier = Modifier.fillMaxWidth().height(12.dp).clip(CircleShape),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(12.dp)
+                    .clip(CircleShape),
                 color = waterColor,
                 trackColor = trackWaterColor
             )
