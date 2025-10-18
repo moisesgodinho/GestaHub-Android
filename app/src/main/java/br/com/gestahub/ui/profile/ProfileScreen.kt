@@ -6,8 +6,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -22,9 +22,12 @@ fun ProfileScreen(
     onNavigateBack: () -> Unit,
     onEditClick: () -> Unit
 ) {
-    val uiState by profileViewModel.uiState.collectAsState()
-    val userProfile = uiState.userProfile
-    val context = LocalContext.current // Pega o contexto local
+    // --- CORREÇÃO DEFINITIVA ---
+    // Coletamos o estado e especificamos seu tipo explicitamente.
+    val uiState: State<ProfileUiState> = profileViewModel.uiState.collectAsState()
+    // Agora acessamos o valor através de .value
+    val userProfile = uiState.value.userProfile
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -52,7 +55,7 @@ fun ProfileScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (uiState.isLoading) {
+                if (uiState.value.isLoading) { // Acessando com .value
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -91,12 +94,23 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // --- BOTÃO ADICIONADO ---
                 Button(
                     onClick = { profileViewModel.sendTestNotification(context) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Enviar Notificação de Teste")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = {
+                        profileViewModel.testAppointmentReminder(context)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                ) {
+                    Text("Testar Lembrete de Consulta")
                 }
             }
 

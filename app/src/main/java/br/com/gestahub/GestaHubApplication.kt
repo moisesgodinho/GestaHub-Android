@@ -1,14 +1,12 @@
-package br.com.gestahub
+package br.com.gestahub // <-- Verifique esta linha
 
 import android.app.Application
-import br.com.gestahub.services.NotificationService
+import br.com.gestahub.services.NotificationService // <-- Verifique o import
 
 class GestaHubApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // Esta parte estava faltando.
-        // Ela cria o canal de notificação assim que o app abre.
         val notificationService = NotificationService(applicationContext)
         notificationService.createNotificationChannel()
     }

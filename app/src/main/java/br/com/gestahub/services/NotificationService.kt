@@ -1,4 +1,4 @@
-package br.com.gestahub.services
+package br.com.gestahub.services // <-- Verifique esta linha
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -31,8 +31,23 @@ class NotificationService(private val context: Context) {
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
-
         notificationManager.notify(1, notification)
+    }
+
+    fun showAppointmentReminderNotification(description: String, time: String, location: String) {
+        val notificationId = System.currentTimeMillis().toInt()
+        val title = "Lembrete de Consulta"
+        val text = "Você tem uma consulta de $description amanhã às $time em $location."
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .build()
+
+        notificationManager.notify(notificationId, notification)
     }
 
     companion object {

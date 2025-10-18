@@ -1,8 +1,11 @@
 package br.com.gestahub.ui.profile
 
-import android.content.Context // <-- IMPORT ADICIONADO
+import android.content.Context
 import androidx.lifecycle.ViewModel
-import br.com.gestahub.services.NotificationService // <-- IMPORT ADICIONADO
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import br.com.gestahub.services.NotificationService
+import br.com.gestahub.workers.NotificationWorker
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -98,6 +101,11 @@ class ProfileViewModel : ViewModel() {
     fun sendTestNotification(context: Context) {
         val notificationService = NotificationService(context)
         notificationService.showTestNotification()
+    }
+
+    fun testAppointmentReminder(context: Context) {
+        val testRequest = OneTimeWorkRequestBuilder<NotificationWorker>().build()
+        WorkManager.getInstance(context).enqueue(testRequest)
     }
 
     fun signOut() {
