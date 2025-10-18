@@ -11,12 +11,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
+import java.time.YearMonth // Importação necessária
 import java.util.Date
 import java.util.Locale
 
 data class HydrationUiState(
     val todayData: WaterIntakeEntry = WaterIntakeEntry(),
     val history: List<WaterIntakeEntry> = emptyList(),
+    val displayedMonth: YearMonth = YearMonth.now(), // Novo estado para o mês do gráfico
     val isLoading: Boolean = true,
     val error: String? = null
 )
@@ -64,15 +66,12 @@ class HydrationViewModel : ViewModel() {
         }
     }
 
-    // --- FUNÇÃO ATUALIZADA ---
     private fun listenToHistoryData() {
         viewModelScope.launch {
             repository.getWaterIntakeHistory().collect { result ->
                 result.fold(
                     onSuccess = { historyList ->
-                        // Pega a data de hoje no formato do banco de dados
                         val todayId = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-                        // Filtra a lista para incluir apenas datas de hoje ou anteriores
                         val filteredHistory = historyList.filter { entry ->
                             entry.date != null && entry.date <= todayId
                         }
@@ -86,6 +85,10 @@ class HydrationViewModel : ViewModel() {
         }
     }
 
+    // Nova função para alterar o mês exibido
+    fun changeDisplayedMonth(newMonth: YearMonth) {
+        _uiState.update { it.copy(displayedMonth = newMonth) }
+    }
 
     fun addWater() {
         val currentData = _uiState.value.todayData

@@ -7,9 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-// --- 1. ADICIONE A IMPORTAÇÃO DO ÍCONE REPLAY ---
 import androidx.compose.material.icons.filled.Replay
-import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -91,10 +89,25 @@ fun HydrationTrackerScreen(
                     InfoCardWithLeftBorder()
                 }
 
+                // --- NOVO GRÁFICO ADICIONADO AQUI ---
+                if (uiState.history.isNotEmpty()) {
+                    item {
+                        HydrationChartCard(
+                            history = uiState.history,
+                            displayedMonth = uiState.displayedMonth,
+                            onMonthChange = viewModel::changeDisplayedMonth,
+                            isDarkTheme = isDarkTheme
+                        )
+                    }
+                }
+
                 if (uiState.history.isNotEmpty()) {
                     item {
                         HydrationHistoryCard(
-                            history = uiState.history,
+                            history = uiState.history.filter {
+                                // Filtra o histórico para mostrar apenas o mês selecionado no gráfico
+                                it.date?.substring(0, 7) == uiState.displayedMonth.toString()
+                            },
                             isDarkTheme = isDarkTheme
                         )
                     }
@@ -103,6 +116,8 @@ fun HydrationTrackerScreen(
         }
     }
 }
+
+// ... (Restante do código do HydrationTrackerScreen.kt permanece o mesmo) ...
 
 @Composable
 fun HydrationHistoryCard(history: List<WaterIntakeEntry>, isDarkTheme: Boolean) {
@@ -119,9 +134,18 @@ fun HydrationHistoryCard(history: List<WaterIntakeEntry>, isDarkTheme: Boolean) 
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            history.forEach { entry ->
-                HydrationHistoryItem(entry = entry, isDarkTheme = isDarkTheme)
-                Spacer(modifier = Modifier.height(8.dp))
+            if (history.isEmpty()) {
+                Text(
+                    "Nenhum registro para este mês.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
+                )
+            } else {
+                history.forEach { entry ->
+                    HydrationHistoryItem(entry = entry, isDarkTheme = isDarkTheme)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
             }
         }
     }
@@ -308,7 +332,6 @@ fun HydrationTodayCard(
                     )
                 ) {
                     Icon(
-                        // --- 2. SUBSTITUA O ÍCONE AQUI ---
                         imageVector = Icons.Default.Replay,
                         contentDescription = "Remover último"
                     )
