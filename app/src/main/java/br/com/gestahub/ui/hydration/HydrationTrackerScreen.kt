@@ -1,6 +1,7 @@
 package br.com.gestahub.ui.hydration
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -14,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +38,7 @@ fun HydrationTrackerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var selectedDayIndex by remember { mutableStateOf<Int?>(null) }
 
     if (showSettingsDialog) {
         WaterSettingsDialog(
@@ -57,59 +60,71 @@ fun HydrationTrackerScreen(
             )
         }
     ) { innerPadding ->
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                item {
-                    HydrationTodayCard(
-                        todayData = uiState.todayData,
-                        onAddWater = viewModel::addWater,
-                        onUndo = viewModel::undoLastWater,
-                        onAddCustomAmount = viewModel::addCustomAmount,
-                        onEditSettings = { showSettingsDialog = true },
-                        isDarkTheme = isDarkTheme
-                    )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = {
+                        selectedDayIndex = null
+                    })
                 }
-
-                item {
-                    InfoCardWithLeftBorder()
+        ) {
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
                 }
-
-                // --- NOVO GRÁFICO ADICIONADO AQUI ---
-                if (uiState.history.isNotEmpty()) {
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                     item {
-                        HydrationChartCard(
-                            history = uiState.history,
-                            displayedMonth = uiState.displayedMonth,
-                            onMonthChange = viewModel::changeDisplayedMonth,
+                        HydrationTodayCard(
+                            todayData = uiState.todayData,
+                            onAddWater = viewModel::addWater,
+                            onUndo = viewModel::undoLastWater,
+                            onAddCustomAmount = viewModel::addCustomAmount,
+                            onEditSettings = { showSettingsDialog = true },
                             isDarkTheme = isDarkTheme
                         )
                     }
-                }
 
-                if (uiState.history.isNotEmpty()) {
                     item {
-                        HydrationHistoryCard(
-                            history = uiState.history.filter {
-                                // Filtra o histórico para mostrar apenas o mês selecionado no gráfico
-                                it.date?.substring(0, 7) == uiState.displayedMonth.toString()
-                            },
-                            isDarkTheme = isDarkTheme
-                        )
+                        InfoCardWithLeftBorder()
+                    }
+
+                    // --- NOVO GRÁFICO ADICIONADO AQUI ---
+                    if (uiState.history.isNotEmpty()) {
+                        item {
+                            HydrationChartCard(
+                                history = uiState.history,
+                                displayedMonth = uiState.displayedMonth,
+                                onMonthChange = { month ->
+                                    selectedDayIndex = null // Reseta o tooltip ao trocar de mês
+                                    viewModel.changeDisplayedMonth(month)
+                                },
+                                isDarkTheme = isDarkTheme,
+                                selectedDayIndex = selectedDayIndex,
+                                onDaySelected = { selectedDayIndex = it }
+                            )
+                        }
+                    }
+
+                    if (uiState.history.isNotEmpty()) {
+                        item {
+                            HydrationHistoryCard(
+                                history = uiState.history.filter {
+                                    // Filtra o histórico para mostrar apenas o mês selecionado no gráfico
+                                    it.date?.substring(0, 7) == uiState.displayedMonth.toString()
+                                },
+                                isDarkTheme = isDarkTheme
+                            )
+                        }
                     }
                 }
             }
@@ -130,7 +145,9 @@ fun HydrationHistoryCard(history: List<WaterIntakeEntry>, isDarkTheme: Boolean) 
             Text(
                 text = "Histórico",
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(16.dp))
 

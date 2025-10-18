@@ -36,7 +36,9 @@ fun HydrationChartCard(
     history: List<WaterIntakeEntry>,
     displayedMonth: YearMonth,
     onMonthChange: (YearMonth) -> Unit,
-    isDarkTheme: Boolean
+    isDarkTheme: Boolean,
+    selectedDayIndex: Int?,
+    onDaySelected: (Int?) -> Unit
 ) {
     val entriesByMonth = remember(history) {
         history.groupBy { YearMonth.parse(it.date?.substring(0, 7)) }
@@ -90,7 +92,9 @@ fun HydrationChartCard(
             MonthlyHydrationChart(
                 entries = entriesByMonth[displayedMonth] ?: emptyList(),
                 yearMonth = displayedMonth,
-                isDarkTheme = isDarkTheme
+                isDarkTheme = isDarkTheme,
+                selectedDayIndex = selectedDayIndex,
+                onDaySelected = onDaySelected
             )
         }
     }
@@ -104,7 +108,9 @@ private fun Path.cubicTo(p1: Offset, p2: Offset, p3: Offset) {
 private fun MonthlyHydrationChart(
     entries: List<WaterIntakeEntry>,
     yearMonth: YearMonth,
-    isDarkTheme: Boolean
+    isDarkTheme: Boolean,
+    selectedDayIndex: Int?,
+    onDaySelected: (Int?) -> Unit
 ) {
     val daysInMonth = yearMonth.lengthOfMonth()
 
@@ -137,7 +143,6 @@ private fun MonthlyHydrationChart(
     val tooltipTextColor = if (isDarkTheme) Color.White else Color.Black
 
     val textMeasurer = rememberTextMeasurer()
-    var selectedDayIndex by remember { mutableStateOf<Int?>(null) }
 
     Box(
         modifier = Modifier
@@ -158,10 +163,10 @@ private fun MonthlyHydrationChart(
                             // Se o toque foi dentro, calcula o dia e alterna a tooltip
                             val stepX = chartWidth / (daysInMonth - 1).coerceAtLeast(1)
                             val tappedIndex = ((offset.x - yAxisAreaWidth) / stepX).roundToInt().coerceIn(0, daysInMonth - 1)
-                            selectedDayIndex = if (selectedDayIndex == tappedIndex) null else tappedIndex
+                            onDaySelected(if (selectedDayIndex == tappedIndex) null else tappedIndex)
                         } else {
                             // Se o toque foi fora, esconde a tooltip
-                            selectedDayIndex = null
+                            onDaySelected(null)
                         }
                     }
                 )
