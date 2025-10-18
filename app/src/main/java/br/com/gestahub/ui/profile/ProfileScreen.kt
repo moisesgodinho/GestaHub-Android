@@ -10,6 +10,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -23,6 +24,7 @@ fun ProfileScreen(
 ) {
     val uiState by profileViewModel.uiState.collectAsState()
     val userProfile = uiState.userProfile
+    val context = LocalContext.current // Pega o contexto local
 
     Scaffold(
         topBar = {
@@ -35,8 +37,7 @@ fun ProfileScreen(
                             contentDescription = "Voltar"
                         )
                     }
-                },
-                actions = { /* O ícone de editar não fica mais aqui */ }
+                }
             )
         }
     ) { innerPadding ->
@@ -81,20 +82,29 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // --- BOTÃO ALTERADO AQUI ---
-                // Trocado de TextButton para Button
                 Button(
                     onClick = onEditClick,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Editar Perfil")
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // --- BOTÃO ADICIONADO ---
+                Button(
+                    onClick = { profileViewModel.sendTestNotification(context) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Enviar Notificação de Teste")
+                }
             }
 
-            // Botão de Sair continua no final da tela
             Button(
                 onClick = { profileViewModel.signOut() },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) {
                 Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Sair")

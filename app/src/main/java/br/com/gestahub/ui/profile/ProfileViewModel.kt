@@ -1,6 +1,8 @@
 package br.com.gestahub.ui.profile
 
+import android.content.Context // <-- IMPORT ADICIONADO
 import androidx.lifecycle.ViewModel
+import br.com.gestahub.services.NotificationService // <-- IMPORT ADICIONADO
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -91,6 +93,11 @@ class ProfileViewModel : ViewModel() {
         } catch (e: DateTimeParseException) {
             "Data inválida"
         }
+    }
+
+    fun sendTestNotification(context: Context) {
+        val notificationService = NotificationService(context)
+        notificationService.showTestNotification()
     }
 
     fun signOut() {
