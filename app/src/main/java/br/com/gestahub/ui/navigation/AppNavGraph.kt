@@ -13,6 +13,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink // <-- GARANTA QUE ESTE IMPORT EXISTE
 import br.com.gestahub.ui.appointment.AppointmentFormScreen
 import br.com.gestahub.ui.appointment.AppointmentType
 import br.com.gestahub.ui.appointment.AppointmentsScreen
@@ -23,7 +24,7 @@ import br.com.gestahub.ui.home.HomeScreen
 import br.com.gestahub.ui.home.HomeViewModel
 import br.com.gestahub.ui.journal.JournalEntryScreen
 import br.com.gestahub.ui.journal.JournalScreen
-import br.com.gestahub.ui.maternitybag.MaternityBagScreen // <-- ADICIONE ESTA LINHA
+import br.com.gestahub.ui.maternitybag.MaternityBagScreen
 import br.com.gestahub.ui.more.MoreScreen
 import br.com.gestahub.ui.movementcounter.MovementCounterScreen
 import br.com.gestahub.ui.profile.EditProfileScreen
@@ -31,8 +32,7 @@ import br.com.gestahub.ui.profile.ProfileScreen
 import br.com.gestahub.ui.weight.WeightEntryFormScreen
 import br.com.gestahub.ui.weight.WeightProfileFormScreen
 import br.com.gestahub.ui.weight.WeightScreen
-import br.com.gestahub.ui.hydration.HydrationTrackerScreen // Import da nova tela
-import br.com.gestahub.ui.maternitybag.MaternityBagScreen
+import br.com.gestahub.ui.hydration.HydrationTrackerScreen
 import java.time.LocalDate
 
 @Composable
@@ -68,7 +68,11 @@ fun AppNavGraph(
                 }
             )
         }
-        composable("appointments") {
+        composable(
+            route = "appointments",
+            // --- ALTERAÇÃO FEITA APENAS AQUI ---
+            deepLinks = listOf(navDeepLink { uriPattern = "gestahub://appointments" })
+        ) {
             AppointmentsScreen(
                 contentPadding = innerPadding,
                 uiState = appointmentsUiState,
@@ -120,7 +124,7 @@ fun AppNavGraph(
                 MoreScreen(
                     onNavigateToMovementCounter = { navController.navigate("movement_counter") },
                     onNavigateToMaternityBag = { navController.navigate("maternity_bag") },
-                    onNavigateToHydrationTracker = { navController.navigate("hydration_tracker") } // Adicionada a navegação
+                    onNavigateToHydrationTracker = { navController.navigate("hydration_tracker") }
                 )
             }
         }
@@ -204,18 +208,16 @@ fun AppNavGraph(
             )
         }
 
-        // --- NOVA ROTA PARA MALA MATERNIDADE ---
-
         composable("maternity_bag") {
             MaternityBagScreen(
-                onNavigateBack = { navController.popBackStack() }, // Passa a função para voltar
-                isDarkTheme = isDarkTheme // Passa o estado do tema do app
+                onNavigateBack = { navController.popBackStack() },
+                isDarkTheme = isDarkTheme
             )
         }
         composable("hydration_tracker") {
             HydrationTrackerScreen(
                 onNavigateBack = { navController.popBackStack() },
-                isDarkTheme = isDarkTheme // Passa o estado do tema
+                isDarkTheme = isDarkTheme
             )
         }
     }

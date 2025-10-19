@@ -1,10 +1,11 @@
-package br.com.gestahub.services // <-- Verifique esta linha
+package br.com.gestahub.services
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import br.com.gestahub.MainActivity
@@ -49,9 +50,17 @@ class NotificationService(private val context: Context) {
         val title = "Lembrete de Consulta"
         val text = "Você tem uma consulta de $description amanhã às $time em $location."
 
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        // --- ALTERAÇÃO AQUI ---
+        // Criamos uma Intent que aponta para a rota de Consultas via deep link.
+        val intent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("gestahub://appointments") // URI para a tela de consultas
+        ).apply {
+            // Garante que a intent abra no seu app
+            `package` = context.packageName
         }
+        // --- FIM DA ALTERAÇÃO ---
+
         val pendingIntent: PendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
