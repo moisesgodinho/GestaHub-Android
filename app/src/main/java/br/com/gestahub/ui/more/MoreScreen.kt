@@ -1,25 +1,13 @@
 package br.com.gestahub.ui.more
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BusinessCenter
-import androidx.compose.material.icons.filled.ShoppingCart // 1. Importe o ícone novo
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.WaterDrop
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,56 +15,62 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
+// Helper data class para manter as informações dos cards organizadas.
+private data class FeatureCardInfo(
+    val onClick: () -> Unit,
+    val icon: ImageVector,
+    val text: String
+)
+
+// CORREÇÃO APLICADA AQUI
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoreScreen(
     onNavigateToMovementCounter: () -> Unit,
     onNavigateToMaternityBag: () -> Unit,
     onNavigateToHydrationTracker: () -> Unit,
-    onNavigateToShoppingList: () -> Unit // 2. Adicione o novo callback
+    onNavigateToShoppingList: () -> Unit
 ) {
+    // Criar uma lista com todos os cards facilita a manutenção.
+    val features = listOf(
+        FeatureCardInfo(onNavigateToMovementCounter, Icons.Default.TouchApp, "Contador de Movimentos"),
+        FeatureCardInfo(onNavigateToMaternityBag, Icons.Default.BusinessCenter, "Mala Maternidade"),
+        FeatureCardInfo(onNavigateToHydrationTracker, Icons.Default.WaterDrop, "Controle de Hidratação"),
+        FeatureCardInfo(onNavigateToShoppingList, Icons.Default.ShoppingCart, "Lista de Compras")
+        // Adicione novos cards aqui no futuro.
+    )
+
+    val itemsPerRow = 3
+
     Column(
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp) // Adiciona espaço entre as linhas
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Primeira linha de cards
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            MoreFunctionCard(
-                onClick = onNavigateToMovementCounter,
-                icon = Icons.Default.TouchApp,
-                text = "Contador de Movimentos"
-            )
-            MoreFunctionCard(
-                onClick = onNavigateToMaternityBag,
-                icon = Icons.Default.BusinessCenter,
-                text = "Mala Maternidade"
-            )
-        }
-        // Segunda linha de cards
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            MoreFunctionCard(
-                onClick = onNavigateToHydrationTracker,
-                icon = Icons.Default.WaterDrop,
-                text = "Controle de Hidratação"
-            )
-            // 3. Adicione o novo card aqui
-            MoreFunctionCard(
-                onClick = onNavigateToShoppingList,
-                icon = Icons.Default.ShoppingCart,
-                text = "Lista de Compras"
-            )
+        features.chunked(itemsPerRow).forEach { rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                rowItems.forEach { feature ->
+                    MoreFunctionCard(
+                        onClick = feature.onClick,
+                        icon = feature.icon,
+                        text = feature.text
+                    )
+                }
+
+                val emptySpaces = itemsPerRow - rowItems.size
+                repeat(emptySpaces) {
+                    Spacer(modifier = Modifier.size(width = 110.dp, height = 120.dp))
+                }
+            }
         }
     }
 }
 
+// CORREÇÃO APLICADA AQUI
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoreFunctionCard(
@@ -86,10 +80,11 @@ fun MoreFunctionCard(
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier.size(120.dp), // Você pode ajustar o tamanho se preferir
+        modifier = Modifier.size(width = 110.dp, height = 120.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(
