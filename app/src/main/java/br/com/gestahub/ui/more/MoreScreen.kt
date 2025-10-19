@@ -10,9 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.TouchApp // Ícone de exemplo
-import androidx.compose.material.icons.filled.BusinessCenter // Ícone de mala
-import androidx.compose.material.icons.filled.WaterDrop // Ícone de gota d'água
+import androidx.compose.material.icons.filled.BusinessCenter
+import androidx.compose.material.icons.filled.ShoppingCart // 1. Importe o ícone novo
+import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,20 +26,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import br.com.gestahub.ui.maternitybag.MaternityBagScreen // Import da nova tela
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoreScreen(
     onNavigateToMovementCounter: () -> Unit,
-    onNavigateToMaternityBag: () -> Unit, // Adicionado novo callback de navegação
-    onNavigateToHydrationTracker: () -> Unit // Adicionado novo callback
+    onNavigateToMaternityBag: () -> Unit,
+    onNavigateToHydrationTracker: () -> Unit,
+    onNavigateToShoppingList: () -> Unit // 2. Adicione o novo callback
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp) // Adiciona espaço entre as linhas
     ) {
+        // Primeira linha de cards
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -49,16 +52,27 @@ fun MoreScreen(
                 text = "Contador de Movimentos"
             )
             MoreFunctionCard(
-                onClick = onNavigateToMaternityBag, // Navega para a nova tela
-                icon = Icons.Default.BusinessCenter, // Ícone de mala
+                onClick = onNavigateToMaternityBag,
+                icon = Icons.Default.BusinessCenter,
                 text = "Mala Maternidade"
             )
+        }
+        // Segunda linha de cards
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             MoreFunctionCard(
-                onClick = onNavigateToHydrationTracker, // Adicionada a navegação
-                icon = Icons.Default.WaterDrop, // Ícone de gota
+                onClick = onNavigateToHydrationTracker,
+                icon = Icons.Default.WaterDrop,
                 text = "Controle de Hidratação"
             )
-            // Adicione mais MoreFunctionCard aqui conforme necessário
+            // 3. Adicione o novo card aqui
+            MoreFunctionCard(
+                onClick = onNavigateToShoppingList,
+                icon = Icons.Default.ShoppingCart,
+                text = "Lista de Compras"
+            )
         }
     }
 }
@@ -72,7 +86,7 @@ fun MoreFunctionCard(
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier.size(120.dp),
+        modifier = Modifier.size(120.dp), // Você pode ajustar o tamanho se preferir
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -88,7 +102,7 @@ fun MoreFunctionCard(
             Icon(
                 imageVector = icon,
                 contentDescription = text,
-                tint = MaterialTheme.colorScheme.primary, // Cor do ícone baseada no tema
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(48.dp)
             )
             Spacer(modifier = Modifier.height(12.dp))

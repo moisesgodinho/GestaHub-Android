@@ -34,6 +34,7 @@ import br.com.gestahub.ui.weight.WeightProfileFormScreen
 import br.com.gestahub.ui.weight.WeightScreen
 import br.com.gestahub.ui.hydration.HydrationTrackerScreen
 import java.time.LocalDate
+import br.com.gestahub.ui.shoppinglist.ShoppingListScreen
 
 @Composable
 fun AppNavGraph(
@@ -127,7 +128,9 @@ fun AppNavGraph(
                 MoreScreen(
                     onNavigateToMovementCounter = { navController.navigate("movement_counter") },
                     onNavigateToMaternityBag = { navController.navigate("maternity_bag") },
-                    onNavigateToHydrationTracker = { navController.navigate("hydration_tracker") }
+                    onNavigateToHydrationTracker = { navController.navigate("hydration_tracker") },
+                    onNavigateToShoppingList = { navController.navigate("shopping_list") },
+
                 )
             }
         }
@@ -221,6 +224,13 @@ fun AppNavGraph(
             HydrationTrackerScreen(
                 onNavigateBack = { navController.popBackStack() },
                 isDarkTheme = isDarkTheme
+            )
+        }
+        composable("shopping_list") {
+            ShoppingListScreen(
+                navController = navController
+                // Se sua tela precisar do isDarkTheme, adicione aqui:
+                // isDarkTheme = isDarkTheme
             )
         }
     }
