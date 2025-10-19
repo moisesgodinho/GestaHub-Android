@@ -76,6 +76,33 @@ class NotificationService(private val context: Context) {
         notificationManager.notify(notificationId, notification)
     }
 
+    fun showDailyMoodReminderNotification() {
+        val notificationId = 2 // ID único para a notificação do diário
+        val title = "Lembrete de Diário"
+        val text = "Não se esqueça de registrar seu humor hoje!"
+
+        // Intent para abrir a tela do diário via deep link
+        val intent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("gestahub://journal")
+        ).apply {
+            `package` = context.packageName
+        }
+
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setSmallIcon(R.drawable.ic_stat_name)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        notificationManager.notify(notificationId, notification)
+    }
+
     companion object {
         const val CHANNEL_ID = "gestahub_channel"
     }

@@ -93,7 +93,10 @@ fun AppNavGraph(
                 }
             )
         }
-        composable("journal") {
+        composable(
+            "journal",
+            deepLinks = listOf(navDeepLink { uriPattern = "gestahub://journal" })
+        ) {
             val dataState = homeUiState.dataState
             var lmp: LocalDate? = null
             if (dataState is GestationalDataState.HasData) {
