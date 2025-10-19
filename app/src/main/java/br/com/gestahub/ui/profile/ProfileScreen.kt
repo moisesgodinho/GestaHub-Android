@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import br.com.gestahub.services.NotificationService
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,15 +96,6 @@ fun ProfileScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Button(
-                    onClick = { profileViewModel.sendTestNotification(context) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Enviar Notificação de Teste")
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Button(
                     onClick = {
                         profileViewModel.testAppointmentReminder(context)
                     },
@@ -111,6 +103,17 @@ fun ProfileScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                 ) {
                     Text("Testar Lembrete de Consulta")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        val notificationService = NotificationService(context)
+                        notificationService.showDailyMoodReminderNotification()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                ) {
+                    Text("Testar Notificação do Diário")
                 }
             }
 

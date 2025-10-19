@@ -28,23 +28,6 @@ class NotificationService(private val context: Context) {
         }
     }
 
-    fun showTestNotification() {
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        val pendingIntent: PendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
-
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle("Notificação de Teste")
-            .setContentText("Esta é uma notificação de teste do GestaHub.")
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .build()
-        notificationManager.notify(1, notification)
-    }
-
     fun showAppointmentReminderNotification(description: String, time: String, location: String) {
         val notificationId = System.currentTimeMillis().toInt()
         val title = "Lembrete de Consulta \uD83D\uDDD3\uFE0F"

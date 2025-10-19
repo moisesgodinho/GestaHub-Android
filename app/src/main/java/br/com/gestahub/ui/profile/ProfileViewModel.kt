@@ -98,10 +98,7 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    fun sendTestNotification(context: Context) {
-        val notificationService = NotificationService(context)
-        notificationService.showTestNotification()
-    }
+
 
     fun testAppointmentReminder(context: Context) {
         val testRequest = OneTimeWorkRequestBuilder<NotificationWorker>().build()
