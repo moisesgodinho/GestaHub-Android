@@ -222,7 +222,7 @@ fun ItemRow(
             // 2. CORREÇÃO VISUAL: Removido o 'textDecoration'
             modifier = Modifier.weight(1f)
         )
-        if (item.isCustom) {
+
             IconButton(onClick = onRemove) {
                 Icon(
                     imageVector = Icons.Default.Delete,
@@ -230,6 +230,6 @@ fun ItemRow(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
+
     }
 }
