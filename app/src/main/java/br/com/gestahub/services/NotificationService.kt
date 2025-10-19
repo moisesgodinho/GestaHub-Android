@@ -47,7 +47,7 @@ class NotificationService(private val context: Context) {
 
     fun showAppointmentReminderNotification(description: String, time: String, location: String) {
         val notificationId = System.currentTimeMillis().toInt()
-        val title = "Lembrete de Consulta"
+        val title = "Lembrete de Consulta \uD83D\uDDD3\uFE0F"
         val text = "Você tem uma consulta de $description amanhã às $time em $location."
 
         // --- ALTERAÇÃO AQUI ---
@@ -78,8 +78,8 @@ class NotificationService(private val context: Context) {
 
     fun showDailyMoodReminderNotification() {
         val notificationId = 2 // ID único para a notificação do diário
-        val title = "Lembrete de Diário"
-        val text = "Não se esqueça de registrar seu humor hoje!"
+        val title = "Como você está hoje? \uD83D\uDCDD"
+        val text = "Não se esqueça de registrar seu humor e sintomas no diário de hoje!"
 
         // Intent para abrir a tela do diário via deep link
         val intent = Intent(
