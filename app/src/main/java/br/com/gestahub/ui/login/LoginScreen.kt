@@ -81,11 +81,12 @@ fun WelcomeText() {
         )
         Spacer(modifier = Modifier.height(16.dp)) // Espaço maior para o subtítulo
         Text(
-            text = "Seu companheiro de bolso para uma jornada gestacional mais tranquila e informada.",
+            text = "Sua jornada da maternidade semana a semana.",
             style = MaterialTheme.typography.bodyLarge, // Usando estilos do tema
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
     }
 }
 

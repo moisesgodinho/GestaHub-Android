@@ -3,12 +3,13 @@ package br.com.gestahub.services
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.app.TaskStackBuilder // Importação necessária
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import br.com.gestahub.MainActivity
+import br.com.gestahub.MainActivity // Importação necessária
 import br.com.gestahub.R
 
 class NotificationService(private val context: Context) {
@@ -30,21 +31,33 @@ class NotificationService(private val context: Context) {
 
     fun showAppointmentReminderNotification(description: String, time: String, location: String) {
         val notificationId = System.currentTimeMillis().toInt()
-        val title = "Lembrete de Consulta \uD83D\uDDD3\uFE0F"
+        val title = "Lembrete de Consulta"
         val text = "Você tem uma consulta de $description amanhã às $time em $location."
 
-        // --- ALTERAÇÃO AQUI ---
-        // Criamos uma Intent que aponta para a rota de Consultas via deep link.
-        val intent = Intent(
-            Intent.ACTION_VIEW,
-            Uri.parse("gestahub://appointments") // URI para a tela de consultas
-        ).apply {
-            // Garante que a intent abra no seu app
-            `package` = context.packageName
+        // --- CORREÇÃO APLICADA AQUI ---
+        // 1. Intent para abrir a tela principal (vai para "home" por padrão)
+        val mainIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
-        // --- FIM DA ALTERAÇÃO ---
 
-        val pendingIntent: PendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+        // 2. Intent do Deep Link para a tela de consultas
+        val appointmentsIntent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("gestahub://appointments"),
+            context,
+            MainActivity::class.java
+        )
+
+        // 3. Usar o TaskStackBuilder para criar a pilha de volta
+        val pendingIntent: PendingIntent? = TaskStackBuilder.create(context).run {
+            addNextIntent(mainIntent) // Adiciona a "home" à pilha
+            addNextIntent(appointmentsIntent) // Adiciona "consultas" no topo
+            getPendingIntent(
+                notificationId,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+        // --- FIM DA CORREÇÃO ---
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle(title)
@@ -61,18 +74,33 @@ class NotificationService(private val context: Context) {
 
     fun showDailyMoodReminderNotification() {
         val notificationId = 2 // ID único para a notificação do diário
-        val title = "Como você está hoje? \uD83D\uDCDD"
-        val text = "Não se esqueça de registrar seu humor e sintomas no diário de hoje!"
+        val title = "Lembrete de Diário"
+        val text = "Não se esqueça de registrar seu humor hoje!"
 
-        // Intent para abrir a tela do diário via deep link
-        val intent = Intent(
-            Intent.ACTION_VIEW,
-            Uri.parse("gestahub://journal")
-        ).apply {
-            `package` = context.packageName
+        // --- CORREÇÃO APLICADA AQUI ---
+        // 1. Intent para abrir a tela principal (vai para "home" por padrão)
+        val mainIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
 
-        val pendingIntent: PendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+        // 2. Intent do Deep Link para a tela do diário
+        val journalIntent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("gestahub://journal"),
+            context,
+            MainActivity::class.java
+        )
+
+        // 3. Usar o TaskStackBuilder para criar a pilha de volta
+        val pendingIntent: PendingIntent? = TaskStackBuilder.create(context).run {
+            addNextIntent(mainIntent) // Adiciona a "home" à pilha
+            addNextIntent(journalIntent) // Adiciona "diário" no topo
+            getPendingIntent(
+                notificationId,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+        // --- FIM DA CORREÇÃO ---
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle(title)
