@@ -35,6 +35,7 @@ import br.com.gestahub.ui.weight.WeightScreen
 import br.com.gestahub.ui.hydration.HydrationTrackerScreen
 import java.time.LocalDate
 import br.com.gestahub.ui.shoppinglist.ShoppingListScreen
+import br.com.gestahub.ui.contractionstimer.ContractionTimerScreen
 
 @Composable
 fun AppNavGraph(
@@ -130,6 +131,7 @@ fun AppNavGraph(
                     onNavigateToMaternityBag = { navController.navigate("maternity_bag") },
                     onNavigateToHydrationTracker = { navController.navigate("hydration_tracker") },
                     onNavigateToShoppingList = { navController.navigate("shopping_list") },
+                    onNavigateToContractionTimer = { navController.navigate("contraction_timer") }
 
                 )
             }
@@ -232,6 +234,9 @@ fun AppNavGraph(
                 // Se sua tela precisar do isDarkTheme, adicione aqui:
                 // isDarkTheme = isDarkTheme
             )
+        }
+        composable("contraction_timer") {
+            ContractionTimerScreen(onBack = { navController.popBackStack() })
         }
     }
 }

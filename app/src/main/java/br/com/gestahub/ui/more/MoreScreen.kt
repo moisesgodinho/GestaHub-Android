@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.filled.Timer
 
 // Helper data class para manter as informações dos cards organizadas.
 private data class FeatureCardInfo(
@@ -31,10 +32,12 @@ fun MoreScreen(
     onNavigateToMovementCounter: () -> Unit,
     onNavigateToMaternityBag: () -> Unit,
     onNavigateToHydrationTracker: () -> Unit,
-    onNavigateToShoppingList: () -> Unit
+    onNavigateToShoppingList: () -> Unit,
+    onNavigateToContractionTimer: () -> Unit
 ) {
     val features = listOf(
         FeatureCardInfo(onNavigateToMovementCounter, Icons.Default.TouchApp, "Contador de Movimentos"),
+        FeatureCardInfo(onNavigateToContractionTimer, Icons.Default.Timer, "Cronômetro de Contrações"),
         FeatureCardInfo(onNavigateToMaternityBag, Icons.Default.BusinessCenter, "Mala Maternidade"),
         FeatureCardInfo(onNavigateToHydrationTracker, Icons.Default.WaterDrop, "Controle de Hidratação"),
         FeatureCardInfo(onNavigateToShoppingList, Icons.Default.ShoppingCart, "Lista de Compras")
