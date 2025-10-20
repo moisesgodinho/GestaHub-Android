@@ -1,6 +1,9 @@
 package br.com.gestahub.ui.more
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BusinessCenter
@@ -22,7 +25,6 @@ private data class FeatureCardInfo(
     val text: String
 )
 
-// CORREÇÃO APLICADA AQUI
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoreScreen(
@@ -31,7 +33,6 @@ fun MoreScreen(
     onNavigateToHydrationTracker: () -> Unit,
     onNavigateToShoppingList: () -> Unit
 ) {
-    // Criar uma lista com todos os cards facilita a manutenção.
     val features = listOf(
         FeatureCardInfo(onNavigateToMovementCounter, Icons.Default.TouchApp, "Contador de Movimentos"),
         FeatureCardInfo(onNavigateToMaternityBag, Icons.Default.BusinessCenter, "Mala Maternidade"),
@@ -40,37 +41,27 @@ fun MoreScreen(
         // Adicione novos cards aqui no futuro.
     )
 
-    val itemsPerRow = 3
-
-    Column(
+    // Substituímos o Column de Rows por um LazyVerticalGrid
+    LazyVerticalGrid(
+        // GridCells.Adaptive calcula o número de colunas baseado no tamanho mínimo do item.
+        columns = GridCells.Adaptive(minSize = 120.dp),
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        // Espaçamento vertical e horizontal entre os cards.
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        features.chunked(itemsPerRow).forEach { rowItems ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                rowItems.forEach { feature ->
-                    MoreFunctionCard(
-                        onClick = feature.onClick,
-                        icon = feature.icon,
-                        text = feature.text
-                    )
-                }
-
-                val emptySpaces = itemsPerRow - rowItems.size
-                repeat(emptySpaces) {
-                    Spacer(modifier = Modifier.size(width = 110.dp, height = 120.dp))
-                }
-            }
+        items(features) { feature ->
+            MoreFunctionCard(
+                onClick = feature.onClick,
+                icon = feature.icon,
+                text = feature.text
+            )
         }
     }
 }
 
-// CORREÇÃO APLICADA AQUI
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoreFunctionCard(
@@ -80,19 +71,21 @@ fun MoreFunctionCard(
 ) {
     Card(
         onClick = onClick,
-        modifier = Modifier.size(width = 110.dp, height = 120.dp),
+        // O card agora tem uma altura definida e se expandirá na largura da célula da grade.
+        modifier = Modifier.height(130.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp), // Aumentando o arredondamento para um visual mais moderno
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp),
+                .fillMaxSize() // Ocupa todo o espaço do card
+                .padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top
+            // Centraliza o conteúdo verticalmente para um melhor balanceamento
+            verticalArrangement = Arrangement.Center
         ) {
             Icon(
                 imageVector = icon,
@@ -106,7 +99,7 @@ fun MoreFunctionCard(
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = 4.dp),
                 style = MaterialTheme.typography.bodyMedium
             )
         }
