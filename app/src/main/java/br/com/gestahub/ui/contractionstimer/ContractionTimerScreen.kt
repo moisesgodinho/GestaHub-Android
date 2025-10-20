@@ -48,14 +48,16 @@ fun ContractionTimerScreen(
             )
         }
     ) { paddingValues ->
+        // V ALTERAÇÃO AQUI V
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
+                .padding(paddingValues),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(16.dp) // Adiciona padding em todos os lados do conteúdo
         ) {
+            // ^ ALTERAÇÃO AQUI ^
             item {
                 TimerCard(
                     timer = timer,
@@ -242,7 +244,6 @@ private fun SummaryItem(label: String, value: String, modifier: Modifier = Modif
 }
 
 
-// V CORREÇÃO AQUI V
 @Composable
 fun InfoCard(
     title: String,
@@ -255,17 +256,15 @@ fun InfoCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        shape = RoundedCornerShape(12.dp) // Garante que o card tenha cantos arredondados
+        shape = RoundedCornerShape(12.dp)
     ) {
         Row(
-            // Este modifier garante que a Row tenha uma altura mínima e que seus
-            // filhos possam usar fillMaxHeight() corretamente.
             modifier = Modifier.height(IntrinsicSize.Min)
         ) {
             Box(
                 modifier = Modifier
                     .width(5.dp)
-                    .fillMaxHeight() // Agora vai preencher a altura da Row
+                    .fillMaxHeight()
                     .background(borderColor)
             )
             Column(modifier = Modifier.padding(16.dp)) {
@@ -276,7 +275,6 @@ fun InfoCard(
         }
     }
 }
-// ^ CORREÇÃO AQUI ^
 
 
 @Composable
