@@ -1,8 +1,9 @@
 package br.com.gestahub.ui.contractionstimer
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -10,12 +11,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import br.com.gestahub.ui.components.ConfirmationDialog
+import br.com.gestahub.ui.theme.Rose500
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -28,7 +33,7 @@ fun ContractionTimerScreen(
     val contractions by viewModel.contractions.collectAsState()
     val isTiming by viewModel.isTiming.collectAsState()
     val timer by viewModel.timer.collectAsState()
-    var showDeleteDialog by remember { mutableStateOf<String?>(null) }
+    var contractionToDelete by remember { mutableStateOf<Contraction?>(null) }
 
 
     Scaffold(
@@ -71,49 +76,92 @@ fun ContractionTimerScreen(
                     content = "Uma referência comum é a Regra 5-1-1: contrações que duram 1 minuto, ocorrem a cada 5 minutos, por pelo menos 1 hora. No entanto, siga sempre a orientação do seu médico."
                 )
             }
+
             if (contractions.isNotEmpty()) {
                 item {
-                    Text(
-                        "Histórico de Contrações",
-                        style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp),
-                        textAlign = TextAlign.Center
+                    HistoryCard(
+                        contractions = contractions,
+                        onDeleteRequest = { contractionToDelete = it }
                     )
-                }
-
-                items(contractions) { contraction ->
-                    ContractionHistoryItem(
-                        contraction = contraction,
-                        onDelete = { showDeleteDialog = it }
-                    )
-                    Divider(color = Color.LightGray, thickness = 0.5.dp)
                 }
             }
         }
     }
-    showDeleteDialog?.let { contractionId ->
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = null },
-            title = { Text(text = "Confirmar Exclusão") },
-            text = { Text("Tem certeza que deseja apagar este registro de contração?") },
-            confirmButton = {
-                Button(onClick = {
-                    viewModel.deleteContraction(contractionId)
-                    showDeleteDialog = null
-                }) {
-                    Text("Apagar")
-                }
+
+    if (contractionToDelete != null) {
+        ConfirmationDialog(
+            title = "Confirmar Exclusão",
+            text = "Tem certeza que deseja apagar este registro de contração?",
+            onConfirm = {
+                contractionToDelete?.id?.let { viewModel.deleteContraction(it) }
+                contractionToDelete = null
             },
-            dismissButton = {
-                OutlinedButton(onClick = { showDeleteDialog = null }) {
-                    Text("Cancelar")
-                }
-            }
+            onDismissRequest = { contractionToDelete = null }
         )
     }
 }
+
+
+@Composable
+fun HistoryCard(
+    contractions: List<Contraction>,
+    onDeleteRequest: (Contraction) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Histórico de Contrações",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                textAlign = TextAlign.Center
+            )
+
+            val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
+            var lastDate: String? = null
+
+            contractions.forEach { contraction ->
+                val currentDate = dateFormat.format(contraction.startTime.toDate())
+                if (currentDate != lastDate) {
+                    DateHeader(date = currentDate)
+                    lastDate = currentDate
+                }
+
+                ContractionHistoryItem(
+                    contraction = contraction,
+                    onDelete = { onDeleteRequest(contraction) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DateHeader(date: String) {
+    Column {
+        Text(
+            text = date,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp),
+            textAlign = TextAlign.Left
+        )
+        Divider(modifier = Modifier.padding(top = 4.dp))
+    }
+}
+
 
 @Composable
 fun TimerCard(
@@ -124,7 +172,10 @@ fun TimerCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -138,7 +189,10 @@ fun TimerCard(
             Text(
                 text = formatTime(timer),
                 fontSize = 60.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                // V ALTERAÇÃO DE COR AQUI V
+                color = MaterialTheme.colorScheme.primary
+                // ^ ALTERAÇÃO DE COR AQUI ^
             )
             Button(
                 onClick = onStartStop,
@@ -152,7 +206,8 @@ fun TimerCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp)
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp) // Espaçamento entre os itens
                 ) {
                     SummaryItem("Última Duração", formatTime(it.duration), modifier = Modifier.weight(1f))
                     SummaryItem("Última Frequência", formatTime(it.frequency), modifier = Modifier.weight(1f))
@@ -164,7 +219,24 @@ fun TimerCard(
 
 @Composable
 private fun SummaryItem(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+    // V LÓGICA DE COR DO BACKGROUND V
+    val isAppInDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val backgroundColor = if (isAppInDarkTheme) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+    // ^ LÓGICA DE COR DO BACKGROUND ^
+
+    Column(
+        // V APLICAÇÃO DO BACKGROUND V
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(backgroundColor)
+            .padding(8.dp),
+        // ^ APLICAÇÃO DO BACKGROUND ^
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Text(label, style = MaterialTheme.typography.bodySmall)
         Text(value, fontWeight = FontWeight.Bold)
     }
@@ -175,7 +247,10 @@ private fun SummaryItem(label: String, value: String, modifier: Modifier = Modif
 fun InfoCard(title: String, content: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
@@ -187,13 +262,23 @@ fun InfoCard(title: String, content: String) {
 
 
 @Composable
-fun ContractionHistoryItem(contraction: Contraction, onDelete: (String) -> Unit) {
+fun ContractionHistoryItem(contraction: Contraction, onDelete: () -> Unit) {
+    val isAppInDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+
+    val backgroundColor = if (isAppInDarkTheme) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceVariant
+    }
+
     val date = contraction.startTime.toDate()
     val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp),
+            .clip(RoundedCornerShape(12.dp))
+            .background(backgroundColor)
+            .padding(vertical = 12.dp, horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceAround
     ) {
@@ -207,14 +292,22 @@ fun ContractionHistoryItem(contraction: Contraction, onDelete: (String) -> Unit)
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("Duração", style = MaterialTheme.typography.bodySmall)
-            Text(formatTime(contraction.duration))
+            Text(
+                text = formatTime(contraction.duration),
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("Frequência", style = MaterialTheme.typography.bodySmall)
-            Text(formatTime(contraction.frequency))
+            Text(
+                text = formatTime(contraction.frequency),
+                color = Rose500,
+                fontWeight = FontWeight.Bold
+            )
         }
-        IconButton(onClick = { onDelete(contraction.id) }) {
-            Icon(Icons.Default.Delete, contentDescription = "Apagar", tint = Color.Gray)
+        IconButton(onClick = onDelete) {
+            Icon(Icons.Default.Delete, contentDescription = "Apagar")
         }
     }
 }
