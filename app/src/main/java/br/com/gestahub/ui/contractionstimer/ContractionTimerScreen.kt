@@ -67,13 +67,15 @@ fun ContractionTimerScreen(
             item {
                 InfoCard(
                     title = "Contrações de Treinamento vs. Trabalho de Parto",
-                    content = "É comum sentir Contrações de Braxton Hicks (de treinamento) a partir do segundo trimestre. Elas são tipicamente irregulares, indolores e não aumentam de intensidade. As contrações de trabalho de parto, por outro lado, tornam-se regulares, mais longas, mais fortes e mais frequentes com o tempo."
+                    content = "É comum sentir Contrações de Braxton Hicks (de treinamento) a partir do segundo trimestre. Elas são tipicamente irregulares, indolores e não aumentam de intensidade. As contrações de trabalho de parto, por outro lado, tornam-se regulares, mais longas, mais fortes e mais frequentes com o tempo.",
+                    borderColor = Color(0xFFF59E0B) // Amarelo/Âmbar
                 )
             }
             item {
                 InfoCard(
                     title = "Quando ir para a maternidade?",
-                    content = "Uma referência comum é a Regra 5-1-1: contrações que duram 1 minuto, ocorrem a cada 5 minutos, por pelo menos 1 hora. No entanto, siga sempre a orientação do seu médico."
+                    content = "Uma referência comum é a Regra 5-1-1: contrações que duram 1 minuto, ocorrem a cada 5 minutos, por pelo menos 1 hora. No entanto, siga sempre a orientação do seu médico.",
+                    borderColor = MaterialTheme.colorScheme.primary
                 )
             }
 
@@ -155,10 +157,13 @@ fun DateHeader(date: String) {
             fontWeight = FontWeight.Bold,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 12.dp),
+                .padding(top = 8.dp),
             textAlign = TextAlign.Left
         )
-        Divider(modifier = Modifier.padding(top = 4.dp))
+        Divider(
+            modifier = Modifier.padding(top = 8.dp),
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
     }
 }
 
@@ -190,9 +195,7 @@ fun TimerCard(
                 text = formatTime(timer),
                 fontSize = 60.sp,
                 fontWeight = FontWeight.Bold,
-                // V ALTERAÇÃO DE COR AQUI V
                 color = MaterialTheme.colorScheme.primary
-                // ^ ALTERAÇÃO DE COR AQUI ^
             )
             Button(
                 onClick = onStartStop,
@@ -207,7 +210,7 @@ fun TimerCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp) // Espaçamento entre os itens
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     SummaryItem("Última Duração", formatTime(it.duration), modifier = Modifier.weight(1f))
                     SummaryItem("Última Frequência", formatTime(it.frequency), modifier = Modifier.weight(1f))
@@ -219,22 +222,18 @@ fun TimerCard(
 
 @Composable
 private fun SummaryItem(label: String, value: String, modifier: Modifier = Modifier) {
-    // V LÓGICA DE COR DO BACKGROUND V
     val isAppInDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val backgroundColor = if (isAppInDarkTheme) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
         MaterialTheme.colorScheme.surfaceVariant
     }
-    // ^ LÓGICA DE COR DO BACKGROUND ^
 
     Column(
-        // V APLICAÇÃO DO BACKGROUND V
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .background(backgroundColor)
             .padding(8.dp),
-        // ^ APLICAÇÃO DO BACKGROUND ^
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(label, style = MaterialTheme.typography.bodySmall)
@@ -243,22 +242,41 @@ private fun SummaryItem(label: String, value: String, modifier: Modifier = Modif
 }
 
 
+// V CORREÇÃO AQUI V
 @Composable
-fun InfoCard(title: String, content: String) {
+fun InfoCard(
+    title: String,
+    content: String,
+    borderColor: Color
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        )
+        ),
+        shape = RoundedCornerShape(12.dp) // Garante que o card tenha cantos arredondados
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(content, style = MaterialTheme.typography.bodyMedium)
+        Row(
+            // Este modifier garante que a Row tenha uma altura mínima e que seus
+            // filhos possam usar fillMaxHeight() corretamente.
+            modifier = Modifier.height(IntrinsicSize.Min)
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(5.dp)
+                    .fillMaxHeight() // Agora vai preencher a altura da Row
+                    .background(borderColor)
+            )
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(content, style = MaterialTheme.typography.bodyMedium)
+            }
         }
     }
 }
+// ^ CORREÇÃO AQUI ^
 
 
 @Composable
