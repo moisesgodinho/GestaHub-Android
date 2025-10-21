@@ -36,6 +36,7 @@ import br.com.gestahub.ui.hydration.HydrationTrackerScreen
 import java.time.LocalDate
 import br.com.gestahub.ui.shoppinglist.ShoppingListScreen
 import br.com.gestahub.ui.contractionstimer.ContractionTimerScreen
+import br.com.gestahub.ui.medicationtracker.MedicationTrackerScreen
 
 @Composable
 fun AppNavGraph(
@@ -131,8 +132,8 @@ fun AppNavGraph(
                     onNavigateToMaternityBag = { navController.navigate("maternity_bag") },
                     onNavigateToHydrationTracker = { navController.navigate("hydration_tracker") },
                     onNavigateToShoppingList = { navController.navigate("shopping_list") },
-                    onNavigateToContractionTimer = { navController.navigate("contraction_timer") }
-
+                    onNavigateToContractionTimer = { navController.navigate("contraction_timer") },
+                    onNavigateToMedicationTracker = { navController.navigate("medication_tracker") }
                 )
             }
         }
@@ -237,6 +238,9 @@ fun AppNavGraph(
         }
         composable("contraction_timer") {
             ContractionTimerScreen(onBack = { navController.popBackStack() })
+        }
+        composable("medication_tracker") {
+            MedicationTrackerScreen(onBack = { navController.popBackStack() })
         }
     }
 }
