@@ -1,12 +1,12 @@
 package br.com.gestahub.ui.medicationtracker
 
 import android.util.Log
+import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
-import com.google.firebase.firestore.toObject
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -28,7 +28,7 @@ class MedicationRepository {
         db.collection("users").document(uid).collection("medicationHistory")
     }
 
-    // V CORREÇÃO DEFINITIVA AQUI: Leitura manual e segura V
+    // V CORREÇÃO DEFINITIVA AQUI: Leitura 100% manual e segura V
     fun getMedications(): Flow<List<Medication>> = callbackFlow {
         val collection = getMedsCollection()
         if (collection == null) {
@@ -42,25 +42,35 @@ class MedicationRepository {
                     Log.e(TAG, "Erro ao buscar medicamentos:", error)
                     close(error); return@addSnapshotListener
                 }
-
                 if (snapshot == null) return@addSnapshotListener
 
-                // Leitura manual para máxima segurança
                 val medsList = snapshot.documents.mapNotNull { doc ->
                     try {
-                        // Tentamos a conversão automática, que é mais simples
-                        doc.toObject<Medication>()
+                        // Leitura manual de cada campo para máxima segurança.
+                        Medication(
+                            id = doc.id,
+                            name = doc.getString("name") ?: "",
+                            dosage = doc.getString("dosage"),
+                            notes = doc.getString("notes"),
+                            scheduleType = doc.getString("scheduleType") ?: "FIXED_TIMES",
+                            doses = (doc.get("doses") as? List<*>)?.mapNotNull { it.toString() } ?: emptyList(),
+                            // Lógica inteligente: aceita número (Long) ou texto (String) e converte.
+                            intervalHours = (doc.get("intervalHours") as? Number)?.toLong() ?: doc.getString("intervalHours")?.toLongOrNull(),
+                            durationType = doc.getString("durationType") ?: "CONTINUOUS",
+                            startDate = doc.getString("startDate") ?: "",
+                            durationValue = (doc.get("durationValue") as? Number)?.toLong() ?: doc.getString("durationValue")?.toLongOrNull(),
+                            createdAt = doc.getTimestamp("createdAt") ?: Timestamp.now()
+                        )
                     } catch (e: Exception) {
-                        // Se falhar (ex: tipo de dado incorreto), logamos o erro e retornamos null
-                        // para que este item específico seja ignorado, em vez de crashar o app.
-                        Log.e(TAG, "Erro ao converter o documento ${doc.id}", e)
-                        null
+                        Log.e(TAG, "Falha ao converter o documento ${doc.id}, pulando item.", e)
+                        null // Se algo der errado, ignora este item em vez de crashar.
                     }
                 }
                 trySend(medsList)
             }
         awaitClose { listener.remove() }
     }
+    // ^ FIM DA CORREÇÃO ^
 
     fun getHistory(): Flow<MedicationHistoryMap> = callbackFlow {
         val collection = getHistoryCollection()
@@ -70,10 +80,9 @@ class MedicationRepository {
 
         val listener = collection.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                Log.e(TAG, "Erro ao buscar histórico de medicação:", error)
+                Log.e(TAG, "Erro ao buscar histórico:", error)
                 close(error); return@addSnapshotListener
             }
-
             if (snapshot == null) {
                 trySend(emptyMap()); return@addSnapshotListener
             }
@@ -87,7 +96,6 @@ class MedicationRepository {
                         dataField.forEach { (key, value) ->
                             val medId = key as? String
                             val doseIndices = (value as? List<*>)?.mapNotNull { (it as? Long)?.toInt() }
-
                             if (medId != null && doseIndices != null) {
                                 medMap[medId] = doseIndices
                             }
@@ -95,14 +103,13 @@ class MedicationRepository {
                         historyMap[doc.id] = medMap
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Erro ao processar o documento de histórico ${doc.id}", e)
+                    Log.e(TAG, "Falha ao processar histórico ${doc.id}", e)
                 }
             }
             trySend(historyMap)
         }
         awaitClose { listener.remove() }
     }
-    // ^ FIM DA CORREÇÃO ^
 
     suspend fun addMedication(medication: Medication) {
         getMedsCollection()?.add(medication)?.await()

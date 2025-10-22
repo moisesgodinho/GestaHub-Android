@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
@@ -71,6 +72,19 @@ fun MedicationTrackerScreen(
             }
         }
 
+        val completedDays by remember(monthlyActiveMeds, uiState.history) {
+            derivedStateOf {
+                monthlyActiveMeds.filter { (date, activeMeds) ->
+                    if (activeMeds.isEmpty()) return@filter false
+                    val historyForDay = uiState.history[date.format(DATE_FORMATTER)] ?: emptyMap()
+                    activeMeds.all { (med, doses) ->
+                        val takenDoseIndices = historyForDay[med.id] ?: emptyList()
+                        doses.all { doseInfo -> takenDoseIndices.contains(doseInfo.originalIndex) }
+                    }
+                }.keys
+            }
+        }
+
         val upcomingDays = daysInMonth.filter { !it.isBefore(today) }
         val pastDays = daysInMonth.filter { it.isBefore(today) }.sortedDescending()
 
@@ -110,6 +124,7 @@ fun MedicationTrackerScreen(
                         activeMedications = monthlyActiveMeds[date] ?: emptyList(),
                         historyForDay = uiState.history[date.format(DATE_FORMATTER)] ?: emptyMap(),
                         onToggleDose = viewModel::toggleDose,
+                        isComplete = date in completedDays,
                         isHistory = false
                     )
                 }
@@ -128,6 +143,7 @@ fun MedicationTrackerScreen(
                             activeMedications = monthlyActiveMeds[date] ?: emptyList(),
                             historyForDay = uiState.history[date.format(DATE_FORMATTER)] ?: emptyMap(),
                             onToggleDose = viewModel::toggleDose,
+                            isComplete = date in completedDays,
                             isHistory = true
                         )
                     }
@@ -171,6 +187,7 @@ fun DayMedicationCard(
     activeMedications: List<Pair<Medication, List<DoseInfo>>>,
     historyForDay: Map<String, List<Int>>,
     onToggleDose: (String, String, Int) -> Unit,
+    isComplete: Boolean,
     isHistory: Boolean
 ) {
     AnimatedVisibility(visible = activeMedications.isNotEmpty()) {
@@ -179,27 +196,42 @@ fun DayMedicationCard(
             elevation = CardDefaults.cardElevation(2.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
-            )
+            ),
+            shape = RoundedCornerShape(12.dp)
         ) {
-            Column(Modifier.padding(16.dp)) {
-                val isToday = date.isEqual(LocalDate.now())
-                val formattedDate = date.format(DateTimeFormatter.ofPattern("eeee, dd 'de' MMMM", Locale("pt", "BR")))
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (isToday) {
-                        Chip(label = "Hoje")
-                    }
-                    Text(text = formattedDate, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+                if (isComplete) {
+                    Box(
+                        modifier = Modifier
+                            .width(5.dp)
+                            .fillMaxHeight()
+                            .background(MaterialTheme.colorScheme.secondary)
+                    )
                 }
-                Spacer(Modifier.height(16.dp))
 
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    val isToday = date.isEqual(LocalDate.now())
+                    val formattedDate = date.format(DateTimeFormatter.ofPattern("eeee, dd 'de' MMMM", Locale("pt", "BR")))
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (isToday) {
+                            Chip(label = "Hoje")
+                        }
+                        Text(text = formattedDate, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    }
+
                     activeMedications.forEach { (med, doses) ->
                         MedicationItem(
                             med = med,
                             doses = doses,
                             takenDoseIndices = historyForDay[med.id] ?: emptyList(),
                             onToggleDose = { doseIndex -> onToggleDose(med.id, date.format(DATE_FORMATTER), doseIndex) },
-                            isHistory = isHistory
+                            isHistory = isHistory,
+                            // V ALTERAÇÃO AQUI: Passando o status de conclusão do dia V
+                            isDayComplete = isComplete
+                            // ^ FIM DA ALTERAÇÃO ^
                         )
                     }
                 }
@@ -215,7 +247,8 @@ fun MedicationItem(
     doses: List<DoseInfo>,
     takenDoseIndices: List<Int>,
     onToggleDose: (Int) -> Unit,
-    isHistory: Boolean
+    isHistory: Boolean,
+    isDayComplete: Boolean // Novo parâmetro
 ) {
     val allDosesTaken = doses.isNotEmpty() && doses.all { takenDoseIndices.contains(it.originalIndex) }
     val isAppInDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
@@ -226,7 +259,6 @@ fun MedicationItem(
         MaterialTheme.colorScheme.surfaceVariant
     }
 
-    // V ALTERAÇÃO DE LAYOUT AQUI V
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -234,8 +266,9 @@ fun MedicationItem(
             .background(backgroundColor)
     ) {
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-            // A borda só aparece se todas as doses forem tomadas
-            if (allDosesTaken) {
+            // V ALTERAÇÃO AQUI: A borda do item só aparece se o dia NÃO estiver completo V
+            if (allDosesTaken && !isDayComplete) {
+                // ^ FIM DA ALTERAÇÃO ^
                 Box(
                     modifier = Modifier
                         .width(5.dp)
@@ -254,7 +287,6 @@ fun MedicationItem(
                         )
                         med.dosage?.let { Text(text = it, style = MaterialTheme.typography.bodySmall) }
                     }
-                    // TODO: Adicionar botões de editar/excluir
                 }
                 med.notes?.let { Text(text = it, style = MaterialTheme.typography.bodySmall, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic) }
 
@@ -267,7 +299,7 @@ fun MedicationItem(
                     ) {
                         doses.forEach { doseInfo ->
                             DoseItem(
-                                time = doseInfo.time.format(DateTimeFormatter.ofPattern("HH:mm")),
+                                description = doseInfo.description,
                                 isTaken = takenDoseIndices.contains(doseInfo.originalIndex),
                                 isEnabled = !isHistory,
                                 onToggle = { onToggleDose(doseInfo.originalIndex) }
@@ -278,11 +310,15 @@ fun MedicationItem(
             }
         }
     }
-    // ^ FIM DA ALTERAÇÃO ^
 }
 
 @Composable
-fun DoseItem(time: String, isTaken: Boolean, isEnabled: Boolean, onToggle: () -> Unit) {
+fun DoseItem(
+    description: String,
+    isTaken: Boolean,
+    isEnabled: Boolean,
+    onToggle: () -> Unit
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Checkbox(
             checked = isTaken,
@@ -293,11 +329,12 @@ fun DoseItem(time: String, isTaken: Boolean, isEnabled: Boolean, onToggle: () ->
                 uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 disabledCheckedColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f),
                 disabledUncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-            )
+            ),
+            modifier = Modifier.scale(1.2f)
         )
         Spacer(Modifier.width(4.dp))
         Text(
-            text = time,
+            text = description,
             textDecoration = if (isTaken) TextDecoration.LineThrough else TextDecoration.None,
             color = if (isEnabled) LocalContentColor.current else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
         )
