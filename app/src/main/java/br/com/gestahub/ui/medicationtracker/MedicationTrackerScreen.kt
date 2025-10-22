@@ -1,40 +1,63 @@
+// Local: app/src/main/java/br/com/gestahub/ui/medicationtracker/MedicationTrackerScreen.kt
 package br.com.gestahub.ui.medicationtracker
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.*
+
+// --- CORREÇÃO: Visibilidade do enum alterada para pública (removendo o modificador 'internal') ---
+enum class DeleteOption { END_TODAY, DELETE_ALL }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MedicationTrackerScreen(
     onBack: () -> Unit,
-    viewModel: MedicationViewModel = viewModel()
+    onNavigateToForm: (medId: String?) -> Unit,
+    viewModel: MedicationViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var currentMonth by remember { mutableStateOf(LocalDate.now().withDayOfMonth(1)) }
+    val currentMonth by viewModel.currentMonth.collectAsState()
+    val isNextMonthEnabled by viewModel.isNextMonthEnabled.collectAsState()
+    val isPreviousMonthEnabled by viewModel.isPreviousMonthEnabled.collectAsState()
+    var medToDelete by remember { mutableStateOf<Medication?>(null) }
+
+
+    if (medToDelete != null) {
+        DeleteMedicationDialog(
+            medicationName = medToDelete!!.name,
+            onDismiss = { medToDelete = null },
+            onConfirm = { option ->
+                when (option) {
+                    DeleteOption.END_TODAY -> viewModel.endMedicationFromToday(medToDelete!!)
+                    DeleteOption.DELETE_ALL -> viewModel.deleteMedication(medToDelete!!.id)
+                }
+                medToDelete = null
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -48,14 +71,13 @@ fun MedicationTrackerScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { /* TODO: Abrir formulário */ }) {
+            FloatingActionButton(onClick = { onNavigateToForm(null) }) {
                 Icon(Icons.Filled.Add, contentDescription = "Adicionar Medicamento")
             }
         }
     ) { paddingValues ->
-
         val today = LocalDate.now()
-        val daysInMonth = (1..currentMonth.lengthOfMonth()).map { currentMonth.withDayOfMonth(it) }
+        val daysInMonth = (1..currentMonth.lengthOfMonth()).map { currentMonth.atDay(it) }
 
         val monthlyActiveMeds by remember(currentMonth, uiState.medications) {
             derivedStateOf {
@@ -98,7 +120,10 @@ fun MedicationTrackerScreen(
             item {
                 MonthNavigator(
                     currentMonth = currentMonth,
-                    onMonthChange = { newMonth -> currentMonth = newMonth }
+                    onPreviousClick = viewModel::selectPreviousMonth,
+                    onNextClick = viewModel::selectNextMonth,
+                    isPreviousEnabled = isPreviousMonthEnabled,
+                    isNextEnabled = isNextMonthEnabled
                 )
             }
 
@@ -125,7 +150,9 @@ fun MedicationTrackerScreen(
                         historyForDay = uiState.history[date.format(DATE_FORMATTER)] ?: emptyMap(),
                         onToggleDose = viewModel::toggleDose,
                         isComplete = date in completedDays,
-                        isHistory = false
+                        isHistory = false,
+                        onEdit = onNavigateToForm,
+                        onDelete = { medToDelete = it }
                     )
                 }
 
@@ -144,7 +171,9 @@ fun MedicationTrackerScreen(
                             historyForDay = uiState.history[date.format(DATE_FORMATTER)] ?: emptyMap(),
                             onToggleDose = viewModel::toggleDose,
                             isComplete = date in completedDays,
-                            isHistory = true
+                            isHistory = true,
+                            onEdit = onNavigateToForm,
+                            onDelete = { medToDelete = it }
                         )
                     }
                 }
@@ -154,7 +183,73 @@ fun MedicationTrackerScreen(
 }
 
 @Composable
-fun MonthNavigator(currentMonth: LocalDate, onMonthChange: (LocalDate) -> Unit) {
+fun DeleteMedicationDialog(
+    medicationName: String,
+    onDismiss: () -> Unit,
+    onConfirm: (DeleteOption) -> Unit
+) {
+    var selectedOption by remember { mutableStateOf(DeleteOption.END_TODAY) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Opções para \"$medicationName\"") },
+        text = {
+            Column {
+                Text("Escolha o que você quer fazer com este medicamento:")
+                Spacer(modifier = Modifier.height(16.dp))
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedOption = DeleteOption.END_TODAY }
+                            .padding(vertical = 8.dp)
+                    ) {
+                        RadioButton(
+                            selected = selectedOption == DeleteOption.END_TODAY,
+                            onClick = { selectedOption = DeleteOption.END_TODAY }
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Encerrar a partir de hoje (manter histórico)", style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedOption = DeleteOption.DELETE_ALL }
+                            .padding(vertical = 8.dp)
+                    ) {
+                        RadioButton(
+                            selected = selectedOption == DeleteOption.DELETE_ALL,
+                            onClick = { selectedOption = DeleteOption.DELETE_ALL }
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Excluir tudo (apagar medicamento e histórico)", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(selectedOption) }) {
+                Text("Confirmar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+@Composable
+fun MonthNavigator(
+    currentMonth: YearMonth,
+    onPreviousClick: () -> Unit,
+    onNextClick: () -> Unit,
+    isPreviousEnabled: Boolean,
+    isNextEnabled: Boolean
+) {
     Card(
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(
@@ -166,7 +261,7 @@ fun MonthNavigator(currentMonth: LocalDate, onMonthChange: (LocalDate) -> Unit) 
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            IconButton(onClick = { onMonthChange(currentMonth.minusMonths(1)) }) {
+            IconButton(onClick = onPreviousClick, enabled = isPreviousEnabled) {
                 Icon(Icons.Default.ChevronLeft, "Mês anterior")
             }
             Text(
@@ -174,12 +269,13 @@ fun MonthNavigator(currentMonth: LocalDate, onMonthChange: (LocalDate) -> Unit) 
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
-            IconButton(onClick = { onMonthChange(currentMonth.plusMonths(1)) }) {
+            IconButton(onClick = onNextClick, enabled = isNextEnabled) {
                 Icon(Icons.Default.ChevronRight, "Próximo mês")
             }
         }
     }
 }
+
 
 @Composable
 fun DayMedicationCard(
@@ -188,27 +284,21 @@ fun DayMedicationCard(
     historyForDay: Map<String, List<Int>>,
     onToggleDose: (String, String, Int) -> Unit,
     isComplete: Boolean,
-    isHistory: Boolean
+    isHistory: Boolean,
+    onEdit: (medId: String) -> Unit,
+    onDelete: (Medication) -> Unit
 ) {
     AnimatedVisibility(visible = activeMedications.isNotEmpty()) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(2.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             shape = RoundedCornerShape(12.dp)
         ) {
             Row(modifier = Modifier.height(IntrinsicSize.Min)) {
                 if (isComplete) {
-                    Box(
-                        modifier = Modifier
-                            .width(5.dp)
-                            .fillMaxHeight()
-                            .background(MaterialTheme.colorScheme.secondary)
-                    )
+                    Box(modifier = Modifier.width(5.dp).fillMaxHeight().background(MaterialTheme.colorScheme.secondary))
                 }
-
                 Column(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -216,22 +306,20 @@ fun DayMedicationCard(
                     val isToday = date.isEqual(LocalDate.now())
                     val formattedDate = date.format(DateTimeFormatter.ofPattern("eeee, dd 'de' MMMM", Locale("pt", "BR")))
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (isToday) {
-                            Chip(label = "Hoje")
-                        }
+                        if (isToday) Chip(label = "Hoje")
                         Text(text = formattedDate, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
-
                     activeMedications.forEach { (med, doses) ->
                         MedicationItem(
                             med = med,
                             doses = doses,
+                            date = date,
                             takenDoseIndices = historyForDay[med.id] ?: emptyList(),
                             onToggleDose = { doseIndex -> onToggleDose(med.id, date.format(DATE_FORMATTER), doseIndex) },
                             isHistory = isHistory,
-                            // V ALTERAÇÃO AQUI: Passando o status de conclusão do dia V
-                            isDayComplete = isComplete
-                            // ^ FIM DA ALTERAÇÃO ^
+                            isDayComplete = isComplete,
+                            onEdit = { onEdit(med.id) },
+                            onDelete = { onDelete(med) }
                         )
                     }
                 }
@@ -245,47 +333,66 @@ fun DayMedicationCard(
 fun MedicationItem(
     med: Medication,
     doses: List<DoseInfo>,
+    date: LocalDate,
     takenDoseIndices: List<Int>,
     onToggleDose: (Int) -> Unit,
     isHistory: Boolean,
-    isDayComplete: Boolean // Novo parâmetro
+    isDayComplete: Boolean,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
     val allDosesTaken = doses.isNotEmpty() && doses.all { takenDoseIndices.contains(it.originalIndex) }
     val isAppInDarkTheme = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val backgroundColor = if (isAppInDarkTheme) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
 
-    val backgroundColor = if (isAppInDarkTheme) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(backgroundColor)
-    ) {
+    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(backgroundColor)) {
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
-            // V ALTERAÇÃO AQUI: A borda do item só aparece se o dia NÃO estiver completo V
             if (allDosesTaken && !isDayComplete) {
-                // ^ FIM DA ALTERAÇÃO ^
-                Box(
-                    modifier = Modifier
-                        .width(5.dp)
-                        .fillMaxHeight()
-                        .background(MaterialTheme.colorScheme.secondary)
-                )
+                Box(modifier = Modifier.width(5.dp).fillMaxHeight().background(MaterialTheme.colorScheme.secondary))
             }
-
             Column(modifier = Modifier.padding(12.dp)) {
-                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.SpaceBetween) {
-                    Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = med.name,
                             fontWeight = FontWeight.Bold,
                             textDecoration = if (allDosesTaken) TextDecoration.LineThrough else TextDecoration.None
                         )
-                        med.dosage?.let { Text(text = it, style = MaterialTheme.typography.bodySmall) }
+                        Spacer(Modifier.width(8.dp))
+                        val pillText = remember(med, date) {
+                            when (med.durationType) {
+                                "CONTINUOUS" -> "Uso contínuo"
+                                "DAYS" -> {
+                                    try {
+                                        val startDate = LocalDate.parse(med.startDate, DATE_FORMATTER)
+                                        val duration = med.durationValue ?: 0L
+                                        if (duration > 0) {
+                                            val endDate = startDate.plusDays(duration - 1)
+                                            when {
+                                                date.isEqual(endDate) -> "Último dia"
+                                                date.isBefore(endDate) -> {
+                                                    val remaining = ChronoUnit.DAYS.between(date, endDate)
+                                                    if (remaining > 0) "$remaining dias restantes" else ""
+                                                }
+                                                else -> ""
+                                            }
+                                        } else ""
+                                    } catch (e: Exception) { "" }
+                                }
+                                else -> ""
+                            }
+                        }
+                        if (pillText.isNotEmpty()) {
+                            MedicationPill(text = pillText)
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        IconButton(onClick = onEdit, modifier = Modifier.size(24.dp)) {
+                            Icon(Icons.Default.Edit, contentDescription = "Editar Medicamento", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
+                            Icon(Icons.Default.Delete, contentDescription = "Excluir Medicamento", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
                 med.notes?.let { Text(text = it, style = MaterialTheme.typography.bodySmall, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic) }
@@ -301,7 +408,7 @@ fun MedicationItem(
                             DoseItem(
                                 description = doseInfo.description,
                                 isTaken = takenDoseIndices.contains(doseInfo.originalIndex),
-                                isEnabled = !isHistory,
+                                isEnabled = date.isEqual(LocalDate.now()),
                                 onToggle = { onToggleDose(doseInfo.originalIndex) }
                             )
                         }
@@ -309,6 +416,31 @@ fun MedicationItem(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun MedicationPill(text: String) {
+    val backgroundColor = when {
+        text == "Último dia" -> MaterialTheme.colorScheme.tertiaryContainer
+        else -> MaterialTheme.colorScheme.secondaryContainer
+    }
+    val contentColor = when {
+        text == "Último dia" -> MaterialTheme.colorScheme.onTertiaryContainer
+        else -> MaterialTheme.colorScheme.onSecondaryContainer
+    }
+
+    Surface(
+        color = backgroundColor,
+        shape = RoundedCornerShape(8.dp),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            color = contentColor,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
 

@@ -1,3 +1,4 @@
+// Local: app/src/main/java/br/com/gestahub/ui/navigation/AppNavGraph.kt
 package br.com.gestahub.ui.navigation
 
 import androidx.compose.foundation.layout.Box
@@ -8,35 +9,39 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import androidx.navigation.navDeepLink // <-- GARANTA QUE ESTE IMPORT EXISTE
+import androidx.navigation.navDeepLink
 import br.com.gestahub.ui.appointment.AppointmentFormScreen
 import br.com.gestahub.ui.appointment.AppointmentType
 import br.com.gestahub.ui.appointment.AppointmentsScreen
 import br.com.gestahub.ui.appointment.AppointmentsViewModel
 import br.com.gestahub.ui.calculator.CalculatorScreen
+import br.com.gestahub.ui.contractionstimer.ContractionTimerScreen
 import br.com.gestahub.ui.home.GestationalDataState
 import br.com.gestahub.ui.home.HomeScreen
 import br.com.gestahub.ui.home.HomeViewModel
+import br.com.gestahub.ui.hydration.HydrationTrackerScreen
 import br.com.gestahub.ui.journal.JournalEntryScreen
 import br.com.gestahub.ui.journal.JournalScreen
 import br.com.gestahub.ui.maternitybag.MaternityBagScreen
+import br.com.gestahub.ui.medicationtracker.MedicationFormScreen
+import br.com.gestahub.ui.medicationtracker.MedicationTrackerScreen
+import br.com.gestahub.ui.medicationtracker.MedicationViewModel
+import br.com.gestahub.ui.medicationtracker.MedicationViewModelFactory
 import br.com.gestahub.ui.more.MoreScreen
 import br.com.gestahub.ui.movementcounter.MovementCounterScreen
 import br.com.gestahub.ui.profile.EditProfileScreen
 import br.com.gestahub.ui.profile.ProfileScreen
+import br.com.gestahub.ui.shoppinglist.ShoppingListScreen
 import br.com.gestahub.ui.weight.WeightEntryFormScreen
 import br.com.gestahub.ui.weight.WeightProfileFormScreen
 import br.com.gestahub.ui.weight.WeightScreen
-import br.com.gestahub.ui.hydration.HydrationTrackerScreen
 import java.time.LocalDate
-import br.com.gestahub.ui.shoppinglist.ShoppingListScreen
-import br.com.gestahub.ui.contractionstimer.ContractionTimerScreen
-import br.com.gestahub.ui.medicationtracker.MedicationTrackerScreen
 
 @Composable
 fun AppNavGraph(
@@ -240,7 +245,28 @@ fun AppNavGraph(
             ContractionTimerScreen(onBack = { navController.popBackStack() })
         }
         composable("medication_tracker") {
-            MedicationTrackerScreen(onBack = { navController.popBackStack() })
+            val dataState = homeUiState.dataState
+            val estimatedLmp = (dataState as? GestationalDataState.HasData)?.estimatedLmp
+            val medicationViewModelFactory = MedicationViewModelFactory(estimatedLmp)
+            val medicationViewModel: MedicationViewModel = viewModel(factory = medicationViewModelFactory)
+
+            MedicationTrackerScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToForm = { medId ->
+                    val route = if (medId != null) "medicationForm?medicationId=$medId" else "medicationForm"
+                    navController.navigate(route)
+                },
+                viewModel = medicationViewModel // Passando o viewModel criado
+            )
+        }
+        composable(
+            route = "medicationForm?medicationId={medicationId}",
+            arguments = listOf(navArgument("medicationId") {
+                type = NavType.StringType
+                nullable = true
+            })
+        ) {
+            MedicationFormScreen(onNavigateBack = { navController.popBackStack() })
         }
     }
 }

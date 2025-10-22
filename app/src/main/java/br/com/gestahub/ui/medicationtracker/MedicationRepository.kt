@@ -1,9 +1,11 @@
+// Local: app/src/main/java/br/com/gestahub/ui/medicationtracker/MedicationRepository.kt
 package br.com.gestahub.ui.medicationtracker
 
 import android.util.Log
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FieldPath // <-- NOVO IMPORT
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
@@ -28,7 +30,6 @@ class MedicationRepository {
         db.collection("users").document(uid).collection("medicationHistory")
     }
 
-    // V CORREÇÃO DEFINITIVA AQUI: Leitura 100% manual e segura V
     fun getMedications(): Flow<List<Medication>> = callbackFlow {
         val collection = getMedsCollection()
         if (collection == null) {
@@ -46,7 +47,6 @@ class MedicationRepository {
 
                 val medsList = snapshot.documents.mapNotNull { doc ->
                     try {
-                        // Leitura manual de cada campo para máxima segurança.
                         Medication(
                             id = doc.id,
                             name = doc.getString("name") ?: "",
@@ -54,7 +54,6 @@ class MedicationRepository {
                             notes = doc.getString("notes"),
                             scheduleType = doc.getString("scheduleType") ?: "FIXED_TIMES",
                             doses = (doc.get("doses") as? List<*>)?.mapNotNull { it.toString() } ?: emptyList(),
-                            // Lógica inteligente: aceita número (Long) ou texto (String) e converte.
                             intervalHours = (doc.get("intervalHours") as? Number)?.toLong() ?: doc.getString("intervalHours")?.toLongOrNull(),
                             durationType = doc.getString("durationType") ?: "CONTINUOUS",
                             startDate = doc.getString("startDate") ?: "",
@@ -63,14 +62,13 @@ class MedicationRepository {
                         )
                     } catch (e: Exception) {
                         Log.e(TAG, "Falha ao converter o documento ${doc.id}, pulando item.", e)
-                        null // Se algo der errado, ignora este item em vez de crashar.
+                        null
                     }
                 }
                 trySend(medsList)
             }
         awaitClose { listener.remove() }
     }
-    // ^ FIM DA CORREÇÃO ^
 
     fun getHistory(): Flow<MedicationHistoryMap> = callbackFlow {
         val collection = getHistoryCollection()
@@ -145,5 +143,22 @@ class MedicationRepository {
                 )
             }
         }.await()
+    }
+
+    // --- NOVA FUNÇÃO ADICIONADA ---
+    suspend fun clearFutureHistoryForMedication(medId: String, fromDateString: String) {
+        val historyCollection = getHistoryCollection() ?: return
+
+        val futureHistoryQuery = historyCollection.whereGreaterThanOrEqualTo(FieldPath.documentId(), fromDateString)
+        val snapshot = futureHistoryQuery.get().await()
+
+        if (snapshot.isEmpty) return
+
+        val batch = db.batch()
+        for (document in snapshot.documents) {
+            val docRef = historyCollection.document(document.id)
+            batch.update(docRef, "data.$medId", FieldValue.delete())
+        }
+        batch.commit().await()
     }
 }
