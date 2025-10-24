@@ -1,4 +1,3 @@
-// Local: app/src/main/java/br/com/gestahub/ui/journal/JournalEntryScreen.kt
 package br.com.gestahub.ui.journal
 
 import android.widget.Toast
@@ -34,7 +33,6 @@ fun JournalEntryScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // --- LÓGICA DO SELETOR DE DATA MOVIDA PARA CÁ ---
     var showDatePicker by remember { mutableStateOf(false) }
 
     if (showDatePicker) {
@@ -50,13 +48,11 @@ fun JournalEntryScreen(
                         val selectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.of("UTC")).toLocalDate()
                         val today = LocalDate.now()
 
-                        // Validação 1: Data não pode ser no futuro
                         if (selectedDate.isAfter(today)) {
                             Toast.makeText(context, "A data não pode ser no futuro.", Toast.LENGTH_SHORT).show()
                             return@TextButton
                         }
 
-                        // Validação 2: Data não pode ser 2 meses antes da gestação
                         estimatedLmp?.let {
                             val limitDate = it.minusMonths(2)
                             if (selectedDate.isBefore(limitDate)) {
@@ -65,7 +61,6 @@ fun JournalEntryScreen(
                             }
                         }
 
-                        // Se for válida, navega para a nova data
                         showDatePicker = false
                         onDateChange(selectedDate.format(DateTimeFormatter.ISO_LOCAL_DATE))
                     }
@@ -79,12 +74,24 @@ fun JournalEntryScreen(
         }
     }
 
-    // Emojis e Sintomas
-    val moods = listOf(
-        "😄 Feliz", "😌 Tranquila", "🥰 Amorosa", "🎉 Animada", "😴 Cansada",
-        "🥱 Sonolenta", "🥺 Sensível", "😟 Ansiosa", "🤔 Preocupada", "😠 Irritada",
-        "🤢 Indisposta", "😖 Com dores"
-    )
+    // --- CORREÇÃO APLICADA AQUI: Usando um mapa para garantir consistência ---
+    val moodsMap = remember {
+        linkedMapOf(
+            "Feliz" to "😄 Feliz",
+            "Tranquila" to "😌 Tranquila",
+            "Amorosa" to "🥰 Amorosa",
+            "Animada" to "🎉 Animada",
+            "Cansada" to "😴 Cansada",
+            "Sonolenta" to "🥱 Sonolenta",
+            "Sensível" to "🥺 Sensível",
+            "Ansiosa" to "😟 Ansiosa",
+            "Preocupada" to "🤔 Preocupada",
+            "Irritada" to "😠 Irritada",
+            "Indisposta" to "🤢 Indisposta",
+            "Com dores" to "😖 Com dores"
+        )
+    }
+
     val commonSymptoms = listOf(
         "Azia", "Aversão a alimentos", "Câimbras", "Congestão nasal", "Constipação",
         "Desejos alimentares", "Dificuldade para dormir", "Dor de cabeça", "Dor nas costas",
@@ -127,32 +134,29 @@ fun JournalEntryScreen(
             ) {
                 Spacer(modifier = Modifier.height(0.dp))
 
-                // --- NOVO CAMPO DE DATA ADICIONADO AQUI ---
                 DatePickerField(
                     label = "Data do Registro",
                     dateString = uiState.entry.date,
                     onClick = { showDatePicker = true }
                 )
 
-                // Seção de Humor
                 SectionTitle("Como você está se sentindo hoje?")
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    moods.forEach { mood ->
-                        val moodValue = mood.split(" ").last()
-                        val isSelected = uiState.entry.mood == moodValue
+                    // --- LÓGICA DE SELEÇÃO CORRIGIDA ---
+                    moodsMap.forEach { (saveValue, displayValue) ->
+                        val isSelected = uiState.entry.mood == saveValue
 
                         FilterChip(
                             selected = isSelected,
-                            onClick = { viewModel.onMoodChange(moodValue) },
-                            label = { Text(mood) }
+                            onClick = { viewModel.onMoodChange(saveValue) }, // Salva o valor correto (ex: "Com dores")
+                            label = { Text(displayValue) } // Mostra o valor com emoji (ex: "😖 Com dores")
                         )
                     }
                 }
 
-                // Seção de Sintomas
                 SectionTitle("Algum sintoma hoje?")
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
@@ -167,7 +171,6 @@ fun JournalEntryScreen(
                     }
                 }
 
-                // Seção de Anotações
                 SectionTitle("Anotações Adicionais")
                 OutlinedTextField(
                     value = uiState.entry.notes,
@@ -207,7 +210,6 @@ fun SectionTitle(title: String) {
     )
 }
 
-// --- COMPONENTE REUTILIZADO DO CALCULATOR SCREEN ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DatePickerField(

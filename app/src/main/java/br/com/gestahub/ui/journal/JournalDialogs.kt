@@ -1,4 +1,3 @@
-// Local: app/src/main/java/br/com/gestahub/ui/journal/JournalDialogs.kt
 package br.com.gestahub.ui.journal
 
 import androidx.compose.foundation.layout.*
@@ -30,7 +29,6 @@ fun ViewJournalEntryDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            // --- COR DE DESTAQUE APLICADA AQUI ---
             DialogTitle(date = LocalDate.parse(entry.date), isTitle = true, highlight = true)
         },
         text = {
@@ -63,7 +61,6 @@ fun NewJournalEntryDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            // --- COR DE DESTAQUE APLICADA AQUI ---
             DialogTitle(date = date, isTitle = true, highlight = true)
         },
         text = {
@@ -120,11 +117,23 @@ fun DialogTitle(date: LocalDate, isTitle: Boolean = false, highlight: Boolean = 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun JournalItemContent(entry: JournalEntry) {
-    val moodsMap = listOf(
-        "😄 Feliz", "😌 Tranquila", "🥰 Amorosa", "🎉 Animada", "😴 Cansada",
-        "🥱 Sonolenta", "🥺 Sensível", "😟 Ansiosa", "🤔 Preocupada", "😠 Irritada",
-        "🤢 Indisposta", "😖 Com dores"
-    ).associate { it.split(" ").last() to it }
+    // --- CORREÇÃO APLICADA AQUI ---
+    // O mapa agora usa a chave de texto ("Com dores") para encontrar
+    // o valor completo com emoji ("😖 Com dores").
+    val moodsMap = mapOf(
+        "Feliz" to "😄 Feliz",
+        "Tranquila" to "😌 Tranquila",
+        "Amorosa" to "🥰 Amorosa",
+        "Animada" to "🎉 Animada",
+        "Cansada" to "😴 Cansada",
+        "Sonolenta" to "🥱 Sonolenta",
+        "Sensível" to "🥺 Sensível",
+        "Ansiosa" to "😟 Ansiosa",
+        "Preocupada" to "🤔 Preocupada",
+        "Irritada" to "😠 Irritada",
+        "Indisposta" to "🤢 Indisposta",
+        "Com dores" to "😖 Com dores"
+    )
 
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)

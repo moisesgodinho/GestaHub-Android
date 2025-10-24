@@ -42,7 +42,6 @@ fun JournalCalendar(
     val daysInMonth = displayMonth.lengthOfMonth()
     val today = LocalDate.now()
 
-    // O Card agora envolve todo o conteúdo, incluindo o navegador do mês.
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -55,7 +54,6 @@ fun JournalCalendar(
         )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // 1. Navegador do Mês (Título e setas) - AGORA DENTRO DO CARD
             MonthNavigator(
                 selectedMonth = displayMonth,
                 onPreviousClick = onPreviousClick,
@@ -66,7 +64,6 @@ fun JournalCalendar(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 2. Cabeçalho com os dias da semana
             Row(modifier = Modifier.fillMaxWidth()) {
                 val daysOfWeek = listOf("D", "S", "T", "Q", "Q", "S", "S")
                 daysOfWeek.forEach { day ->
@@ -83,7 +80,6 @@ fun JournalCalendar(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 3. Grid com os dias do mês
             var dayCounter = 1
             for (week in 0 until 6) {
                 if (dayCounter > daysInMonth) break
@@ -150,10 +146,22 @@ fun RowScope.DayCell(
     isEnabled: Boolean,
     onClick: () -> Unit
 ) {
+    // --- CORREÇÃO APLICADA AQUI ---
+    // Agora o mapa usa a chave de texto correta (Ex: "Com dores")
+    // para encontrar o emoji (Ex: "😖")
     val moodsMap = mapOf(
-        "Feliz" to "😄", "Tranquila" to "😌", "Amorosa" to "🥰", "Animada" to "🎉",
-        "Cansada" to "😴", "Sonolenta" to "🥱", "Sensível" to "🥺", "Ansiosa" to "😟",
-        "Preocupada" to "🤔", "Irritada" to "😠", "Indisposta" to "🤢", "Com dores" to "😖"
+        "Feliz" to "😄",
+        "Tranquila" to "😌",
+        "Amorosa" to "🥰",
+        "Animada" to "🎉",
+        "Cansada" to "😴",
+        "Sonolenta" to "🥱",
+        "Sensível" to "🥺",
+        "Ansiosa" to "😟",
+        "Preocupada" to "🤔",
+        "Irritada" to "😠",
+        "Indisposta" to "🤢",
+        "Com dores" to "😖"
     )
 
     var contentColor = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
@@ -191,7 +199,7 @@ fun RowScope.DayCell(
                     fontSize = 18.sp,
                     modifier = Modifier.alpha(if (isEnabled) 1f else 0.38f)
                 )
-            } else {
+            } else if (entry.mood.isNotBlank()){ // Adicionado para garantir que o ponto só apareça se houver um humor
                 Box(
                     modifier = Modifier
                         .size(6.dp)
