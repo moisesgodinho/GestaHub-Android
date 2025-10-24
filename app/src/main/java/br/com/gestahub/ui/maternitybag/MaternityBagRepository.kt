@@ -3,7 +3,6 @@ package br.com.gestahub.ui.maternitybag
 import br.com.gestahub.data.MaternityBagData
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ktx.toObject
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -19,6 +18,7 @@ class MaternityBagRepository {
         val userDocRef = getUserDocRef()
         if (userDocRef == null) {
             trySend(Result.failure(Exception("Usuário não autenticado.")))
+            close() // Fecha o Flow se não houver usuário
             return@callbackFlow
         }
 
@@ -28,18 +28,22 @@ class MaternityBagRepository {
                 return@addSnapshotListener
             }
 
-            if (snapshot != null && snapshot.exists()) {
-                val gestationalProfile = snapshot.get("gestationalProfile") as? Map<*, *>
-                val list = gestationalProfile?.get("maternityBagList")
+            if (snapshot == null) {
+                trySend(Result.failure(Exception("Snapshot nulo.")))
+                return@addSnapshotListener
+            }
 
-                if (list != null) {
+            val gestationalProfile = snapshot.get("gestationalProfile") as? Map<*, *>
+            val listExists = gestationalProfile?.get("maternityBagList") != null
+
+            // Se o documento existe e a lista está nele, processa os dados
+            if (snapshot.exists() && listExists) {
+                try {
                     val bagData = snapshot.get("gestationalProfile")?.let {
                         val map = it as HashMap<String, Any>
-                        // Manual conversion is more robust here
                         val bagListMap = map["maternityBagList"] as? HashMap<String, Any> ?: hashMapOf()
                         val checkedList = map["maternityBagChecked"] as? List<String> ?: emptyList()
 
-                        // Helper to convert map to Category
                         fun mapToCategory(categoryMap: Any?): MaternityBagCategory {
                             if (categoryMap !is Map<*, *>) return MaternityBagCategory()
                             val title = categoryMap["title"] as? String ?: ""
@@ -63,16 +67,20 @@ class MaternityBagRepository {
 
                         MaternityBagFirestore(bagList, checkedList)
                     } ?: MaternityBagFirestore()
+
                     trySend(Result.success(bagData))
-                } else {
-                    // Se não existe, cria a lista padrão
-                    val default = MaternityBagData.defaultData
-                    userDocRef.set(
-                        mapOf("gestationalProfile" to mapOf("maternityBagList" to default)),
-                        com.google.firebase.firestore.SetOptions.merge()
-                    )
-                    // O listener será acionado novamente com os novos dados
+                } catch (e: Exception) {
+                    trySend(Result.failure(e))
                 }
+            } else {
+                // Se o documento não existe ou a lista não está lá, cria a lista padrão.
+                // O 'set' com 'merge' vai criar o documento se ele não existir.
+                val default = MaternityBagData.defaultData
+                userDocRef.set(
+                    mapOf("gestationalProfile" to mapOf("maternityBagList" to default)),
+                    com.google.firebase.firestore.SetOptions.merge()
+                )
+                // O listener será acionado novamente com os novos dados, então não precisamos enviar nada aqui.
             }
         }
         awaitClose { listener.remove() }
