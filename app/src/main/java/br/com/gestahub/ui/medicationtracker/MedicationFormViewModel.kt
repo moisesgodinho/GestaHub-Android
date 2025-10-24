@@ -1,16 +1,13 @@
-// Local: app/src/main/java/br/com/gestahub/ui/medicationtracker/MedicationFormViewModel.kt
 package br.com.gestahub.ui.medicationtracker
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import br.com.gestahub.util.getTodayString // <-- IMPORTE AQUI
+import br.com.gestahub.util.getTodayString
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 import kotlin.math.floor
 
 data class MedicationFormUiState(
@@ -24,7 +21,7 @@ data class MedicationFormUiState(
     val durationType: String = "CONTINUOUS",
     val startDate: String = getTodayString(),
     val durationValue: String = "",
-    val frequency: Int = 1,
+    val frequency: String = "1", // <-- MUDANÇA: De Int para String
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
@@ -51,8 +48,6 @@ class MedicationFormViewModel(
     private fun loadMedication(id: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            // A busca por um único medicamento precisaria ser implementada no repositório.
-            // Por enquanto, vamos filtrar da lista geral como uma solução alternativa.
             repository.getMedications().collect { meds ->
                 val medToEdit = meds.find { it.id == id }
                 if (medToEdit != null) {
@@ -74,7 +69,7 @@ class MedicationFormViewModel(
                             durationType = medToEdit.durationType,
                             startDate = medToEdit.startDate.ifBlank { getTodayString() },
                             durationValue = medToEdit.durationValue?.toString() ?: "",
-                            frequency = freq,
+                            frequency = freq.toString(), // <-- MUDANÇA: Converter para String
                             isLoading = false
                         )
                     }
@@ -94,14 +89,14 @@ class MedicationFormViewModel(
         durationType: String? = null,
         startDate: String? = null,
         durationValue: String? = null,
-        frequency: Int? = null
+        frequency: String? = null // <-- MUDANÇA: De Int? para String?
     ) {
         _uiState.update { currentState ->
             val newScheduleType = scheduleType ?: currentState.scheduleType
-            val newFrequency = frequency ?: currentState.frequency
             val newIntervalHours = intervalHours ?: currentState.intervalHours
+            val newFrequencyString = frequency ?: currentState.frequency
 
-            val updatedState = currentState.copy(
+            var updatedState = currentState.copy(
                 name = name ?: currentState.name,
                 dosage = dosage ?: currentState.dosage,
                 notes = notes ?: currentState.notes,
@@ -110,23 +105,30 @@ class MedicationFormViewModel(
                 durationType = durationType ?: currentState.durationType,
                 startDate = startDate ?: currentState.startDate,
                 durationValue = durationValue ?: currentState.durationValue,
-                frequency = newFrequency
+                frequency = newFrequencyString // Armazena o novo texto
             )
 
-            // Ajusta o número de doses se a frequência mudar (e não for por intervalo)
+            // Se a frequência foi alterada e não é por intervalo
             if (frequency != null && newScheduleType != "INTERVAL") {
-                val newDoses = List(newFrequency) { index ->
-                    currentState.doses.getOrNull(index) ?: ""
+                val freqInt = frequency.toIntOrNull()
+                // Se for um número válido, ajusta os campos de dose
+                if (freqInt != null) {
+                    val currentDoseCount = currentState.doses.size
+                    if (freqInt != currentDoseCount) {
+                        val newDoses = List(freqInt) { index ->
+                            currentState.doses.getOrNull(index) ?: ""
+                        }
+                        updatedState = updatedState.copy(doses = newDoses)
+                    }
                 }
-                return@update updatedState.copy(doses = newDoses)
             }
 
-            // Recalcula a frequência se o intervalo mudar
+            // Se o intervalo foi alterado, ele dita a frequência
             if (intervalHours != null && newScheduleType == "INTERVAL") {
                 val interval = newIntervalHours.toIntOrNull()
                 if (interval != null && interval in 1..24) {
                     val calculatedFreq = floor(24.0 / interval).toInt().coerceAtLeast(1)
-                    return@update updatedState.copy(frequency = calculatedFreq)
+                    updatedState = updatedState.copy(frequency = calculatedFreq.toString())
                 }
             }
 
@@ -148,6 +150,14 @@ class MedicationFormViewModel(
 
     fun saveMedication() {
         val state = _uiState.value
+
+        // --- MUDANÇA: Validação no momento de salvar ---
+        val freqInt = state.frequency.toIntOrNull()
+        if (freqInt == null || freqInt !in 1..10) {
+            _uiState.update { it.copy(userMessage = "O número de doses por dia deve ser entre 1 e 10.") }
+            return
+        }
+
         if (state.name.isBlank()) {
             _uiState.update { it.copy(userMessage = "O nome do medicamento é obrigatório.") }
             return

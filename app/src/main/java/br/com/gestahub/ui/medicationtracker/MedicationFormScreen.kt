@@ -1,4 +1,3 @@
-// Local: app/src/main/java/br/com/gestahub/ui/medicationtracker/MedicationFormScreen.kt
 package br.com.gestahub.ui.medicationtracker
 
 import android.widget.Toast
@@ -92,8 +91,19 @@ fun MedicationFormScreen(
                             modifier = Modifier.weight(1f)
                         )
                         OutlinedTextField(
-                            value = uiState.frequency.toString(),
-                            onValueChange = { viewModel.onFieldChange(frequency = it.toIntOrNull()?.coerceIn(1, 10)) },
+                            value = uiState.frequency, // <-- MUDANÇA: usa a string do state
+                            // --- LÓGICA DE onValueChange CORRIGIDA ---
+                            onValueChange = { newText ->
+                                val cleanedText = newText.filter { it.isDigit() }
+                                if (cleanedText.isEmpty()) {
+                                    viewModel.onFieldChange(frequency = "")
+                                    return@OutlinedTextField
+                                }
+                                val number = cleanedText.toIntOrNull()
+                                if (number != null && number in 1..10) {
+                                    viewModel.onFieldChange(frequency = cleanedText)
+                                }
+                            },
                             label = { Text("Doses/dia") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.weight(1f),
@@ -189,7 +199,7 @@ private fun FormSection(title: String, content: @Composable ColumnScope.() -> Un
         Spacer(Modifier.height(8.dp))
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface) // <-- COR ATUALIZADA
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(Modifier.padding(16.dp), content = content)
         }

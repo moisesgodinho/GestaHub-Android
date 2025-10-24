@@ -1,4 +1,3 @@
-// Local: app/src/main/java/br/com/gestahub/ui/medicationtracker/MedicationViewModel.kt
 package br.com.gestahub.ui.medicationtracker
 
 import androidx.lifecycle.ViewModel
@@ -30,29 +29,30 @@ class MedicationViewModel(private val estimatedLmp: LocalDate?) : ViewModel() {
         month.isBefore(maxMonth)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    // --- LÓGICA DE PAGINAÇÃO CORRIGIDA AQUI ---
-    val isPreviousMonthEnabled: StateFlow<Boolean> = _uiState.combine(_currentMonth) { state, month ->
-        // 1. Encontra a data do primeiro medicamento já registrado.
-        val firstMedDate = state.medications
-            .mapNotNull { runCatching { LocalDate.parse(it.startDate, DATE_FORMATTER) }.getOrNull() }
-            .minOrNull()
-            ?.let { YearMonth.from(it) }
-
-        // 2. Define o limite máximo para voltar (2 meses antes da DUM).
-        val lmpLimit = estimatedLmp?.minusMonths(2)?.let { YearMonth.from(it) }
-
-        // 3. Determina o mês mais antigo permitido para navegação.
-        //    Prioriza a data do primeiro medicamento, mas respeita o limite da DUM.
-        val minMonth = when {
-            firstMedDate != null && lmpLimit != null -> if (firstMedDate.isBefore(lmpLimit)) firstMedDate else lmpLimit
-            firstMedDate != null -> firstMedDate
-            lmpLimit != null -> lmpLimit
-            else -> null // Não há limite se não tiver DUM nem medicamentos
+    // --- LÓGICA DE PAGINAÇÃO FINAL E CORRETA ---
+    val isPreviousMonthEnabled: StateFlow<Boolean> = _uiState.combine(_currentMonth) { state, currentMonth ->
+        // Se estiver carregando ou a lista de medicamentos estiver vazia, desabilita.
+        if (state.isLoading || state.medications.isEmpty()) {
+            return@combine false
         }
 
-        // 4. Habilita o botão apenas se o mês atual for posterior ao mês mais antigo permitido.
-        minMonth?.let { month.isAfter(it) } ?: false
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+        // 1. Encontra a data do primeiro registro de medicamento.
+        val earliestMonthWithEntry = state.medications
+            .asSequence()
+            .mapNotNull { it.startDate.takeIf(String::isNotBlank) }
+            .mapNotNull { runCatching { YearMonth.from(LocalDate.parse(it, DATE_FORMATTER)) }.getOrNull() }
+            .minOrNull()
+
+        // 2. Se por algum motivo não encontrar uma data válida, desabilita por segurança.
+        if (earliestMonthWithEntry == null) {
+            return@combine false
+        }
+
+        // 3. A regra final: O botão é habilitado apenas se o mês atual
+        //    for estritamente posterior ao mês do primeiro registro.
+        return@combine currentMonth.isAfter(earliestMonthWithEntry)
+
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), initialValue = false)
 
 
     init {
