@@ -40,6 +40,8 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
 
     LaunchedEffect(key1 = user.uid) {
         homeViewModel.listenToGestationalData(user.uid)
+        // --- NOVA LINHA ADICIONADA ---
+        homeViewModel.listenToAppointments(user.uid)
     }
 
     LaunchedEffect(appointmentsUiState.userMessage) {

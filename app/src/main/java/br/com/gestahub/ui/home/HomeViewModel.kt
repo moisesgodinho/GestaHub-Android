@@ -1,14 +1,19 @@
 package br.com.gestahub.ui.home
 
 import androidx.lifecycle.ViewModel
+import br.com.gestahub.data.AppointmentRepository
 import br.com.gestahub.data.GestationalProfileRepository
 import br.com.gestahub.data.WeeklyInfo
 import br.com.gestahub.domain.usecase.CalculateGestationalInfoUseCase
+import br.com.gestahub.ui.appointment.Appointment
+import br.com.gestahub.ui.appointment.ManualAppointment
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.ktx.toObject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 sealed class GestationalDataState {
     object Loading : GestationalDataState()
@@ -21,7 +26,9 @@ sealed class GestationalDataState {
         val countdownDays: Int,
         val gestationalData: GestationalData,
         val weeklyInfo: WeeklyInfo?,
-        val estimatedLmp: LocalDate?
+        val estimatedLmp: LocalDate?,
+        // --- NOVO CAMPO ADICIONADO ---
+        val upcomingAppointments: List<Appointment> = emptyList()
     ) : GestationalDataState()
 }
 
@@ -38,8 +45,12 @@ data class UiState(
 
 class HomeViewModel : ViewModel() {
 
-    private val repository = GestationalProfileRepository()
+    private val gestationalProfileRepository = GestationalProfileRepository()
+    // --- NOVO REPOSITÓRIO ADICIONADO ---
+    private val appointmentRepository = AppointmentRepository()
     private var gestationalDataListener: ListenerRegistration? = null
+    // --- NOVO LISTENER ADICIONADO ---
+    private var appointmentsListener: ListenerRegistration? = null
     private val calculateGestationalInfoUseCase = CalculateGestationalInfoUseCase()
 
     private val _uiState = MutableStateFlow(UiState())
@@ -47,7 +58,7 @@ class HomeViewModel : ViewModel() {
 
     fun listenToGestationalData(userId: String) {
         gestationalDataListener?.remove()
-        gestationalDataListener = repository.getGestationalProfileFlow(userId).addSnapshotListener { snapshot, error ->
+        gestationalDataListener = gestationalProfileRepository.getGestationalProfileFlow(userId).addSnapshotListener { snapshot, error ->
             if (error != null || snapshot == null || !snapshot.exists()) {
                 _uiState.update { it.copy(dataState = GestationalDataState.NoData) }
                 return@addSnapshotListener
@@ -68,6 +79,32 @@ class HomeViewModel : ViewModel() {
         }
     }
 
+    // --- NOVA FUNÇÃO ADICIONADA ---
+    fun listenToAppointments(userId: String) {
+        appointmentsListener?.remove()
+        appointmentsListener = appointmentRepository.getAppointmentsFlow(userId).addSnapshotListener { snapshot, error ->
+            if (error != null || snapshot == null) {
+                return@addSnapshotListener
+            }
+
+            val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+
+            val appointments = snapshot.documents.mapNotNull { it.toObject<ManualAppointment>() }
+                .filter { it.date != null && it.date >= today && !it.done }
+                .sortedBy { it.date }
+                .take(3)
+
+            val currentState = _uiState.value.dataState
+            if (currentState is GestationalDataState.HasData) {
+                _uiState.update {
+                    it.copy(
+                        dataState = currentState.copy(upcomingAppointments = appointments)
+                    )
+                }
+            }
+        }
+    }
+
     private fun processGestationalData(data: GestationalData) {
         val gestationalInfo = calculateGestationalInfoUseCase(data)
 
@@ -75,6 +112,9 @@ class HomeViewModel : ViewModel() {
             _uiState.update { it.copy(dataState = GestationalDataState.NoData) }
             return
         }
+
+        // Mantém a lista de compromissos se ela já existir no estado
+        val currentAppointments = (_uiState.value.dataState as? GestationalDataState.HasData)?.upcomingAppointments ?: emptyList()
 
         _uiState.update {
             it.copy(
@@ -86,7 +126,8 @@ class HomeViewModel : ViewModel() {
                     countdownDays = gestationalInfo.countdownDays,
                     gestationalData = data,
                     weeklyInfo = gestationalInfo.weeklyInfo,
-                    estimatedLmp = gestationalInfo.estimatedLmp
+                    estimatedLmp = gestationalInfo.estimatedLmp,
+                    upcomingAppointments = currentAppointments // Preserva os compromissos
                 )
             )
         }
@@ -95,5 +136,7 @@ class HomeViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         gestationalDataListener?.remove()
+        // --- LIMPEZA DO NOVO LISTENER ---
+        appointmentsListener?.remove()
     }
 }

@@ -73,7 +73,9 @@ fun AppNavGraph(
                         val data = dataState.gestationalData
                         navController.navigate("calculator?lmp=${data.lmp ?: ""}&examDate=${data.ultrasoundExamDate ?: ""}&weeks=${data.weeksAtExam ?: ""}&days=${data.daysAtExam ?: ""}")
                     }
-                }
+                },
+                // --- NOVO PARÂMETRO PASSADO ---
+                navController = navController
             )
         }
         composable(

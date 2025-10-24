@@ -11,8 +11,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import br.com.gestahub.ui.home.components.EmptyHomeScreen
 import br.com.gestahub.ui.home.components.GestationalInfoDashboard
+import br.com.gestahub.ui.home.components.UpcomingAppointmentsCard
 
 @Composable
 fun HomeScreen(
@@ -20,7 +22,8 @@ fun HomeScreen(
     homeViewModel: HomeViewModel = viewModel(),
     isDarkTheme: Boolean,
     onAddDataClick: () -> Unit,
-    onEditDataClick: () -> Unit
+    onEditDataClick: () -> Unit,
+    navController: NavController
 ) {
     val uiState by homeViewModel.uiState.collectAsState()
     val dataState = uiState.dataState
@@ -40,11 +43,19 @@ fun HomeScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // --- ORDEM DOS CARDS INVERTIDA AQUI ---
                 GestationalInfoDashboard(
                     state = dataState,
                     onEditDataClick = onEditDataClick,
                     isDarkTheme = isDarkTheme
                 )
+
+                if (dataState.upcomingAppointments.isNotEmpty()) {
+                    UpcomingAppointmentsCard(
+                        appointments = dataState.upcomingAppointments,
+                        navController = navController
+                    )
+                }
             }
         }
         is GestationalDataState.NoData -> {
