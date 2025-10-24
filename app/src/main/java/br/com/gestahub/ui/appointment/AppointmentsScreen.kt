@@ -1,4 +1,3 @@
-// Local: app/src/main/java/br/com/gestahub/ui/appointment/AppointmentsScreen.kt
 package br.com.gestahub.ui.appointment
 
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import br.com.gestahub.ui.appointment.components.AppointmentsListCard
+import br.com.gestahub.ui.components.ConfirmationDialog
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -30,12 +30,14 @@ fun AppointmentsScreen(
     onDeleteOrClearRequest: (Appointment) -> Unit,
     onNavigateToForm: (date: String?) -> Unit
 ) {
-    // Estados para controlar os diálogos
     var showNewAppointmentDialogForDate by remember { mutableStateOf<LocalDate?>(null) }
     var appointmentsToShowInDialog by remember { mutableStateOf<List<Appointment>>(emptyList()) }
     var dialogDate by remember { mutableStateOf<LocalDate?>(null) }
 
-    // Diálogo para dias vazios
+    // --- CORREÇÃO APLICADA AQUI: Estado local para o diálogo de confirmação ---
+    var appointmentToDelete by remember { mutableStateOf<Appointment?>(null) }
+
+    // Diálogo para dias sem consultas
     showNewAppointmentDialogForDate?.let { date ->
         NewAppointmentDialog(
             date = date,
@@ -47,7 +49,7 @@ fun AppointmentsScreen(
         )
     }
 
-    // Diálogo para dias com consultas
+    // Diálogo para dias com consultas (modal de visualização)
     if (appointmentsToShowInDialog.isNotEmpty()) {
         dialogDate?.let { date ->
             ViewAppointmentsDialog(
@@ -58,10 +60,9 @@ fun AppointmentsScreen(
                     onEditClick(it)
                     appointmentsToShowInDialog = emptyList()
                 },
-                onDelete = {
-                    onDeleteOrClearRequest(it)
-                    // Atualiza a lista do diálogo em tempo real ao deletar
-                    appointmentsToShowInDialog = appointmentsToShowInDialog.filterNot { item -> item.id == it.id }
+                // A ação de deletar agora apenas define qual item será deletado
+                onDelete = { appointment ->
+                    appointmentToDelete = appointment
                 },
                 onAddNew = {
                     onNavigateToForm(it.format(DateTimeFormatter.ISO_LOCAL_DATE))
@@ -70,6 +71,32 @@ fun AppointmentsScreen(
             )
         }
     }
+
+    // --- NOVO: Diálogo de confirmação de exclusão ---
+    // Este diálogo aparece por cima do de visualização
+    if (appointmentToDelete != null) {
+        val appointment = appointmentToDelete!! // Garante que não é nulo neste escopo
+
+        // Usa o ConfirmationDialog genérico para mais flexibilidade
+        ConfirmationDialog(
+            title = "Confirmar Exclusão",
+            text = "Tem certeza que deseja apagar a consulta \"${appointment.title}\"?",
+            confirmButtonText = "Excluir",
+            onConfirm = {
+                // Executa a exclusão real
+                onDeleteOrClearRequest(appointment)
+                // Atualiza a lista no modal de visualização (que ainda está "aberto" no estado)
+                appointmentsToShowInDialog = appointmentsToShowInDialog.filterNot { it.id == appointment.id }
+                // Fecha este diálogo de confirmação
+                appointmentToDelete = null
+            },
+            onDismissRequest = {
+                // Apenas fecha o diálogo de confirmação, mantendo o de visualização
+                appointmentToDelete = null
+            }
+        )
+    }
+
 
     if (uiState.isLoading) {
         Box(
