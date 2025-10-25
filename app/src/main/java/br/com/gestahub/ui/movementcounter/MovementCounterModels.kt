@@ -1,14 +1,13 @@
 package br.com.gestahub.ui.movementcounter
 
-import br.com.gestahub.util.GestationalAge
-import br.com.gestahub.util.GestationalAgeCalculator
+import br.com.gestahub.domain.usecase.CalculateGestationalAgeOnDateUseCase
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.Exclude
 import com.google.firebase.firestore.PropertyName
 import java.text.SimpleDateFormat
-import java.time.Duration
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.Duration
 import java.util.Date
 import java.util.Locale
 
@@ -62,7 +61,7 @@ data class KickSession(
     fun getGestationalAge(lmp: LocalDate?): String {
         if (lmp == null) return ""
         val sessionDate = Date(timestampAsLong).toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
-        val age = GestationalAgeCalculator.calculateGestationalAge(lmp, sessionDate)
+        val age = CalculateGestationalAgeOnDateUseCase()(lmp, sessionDate)
         return "${age.weeks}s ${age.days}d"
     }
 }

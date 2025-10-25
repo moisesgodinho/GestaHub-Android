@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.gestahub.data.WeightRepository
+import br.com.gestahub.domain.usecase.CalculateGestationalAgeOnDateUseCase
+import br.com.gestahub.domain.usecase.GestationalAge
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ListenerRegistration
@@ -15,7 +17,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
@@ -38,6 +39,7 @@ class WeightViewModel(private val estimatedLmp: LocalDate?) : ViewModel() {
     private var weightListener: ListenerRegistration? = null
     private var profileListener: ListenerRegistration? = null
     private val authStateListener: FirebaseAuth.AuthStateListener
+    private val calculateGestationalAgeUseCase = CalculateGestationalAgeOnDateUseCase()
 
     private val _uiState = MutableStateFlow(WeightUiState())
     val uiState = _uiState.asStateFlow()
@@ -82,7 +84,7 @@ class WeightViewModel(private val estimatedLmp: LocalDate?) : ViewModel() {
                     entries.forEach { entry ->
                         try {
                             val entryDate = LocalDate.parse(entry.date)
-                            val age = calculateGestationalAge(estimatedLmp, entryDate)
+                            val age : GestationalAge = calculateGestationalAgeUseCase(estimatedLmp, entryDate)
                             ages[entry.date] = "${age.weeks}s ${age.days}d"
                         } catch (e: Exception) {
                             // Ignora entradas com data mal formatada
@@ -135,16 +137,6 @@ class WeightViewModel(private val estimatedLmp: LocalDate?) : ViewModel() {
         _uiState.update {
             it.copy(weightChartEntries = chartEntries, chartDateLabels = dateLabels)
         }
-    }
-
-
-    private data class GestationalAge(val weeks: Int, val days: Int)
-    private fun calculateGestationalAge(lmp: LocalDate, targetDate: LocalDate): GestationalAge {
-        val daysBetween = ChronoUnit.DAYS.between(lmp, targetDate).toInt()
-        if (daysBetween < 0) return GestationalAge(0, 0)
-        val weeks = daysBetween / 7
-        val days = daysBetween % 7
-        return GestationalAge(weeks, days)
     }
 
     private fun calculateWeightSummary() {

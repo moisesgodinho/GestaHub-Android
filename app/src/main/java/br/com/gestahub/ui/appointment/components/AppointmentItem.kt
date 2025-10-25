@@ -20,12 +20,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import br.com.gestahub.domain.usecase.CalculateGestationalAgeOnDateUseCase
 import br.com.gestahub.ui.appointment.Appointment
 import br.com.gestahub.ui.appointment.AppointmentType
 import br.com.gestahub.ui.appointment.ManualAppointment
 import br.com.gestahub.ui.appointment.UltrasoundAppointment
 import br.com.gestahub.ui.theme.Rose500
-import br.com.gestahub.util.GestationalAgeCalculator
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -115,8 +115,9 @@ fun AppointmentItem(
 
                     if (appointment is UltrasoundAppointment) {
                         val windowText = if (lmpDate != null) {
-                            val startDate = GestationalAgeCalculator.getWindowStartDate(lmpDate, appointment.startWeek)
-                            val endDate = GestationalAgeCalculator.getWindowEndDate(lmpDate, appointment.endWeek)
+                            val useCase = CalculateGestationalAgeOnDateUseCase()
+                            val startDate = useCase.forUI(lmpDate, appointment.startWeek)
+                            val endDate = useCase.forUI(lmpDate, appointment.endWeek, isEnd = true)
                             "$startDate a $endDate"
                         } else {
                             "Entre ${appointment.startWeek} e ${appointment.endWeek} semanas"

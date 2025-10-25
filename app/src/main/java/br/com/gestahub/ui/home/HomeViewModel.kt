@@ -4,7 +4,8 @@ import androidx.lifecycle.ViewModel
 import br.com.gestahub.data.AppointmentRepository
 import br.com.gestahub.data.GestationalProfileRepository
 import br.com.gestahub.data.WeeklyInfo
-import br.com.gestahub.domain.usecase.CalculateGestationalInfoUseCase
+import br.com.gestahub.domain.model.GestationalInfo // Importação necessária
+import br.com.gestahub.domain.usecase.CalculateGestationalInfoUseCase // Importação CORRIGIDA
 import br.com.gestahub.ui.appointment.Appointment
 import br.com.gestahub.ui.appointment.ManualAppointment
 import com.google.firebase.firestore.ListenerRegistration
@@ -27,7 +28,6 @@ sealed class GestationalDataState {
         val gestationalData: GestationalData,
         val weeklyInfo: WeeklyInfo?,
         val estimatedLmp: LocalDate?,
-        // --- NOVO CAMPO ADICIONADO ---
         val upcomingAppointments: List<Appointment> = emptyList()
     ) : GestationalDataState()
 }
@@ -46,12 +46,10 @@ data class UiState(
 class HomeViewModel : ViewModel() {
 
     private val gestationalProfileRepository = GestationalProfileRepository()
-    // --- NOVO REPOSITÓRIO ADICIONADO ---
     private val appointmentRepository = AppointmentRepository()
     private var gestationalDataListener: ListenerRegistration? = null
-    // --- NOVO LISTENER ADICIONADO ---
     private var appointmentsListener: ListenerRegistration? = null
-    private val calculateGestationalInfoUseCase = CalculateGestationalInfoUseCase()
+    private val calculateGestationalInfoUseCase = CalculateGestationalInfoUseCase() // Agora vai resolver a referência
 
     private val _uiState = MutableStateFlow(UiState())
     val uiState = _uiState.asStateFlow()
@@ -79,7 +77,6 @@ class HomeViewModel : ViewModel() {
         }
     }
 
-    // --- NOVA FUNÇÃO ADICIONADA ---
     fun listenToAppointments(userId: String) {
         appointmentsListener?.remove()
         appointmentsListener = appointmentRepository.getAppointmentsFlow(userId).addSnapshotListener { snapshot, error ->
@@ -106,19 +103,20 @@ class HomeViewModel : ViewModel() {
     }
 
     private fun processGestationalData(data: GestationalData) {
-        val gestationalInfo = calculateGestationalInfoUseCase(data)
+        // A chamada ao use case agora funciona
+        val gestationalInfo: GestationalInfo? = calculateGestationalInfoUseCase(data)
 
         if (gestationalInfo == null) {
             _uiState.update { it.copy(dataState = GestationalDataState.NoData) }
             return
         }
 
-        // Mantém a lista de compromissos se ela já existir no estado
         val currentAppointments = (_uiState.value.dataState as? GestationalDataState.HasData)?.upcomingAppointments ?: emptyList()
 
         _uiState.update {
             it.copy(
                 dataState = GestationalDataState.HasData(
+                    // E todas estas propriedades serão encontradas
                     gestationalWeeks = gestationalInfo.gestationalWeeks,
                     gestationalDays = gestationalInfo.gestationalDays,
                     dueDate = gestationalInfo.dueDate,
@@ -127,7 +125,7 @@ class HomeViewModel : ViewModel() {
                     gestationalData = data,
                     weeklyInfo = gestationalInfo.weeklyInfo,
                     estimatedLmp = gestationalInfo.estimatedLmp,
-                    upcomingAppointments = currentAppointments // Preserva os compromissos
+                    upcomingAppointments = currentAppointments
                 )
             )
         }
@@ -136,7 +134,6 @@ class HomeViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         gestationalDataListener?.remove()
-        // --- LIMPEZA DO NOVO LISTENER ---
         appointmentsListener?.remove()
     }
 }

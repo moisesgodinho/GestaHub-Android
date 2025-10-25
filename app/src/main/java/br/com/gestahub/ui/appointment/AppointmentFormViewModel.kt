@@ -4,7 +4,7 @@ package br.com.gestahub.ui.appointment
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import br.com.gestahub.util.GestationalAgeCalculator
+import br.com.gestahub.domain.usecase.GetEstimatedLmpUseCase
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -47,6 +47,7 @@ class AppointmentFormViewModel(
 
     private var estimatedLmp: LocalDate? = null
     private var dueDate: LocalDate? = null
+    private val getEstimatedLmpUseCase = GetEstimatedLmpUseCase()
 
     private val _uiState = MutableStateFlow(AppointmentFormUiState())
     val uiState = _uiState.asStateFlow()
@@ -68,7 +69,7 @@ class AppointmentFormViewModel(
                 val userDoc = db.collection("users").document(userId).get().await()
                 val gestationalProfile = userDoc.get("gestationalProfile") as? Map<*, *>
 
-                estimatedLmp = GestationalAgeCalculator.getEstimatedLmp(gestationalProfile)
+                estimatedLmp = getEstimatedLmpUseCase(gestationalProfile)
                 dueDate = estimatedLmp?.plusDays(280)
 
                 if (appointmentId != null && appointmentType != null) {

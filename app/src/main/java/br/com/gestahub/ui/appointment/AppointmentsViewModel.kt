@@ -4,7 +4,7 @@ package br.com.gestahub.ui.appointment
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import br.com.gestahub.util.GestationalAgeCalculator
+import br.com.gestahub.domain.usecase.GetEstimatedLmpUseCase
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.firestore
@@ -29,6 +29,7 @@ data class AppointmentsUiState(
 class AppointmentsViewModel : ViewModel() {
     private val db = Firebase.firestore
     private val userId = Firebase.auth.currentUser?.uid
+    private val getEstimatedLmpUseCase = GetEstimatedLmpUseCase()
 
     private val _manualAppointments = MutableStateFlow<List<ManualAppointment>>(emptyList())
     private val _gestationalProfile = MutableStateFlow<Map<*,*>?>(null)
@@ -71,7 +72,7 @@ class AppointmentsViewModel : ViewModel() {
     private fun observeAndCombineData() {
         viewModelScope.launch {
             combine(_manualAppointments, _gestationalProfile) { manual, profile ->
-                val estimatedLmp = GestationalAgeCalculator.getEstimatedLmp(profile)
+                val estimatedLmp = getEstimatedLmpUseCase(profile)
                 val ultrasoundScheduleMap = profile?.get("ultrasoundSchedule") as? Map<String, Any> ?: emptyMap()
 
                 val ultrasoundList = AppointmentData.ultrasoundSchedule.map { baseUltrasound ->
