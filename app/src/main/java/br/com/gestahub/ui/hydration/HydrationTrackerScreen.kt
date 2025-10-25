@@ -1,5 +1,8 @@
 package br.com.gestahub.ui.hydration
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -98,14 +101,13 @@ fun HydrationTrackerScreen(
                         InfoCardWithLeftBorder()
                     }
 
-                    // --- NOVO GRÁFICO ADICIONADO AQUI ---
                     if (uiState.history.isNotEmpty()) {
                         item {
                             HydrationChartCard(
                                 history = uiState.history,
                                 displayedMonth = uiState.displayedMonth,
                                 onMonthChange = { month ->
-                                    selectedDayIndex = null // Reseta o tooltip ao trocar de mês
+                                    selectedDayIndex = null
                                     viewModel.changeDisplayedMonth(month)
                                 },
                                 isDarkTheme = isDarkTheme,
@@ -119,7 +121,6 @@ fun HydrationTrackerScreen(
                         item {
                             HydrationHistoryCard(
                                 history = uiState.history.filter {
-                                    // Filtra o histórico para mostrar apenas o mês selecionado no gráfico
                                     it.date?.substring(0, 7) == uiState.displayedMonth.toString()
                                 },
                                 isDarkTheme = isDarkTheme
@@ -131,8 +132,6 @@ fun HydrationTrackerScreen(
         }
     }
 }
-
-// ... (Restante do código do HydrationTrackerScreen.kt permanece o mesmo) ...
 
 @Composable
 fun HydrationHistoryCard(history: List<WaterIntakeEntry>, isDarkTheme: Boolean) {
@@ -212,7 +211,7 @@ fun HydrationHistoryItem(entry: WaterIntakeEntry, isDarkTheme: Boolean) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 LinearProgressIndicator(
-                    progress = progress,
+                    progress = { progress }, // Adaptado para a nova API
                     modifier = Modifier
                         .width(100.dp)
                         .height(8.dp)
@@ -286,7 +285,20 @@ fun HydrationTodayCard(
     onEditSettings: () -> Unit,
     isDarkTheme: Boolean
 ) {
-    val progress = if (todayData.goal > 0) min(todayData.current.toFloat() / todayData.goal.toFloat(), 1f) else 0f
+    // --- ANIMAÇÃO 1: Anima o valor do progresso (de 0.0f a 1.0f) ---
+    val animatedProgress by animateFloatAsState(
+        targetValue = if (todayData.goal > 0) min(todayData.current.toFloat() / todayData.goal.toFloat(), 1f) else 0f,
+        animationSpec = tween(durationMillis = 1000), // Animação de 1 segundo
+        label = "ProgressAnimation"
+    )
+
+    // --- ANIMAÇÃO 2: Anima o valor do texto (de 0 a valor atual) ---
+    val animatedCurrentIntake by animateIntAsState(
+        targetValue = todayData.current,
+        animationSpec = tween(durationMillis = 1000), // Animação de 1 segundo
+        label = "IntakeAnimation"
+    )
+
     val waterColor = Color(0xFF64B5F6)
     val trackWaterColor = Color(0xFFBBDEFB)
 
@@ -313,8 +325,9 @@ fun HydrationTodayCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                // Usa o valor animado no texto
                 Text(
-                    text = "${todayData.current} ml",
+                    text = "$animatedCurrentIntake ml",
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -327,8 +340,9 @@ fun HydrationTodayCard(
             }
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Usa o valor animado no progresso
             LinearProgressIndicator(
-                progress = progress,
+                progress = { animatedProgress }, // Adaptado para a nova API
                 modifier = Modifier.fillMaxWidth().height(12.dp).clip(CircleShape),
                 color = waterColor,
                 trackColor = trackWaterColor
