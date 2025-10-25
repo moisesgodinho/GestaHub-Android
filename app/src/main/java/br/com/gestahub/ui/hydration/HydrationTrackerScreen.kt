@@ -18,7 +18,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType // <- ADICIONADO
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback // <- ADICIONADO
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -211,7 +213,7 @@ fun HydrationHistoryItem(entry: WaterIntakeEntry, isDarkTheme: Boolean) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 LinearProgressIndicator(
-                    progress = { progress }, // Adaptado para a nova API
+                    progress = { progress },
                     modifier = Modifier
                         .width(100.dp)
                         .height(8.dp)
@@ -285,17 +287,17 @@ fun HydrationTodayCard(
     onEditSettings: () -> Unit,
     isDarkTheme: Boolean
 ) {
-    // --- ANIMAÇÃO 1: Anima o valor do progresso (de 0.0f a 1.0f) ---
+    val haptic = LocalHapticFeedback.current
+
     val animatedProgress by animateFloatAsState(
         targetValue = if (todayData.goal > 0) min(todayData.current.toFloat() / todayData.goal.toFloat(), 1f) else 0f,
-        animationSpec = tween(durationMillis = 1000), // Animação de 1 segundo
+        animationSpec = tween(durationMillis = 1000),
         label = "ProgressAnimation"
     )
 
-    // --- ANIMAÇÃO 2: Anima o valor do texto (de 0 a valor atual) ---
     val animatedCurrentIntake by animateIntAsState(
         targetValue = todayData.current,
-        animationSpec = tween(durationMillis = 1000), // Animação de 1 segundo
+        animationSpec = tween(durationMillis = 1000),
         label = "IntakeAnimation"
     )
 
@@ -325,7 +327,6 @@ fun HydrationTodayCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                // Usa o valor animado no texto
                 Text(
                     text = "$animatedCurrentIntake ml",
                     style = MaterialTheme.typography.headlineLarge,
@@ -340,9 +341,8 @@ fun HydrationTodayCard(
             }
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Usa o valor animado no progresso
             LinearProgressIndicator(
-                progress = { animatedProgress }, // Adaptado para a nova API
+                progress = { animatedProgress },
                 modifier = Modifier.fillMaxWidth().height(12.dp).clip(CircleShape),
                 color = waterColor,
                 trackColor = trackWaterColor
@@ -355,7 +355,10 @@ fun HydrationTodayCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = onUndo,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onUndo()
+                    },
                     enabled = todayData.history.isNotEmpty(),
                     colors = IconButtonDefaults.iconButtonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
@@ -368,7 +371,10 @@ fun HydrationTodayCard(
                     )
                 }
                 Button(
-                    onClick = onAddWater,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onAddWater()
+                    },
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("Adicionar um copo (${todayData.cupSize} ml)")
@@ -388,7 +394,10 @@ fun HydrationTodayCard(
                 val quickAmounts = listOf(50, 100, 150, 200)
                 quickAmounts.forEach { amount ->
                     Button(
-                        onClick = { onAddCustomAmount(amount) },
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onAddCustomAmount(amount)
+                        },
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = waterColor)
                     ) {
