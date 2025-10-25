@@ -1,4 +1,3 @@
-// Local: app/src/main/java/br/com/gestahub/ui/appointment/AppointmentsViewModel.kt
 package br.com.gestahub.ui.appointment
 
 import android.util.Log
@@ -7,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import br.com.gestahub.domain.usecase.GetEstimatedLmpUseCase
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
@@ -28,38 +28,33 @@ data class AppointmentsUiState(
 
 class AppointmentsViewModel : ViewModel() {
     private val db = Firebase.firestore
-    private val userId = Firebase.auth.currentUser?.uid
     private val getEstimatedLmpUseCase = GetEstimatedLmpUseCase()
+
+    private var manualAppointmentsListener: ListenerRegistration? = null
+    private var gestationalProfileListener: ListenerRegistration? = null
 
     private val _manualAppointments = MutableStateFlow<List<ManualAppointment>>(emptyList())
     private val _gestationalProfile = MutableStateFlow<Map<*,*>?>(null)
-    private val _isLoading = MutableStateFlow(true)
 
     private val _uiState = MutableStateFlow(AppointmentsUiState())
     val uiState = _uiState.asStateFlow()
 
-    init {
-        if (userId != null) {
-            listenToData(userId)
-            observeAndCombineData()
-        } else {
-            _isLoading.value = false
-            _uiState.value = AppointmentsUiState(isLoading = false, userMessage = "Usuário não autenticado.")
-        }
-    }
+    private var isObserving = false
 
-    private fun listenToData(userId: String) {
-        db.collection("users").document(userId).collection("appointments")
+    fun listenToData(userId: String) {
+        if (userId.isBlank()) return
+
+        manualAppointmentsListener = db.collection("users").document(userId).collection("appointments")
             .addSnapshotListener { snapshot, e ->
                 if (e != null) {
-                    Log.e("AppointmentsViewModel", "Erro ao buscar consultas", e) // <-- Log detalhado
+                    Log.e("AppointmentsViewModel", "Erro ao buscar consultas", e)
                     _uiState.update { it.copy(userMessage = "Ocorreu um erro ao buscar suas consultas.") }
                     return@addSnapshotListener
                 }
                 _manualAppointments.value = snapshot?.documents?.mapNotNull { it.toObject<ManualAppointment>() } ?: emptyList()
             }
 
-        db.collection("users").document(userId)
+        gestationalProfileListener = db.collection("users").document(userId)
             .addSnapshotListener { snapshot, e ->
                 if (e != null) {
                     _uiState.update { it.copy(userMessage = "Erro ao buscar perfil.") }
@@ -67,6 +62,11 @@ class AppointmentsViewModel : ViewModel() {
                 }
                 _gestationalProfile.value = snapshot?.get("gestationalProfile") as? Map<*, *>
             }
+
+        if (!isObserving) {
+            observeAndCombineData()
+            isObserving = true
+        }
     }
 
     private fun observeAndCombineData() {
@@ -91,13 +91,12 @@ class AppointmentsViewModel : ViewModel() {
                 val (past, upcoming) = allAppointments.partition { it.done }
 
                 AppointmentsUiState(
-                    // --- ORDENAÇÃO CORRIGIDA ---
                     upcomingAppointments = upcoming.sortedWith { a, b ->
                         val dateComparison = compareValues(a.date, b.date)
                         if (dateComparison != 0) dateComparison else compareValues(a.time, b.time)
                     },
                     pastAppointments = past.sortedWith { a, b ->
-                        val dateComparison = compareValues(b.date, a.date) // Ordem descendente
+                        val dateComparison = compareValues(b.date, a.date)
                         if (dateComparison != 0) dateComparison else compareValues(b.time, a.time)
                     },
                     lmpDate = estimatedLmp,
@@ -109,8 +108,21 @@ class AppointmentsViewModel : ViewModel() {
         }
     }
 
+    fun clearListeners() {
+        manualAppointmentsListener?.remove()
+        gestationalProfileListener?.remove()
+        _manualAppointments.value = emptyList()
+        _gestationalProfile.value = null
+        _uiState.value = AppointmentsUiState()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        clearListeners()
+    }
+
     fun toggleDone(appointment: Appointment) = viewModelScope.launch {
-        if (userId == null) return@launch
+        val userId = Firebase.auth.currentUser?.uid ?: return@launch
         val newDoneStatus = !appointment.done
 
         if (newDoneStatus) {
@@ -131,30 +143,16 @@ class AppointmentsViewModel : ViewModel() {
         try {
             when (appointment) {
                 is ManualAppointment -> {
-                    val docRef = db.collection("users").document(userId)
-                        .collection("appointments").document(appointment.id)
-                    docRef.update("done", newDoneStatus).await()
+                    db.collection("users").document(userId).collection("appointments").document(appointment.id)
+                        .update("done", newDoneStatus).await()
                 }
                 is UltrasoundAppointment -> {
-                    val docRef = db.collection("users").document(userId)
-                    val fieldPath = "gestationalProfile.ultrasoundSchedule.${appointment.id}.done"
-                    docRef.update(fieldPath, newDoneStatus).await()
+                    db.collection("users").document(userId)
+                        .update("gestationalProfile.ultrasoundSchedule.${appointment.id}.done", newDoneStatus).await()
                 }
             }
-            Log.d("ViewModel", "Status atualizado com sucesso!")
         } catch (e: Exception) {
-            if (userId != null && appointment is UltrasoundAppointment) {
-                val docRef = db.collection("users").document(userId)
-                val ultrasoundUpdate = mapOf("done" to newDoneStatus)
-                val scheduleUpdate = mapOf(appointment.id to ultrasoundUpdate)
-                val profileUpdate = mapOf("ultrasoundSchedule" to scheduleUpdate)
-                val finalUpdate = mapOf("gestationalProfile" to profileUpdate)
-                docRef.set(finalUpdate, com.google.firebase.firestore.SetOptions.merge())
-                    .addOnSuccessListener { Log.d("ViewModel", "Status (com merge) atualizado com sucesso!") }
-                    .addOnFailureListener { fail -> _uiState.update { it.copy(userMessage = "Erro ao mesclar dados.") } }
-            } else {
-                _uiState.update { it.copy(userMessage = "Erro ao atualizar o status.") }
-            }
+            _uiState.update { it.copy(userMessage = "Erro ao atualizar o status da consulta.") }
         }
     }
 
@@ -163,7 +161,8 @@ class AppointmentsViewModel : ViewModel() {
     }
 
     fun deleteAppointment(appointment: Appointment) = viewModelScope.launch {
-        if (userId == null || appointment !is ManualAppointment) return@launch
+        val userId = Firebase.auth.currentUser?.uid ?: return@launch
+        if (appointment !is ManualAppointment) return@launch
         try {
             db.collection("users").document(userId).collection("appointments").document(appointment.id)
                 .delete().await()
@@ -173,7 +172,8 @@ class AppointmentsViewModel : ViewModel() {
     }
 
     fun clearUltrasoundSchedule(appointment: Appointment) = viewModelScope.launch {
-        if (userId == null || appointment !is UltrasoundAppointment) return@launch
+        val userId = Firebase.auth.currentUser?.uid ?: return@launch
+        if (appointment !is UltrasoundAppointment) return@launch
         try {
             val docRef = db.collection("users").document(userId)
             val updates = mapOf(
@@ -184,7 +184,6 @@ class AppointmentsViewModel : ViewModel() {
                 "gestationalProfile.ultrasoundSchedule.${appointment.id}.notes" to FieldValue.delete()
             )
             docRef.update(updates).await()
-            _uiState.update { it.copy(userMessage = "Agendamento do ultrassom foi limpo.") }
         } catch (e: Exception) {
             _uiState.update { it.copy(userMessage = "Erro ao limpar agendamento.") }
         }

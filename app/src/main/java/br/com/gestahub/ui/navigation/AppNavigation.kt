@@ -14,7 +14,6 @@ import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
-// Factory para criar o WeightViewModel com a DUM
 class WeightViewModelFactory(private val estimatedLmp: LocalDate?) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(WeightViewModel::class.java)) {
@@ -27,7 +26,7 @@ class WeightViewModelFactory(private val estimatedLmp: LocalDate?) : ViewModelPr
 
 @Composable
 fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
-    val homeViewModel: br.com.gestahub.ui.home.HomeViewModel = viewModel(key = user.uid)
+    val homeViewModel: br.com.gestahub.ui.home.HomeViewModel = viewModel()
     val appointmentsViewModel: AppointmentsViewModel = viewModel()
 
     val appointmentsUiState by appointmentsViewModel.uiState.collectAsState()
@@ -38,10 +37,22 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
     var showDeleteDialog by remember { mutableStateOf<Appointment?>(null) }
     var showClearDialog by remember { mutableStateOf<Appointment?>(null) }
 
+    // Este LaunchedEffect agora observa o user.uid.
+    // Ele será (re)executado sempre que o ID do usuário mudar.
     LaunchedEffect(key1 = user.uid) {
-        homeViewModel.listenToGestationalData(user.uid)
-        // --- NOVA LINHA ADICIONADA ---
-        homeViewModel.listenToAppointments(user.uid)
+        // Inicia o carregamento de dados para o usuário atual.
+        homeViewModel.listenToAllData(user.uid)
+        appointmentsViewModel.listenToData(user.uid)
+    }
+
+    // Este efeito é chamado quando GestaHubApp sai da tela (no logout).
+    // Ele garante que os listeners sejam limpos para evitar vazamentos de memória
+    // e carregamento de dados do usuário antigo.
+    DisposableEffect(Unit) {
+        onDispose {
+            homeViewModel.clearListeners()
+            appointmentsViewModel.clearListeners()
+        }
     }
 
     LaunchedEffect(appointmentsUiState.userMessage) {
@@ -53,8 +64,6 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
         }
     }
 
-    // O Scaffold foi movido para a MainScreen, mas os diálogos e snackbar
-    // ainda precisam de um host. Vamos envolvê-los aqui por enquanto.
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) {
