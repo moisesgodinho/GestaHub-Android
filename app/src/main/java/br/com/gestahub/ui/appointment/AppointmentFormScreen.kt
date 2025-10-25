@@ -1,15 +1,11 @@
-// Local: app/src/main/java/br/com/gestahub/ui/appointment/AppointmentFormScreen.kt
 package br.com.gestahub.ui.appointment
 
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.WatchLater
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,13 +14,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import br.com.gestahub.ui.components.form.DatePickerField
+import br.com.gestahub.ui.components.form.TimePickerField
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 private const val NOTES_MAX_LENGTH = 500
 
@@ -112,20 +104,18 @@ fun AppointmentFormScreen(
                     }
 
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            DatePickerField(
-                                label = "Data*",
-                                dateString = uiState.date,
-                                onDateSelected = { viewModel.onFieldChange(date = it) }
-                            )
-                        }
-                        Box(modifier = Modifier.weight(1f)) {
-                            TimePickerField(
-                                label = "Hora",
-                                timeString = uiState.time,
-                                onTimeSelected = { viewModel.onFieldChange(time = it) }
-                            )
-                        }
+                        DatePickerField(
+                            label = "Data*",
+                            dateString = uiState.date,
+                            onDateSelected = { viewModel.onFieldChange(date = it) },
+                            modifier = Modifier.weight(1f)
+                        )
+                        TimePickerField(
+                            label = "Hora",
+                            timeString = uiState.time,
+                            onTimeSelected = { viewModel.onFieldChange(time = it) },
+                            modifier = Modifier.weight(1f)
+                        )
                     }
 
                     OutlinedTextField(
@@ -194,159 +184,6 @@ fun AppointmentFormScreen(
                             )
                         } else {
                             Text("Salvar")
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DatePickerField(
-    label: String,
-    dateString: String,
-    onDateSelected: (String) -> Unit
-) {
-    var showDatePicker by remember { mutableStateOf(false) }
-    val displayFormatter = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale("pt", "BR")) }
-    val dbFormatter = remember { DateTimeFormatter.ISO_LOCAL_DATE }
-
-    val dateForDisplay = remember(dateString) {
-        if (dateString.isNotBlank()) {
-            try {
-                LocalDate.parse(dateString, dbFormatter).format(displayFormatter)
-            } catch (e: Exception) { "" }
-        } else { "" }
-    }
-
-    Box(modifier = Modifier.clickable { showDatePicker = true }) {
-        OutlinedTextField(
-            value = dateForDisplay,
-            onValueChange = {},
-            label = { Text(label) },
-            placeholder = { Text("DD/MM/AAAA") },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = false,
-            readOnly = true,
-            trailingIcon = {
-                Icon(Icons.Default.DateRange, contentDescription = "Abrir calendário")
-            },
-            colors = OutlinedTextFieldDefaults.colors(
-                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                disabledBorderColor = MaterialTheme.colorScheme.outline,
-                disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        )
-    }
-
-    if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = if (dateString.isNotBlank()) {
-                try {
-                    LocalDate.parse(dateString, dbFormatter).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                } catch (e: Exception) { Instant.now().toEpochMilli() }
-            } else { Instant.now().toEpochMilli() }
-        )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            // --- LINHA CORRIGIDA ---
-                            val selectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.of("UTC")).toLocalDate()
-                            onDateSelected(selectedDate.format(dbFormatter))
-                        }
-                        showDatePicker = false
-                    }
-                ) { Text("OK") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancelar") }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
-    }
-}
-
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TimePickerField(
-    label: String,
-    timeString: String,
-    onTimeSelected: (String) -> Unit
-) {
-    var showTimePicker by remember { mutableStateOf(false) }
-
-    Box(modifier = Modifier.clickable { showTimePicker = true }) {
-        OutlinedTextField(
-            value = timeString,
-            onValueChange = {},
-            label = { Text(label) },
-            placeholder = { Text("HH:MM") },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = false,
-            readOnly = true,
-            trailingIcon = {
-                Icon(Icons.Default.WatchLater, contentDescription = "Abrir seletor de hora")
-            },
-            colors = OutlinedTextFieldDefaults.colors(
-                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                disabledBorderColor = MaterialTheme.colorScheme.outline,
-                disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        )
-    }
-
-    if (showTimePicker) {
-        val time = if (timeString.isNotBlank()) {
-            runCatching { LocalTime.parse(timeString) }.getOrDefault(LocalTime.now())
-        } else {
-            LocalTime.now()
-        }
-        val timePickerState = rememberTimePickerState(
-            initialHour = time.hour,
-            initialMinute = time.minute,
-            is24Hour = true
-        )
-
-        AlertDialog(
-            onDismissRequest = { showTimePicker = false },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Surface(
-                shape = MaterialTheme.shapes.extraLarge,
-                tonalElevation = 6.dp
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    TimePicker(state = timePickerState)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        TextButton(onClick = { showTimePicker = false }) {
-                            Text("Cancelar")
-                        }
-                        TextButton(
-                            onClick = {
-                                val selectedTime = String.format(Locale.getDefault(), "%02d:%02d", timePickerState.hour, timePickerState.minute)
-                                onTimeSelected(selectedTime)
-                                showTimePicker = false
-                            }
-                        ) {
-                            Text("OK")
                         }
                     }
                 }

@@ -1,12 +1,10 @@
 package br.com.gestahub.ui.calculator
 
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,11 +17,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import br.com.gestahub.ui.components.form.DatePickerField
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -126,6 +120,7 @@ fun InfoSection() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DumCalculator(
     viewModel: CalculatorViewModel,
@@ -165,6 +160,7 @@ fun DumCalculator(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UltrasoundCalculator(
     viewModel: CalculatorViewModel,
@@ -221,80 +217,6 @@ fun UltrasoundCalculator(
             ) {
                 if (isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp)) else Text("Salvar")
             }
-        }
-    }
-}
-
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DatePickerField(
-    label: String,
-    dateString: String,
-    onDateSelected: (String) -> Unit
-) {
-    var showDatePicker by remember { mutableStateOf(false) }
-    val displayFormatter = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale("pt", "BR")) }
-    val dbFormatter = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale("pt", "BR")) }
-
-    val dateForDisplay = remember(dateString) {
-        if (dateString.isNotBlank()) {
-            try {
-                LocalDate.parse(dateString, dbFormatter).format(displayFormatter)
-            } catch (e: Exception) { "" }
-        } else { "" }
-    }
-
-    Box(modifier = Modifier.clickable { showDatePicker = true }) {
-        OutlinedTextField(
-            value = dateForDisplay,
-            onValueChange = {},
-            label = { Text(label) },
-            placeholder = { Text("DD/MM/AAAA") },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = false,
-            readOnly = true,
-            trailingIcon = {
-                Icon(Icons.Default.DateRange, contentDescription = "Abrir calendário")
-            },
-            colors = OutlinedTextFieldDefaults.colors(
-                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                disabledBorderColor = MaterialTheme.colorScheme.outline,
-                disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        )
-    }
-
-    if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = if (dateString.isNotBlank()) {
-                try {
-                    LocalDate.parse(dateString, dbFormatter).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                } catch (e: Exception) { Instant.now().toEpochMilli() }
-            } else { Instant.now().toEpochMilli() }
-        )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            // --- CORREÇÃO APLICADA AQUI ---
-                            // Forçamos a conversão da data para o fuso UTC, ignorando o fuso do celular.
-                            val selectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.of("UTC")).toLocalDate()
-                            onDateSelected(selectedDate.format(dbFormatter))
-                        }
-                        showDatePicker = false
-                    }
-                ) { Text("OK") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancelar") }
-            }
-        ) {
-            DatePicker(state = datePickerState)
         }
     }
 }

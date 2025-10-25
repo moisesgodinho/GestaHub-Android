@@ -1,23 +1,21 @@
+// Local: app/src/main/java/br/com/gestahub/ui/profile/EditProfileScreen.kt
 package br.com.gestahub.ui.profile
 
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import br.com.gestahub.ui.components.form.DatePickerField
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,22 +26,6 @@ fun EditProfileScreen(
 ) {
     val uiState by editProfileViewModel.uiState.collectAsState()
     val context = LocalContext.current
-
-    var showDatePicker by remember { mutableStateOf(false) }
-    val displayFormatter = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale("pt", "BR")) }
-    val dbFormatter = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale("pt", "BR")) }
-
-    val birthDateForDisplay = remember(uiState.birthDate) {
-        if (uiState.birthDate.isNotBlank()) {
-            try {
-                LocalDate.parse(uiState.birthDate, dbFormatter).format(displayFormatter)
-            } catch (e: Exception) {
-                ""
-            }
-        } else {
-            ""
-        }
-    }
 
     LaunchedEffect(uiState.saveSuccess) {
         if (uiState.saveSuccess) {
@@ -85,30 +67,11 @@ fun EditProfileScreen(
                         singleLine = true
                     )
 
-                    // --- CORREÇÃO APLICADA AQUI ---
-                    // Envolvemos o TextField em um Box que captura o clique.
-                    Box(modifier = Modifier.clickable { showDatePicker = true }) {
-                        OutlinedTextField(
-                            value = birthDateForDisplay,
-                            onValueChange = { },
-                            label = { Text("Data de Nascimento") },
-                            placeholder = { Text("DD/MM/AAAA") },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = false, // Desabilitamos o campo
-                            readOnly = true,
-                            trailingIcon = {
-                                Icon(Icons.Default.DateRange, contentDescription = "Abrir calendário")
-                            },
-                            // Personalizamos as cores para que não pareça "apagado"
-                            colors = OutlinedTextFieldDefaults.colors(
-                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                                disabledBorderColor = MaterialTheme.colorScheme.outline,
-                                disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        )
-                    }
+                    DatePickerField(
+                        label = "Data de Nascimento",
+                        dateString = uiState.birthDate,
+                        onDateSelected = { editProfileViewModel.onBirthDateChange(it) }
+                    )
                 }
 
                 Row(
@@ -134,43 +97,6 @@ fun EditProfileScreen(
                     }
                 }
             }
-        }
-    }
-
-    if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = if (uiState.birthDate.isNotBlank()) {
-                try {
-                    LocalDate.parse(uiState.birthDate, dbFormatter).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                } catch (e: Exception) {
-                    Instant.now().toEpochMilli()
-                }
-            } else {
-                Instant.now().toEpochMilli()
-            }
-        )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            val selectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.of("UTC")).toLocalDate()
-                            editProfileViewModel.onBirthDateChange(selectedDate.format(dbFormatter))
-                        }
-                        showDatePicker = false
-                    }
-                ) {
-                    Text("OK")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancelar")
-                }
-            }
-        ) {
-            DatePicker(state = datePickerState)
         }
     }
 }

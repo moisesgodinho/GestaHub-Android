@@ -1,12 +1,11 @@
+// Local: app/src/main/java/br/com/gestahub/ui/weight/WeightEntryForm.kt
 package br.com.gestahub.ui.weight
 
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -14,6 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import br.com.gestahub.ui.components.form.DatePickerField
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -60,9 +60,18 @@ fun WeightEntryFormScreen(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                val formatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
                 DatePickerField(
-                    date = uiState.date,
-                    onDateChange = { viewModel.onDateChange(it) }
+                    label = "Data",
+                    dateString = formatter.format(uiState.date),
+                    onDateSelected = { dateString ->
+                        formatter.parse(dateString)?.let { viewModel.onDateChange(it) }
+                    },
+                    selectableDates = object : SelectableDates {
+                        override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                            return utcTimeMillis <= System.currentTimeMillis()
+                        }
+                    }
                 )
                 OutlinedTextField(
                     value = uiState.weight,
@@ -84,68 +93,6 @@ fun WeightEntryFormScreen(
                     Text("Salvar")
                 }
             }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-object PastOrPresentSelectableDates: SelectableDates {
-    override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-        return utcTimeMillis <= System.currentTimeMillis()
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DatePickerField(date: Date, onDateChange: (Date) -> Unit) {
-    var showDatePicker by remember { mutableStateOf(false) }
-
-    // --- CORREÇÃO APLICADA AQUI ---
-    // O formatador de data agora é configurado para usar o fuso horário UTC.
-    val formatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).apply {
-        timeZone = TimeZone.getTimeZone("UTC")
-    }
-
-    Box(modifier = Modifier.clickable { showDatePicker = true }) {
-        OutlinedTextField(
-            value = formatter.format(date),
-            onValueChange = {},
-            label = { Text("Data") },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = false,
-            readOnly = true,
-            trailingIcon = {
-                Icon(Icons.Default.DateRange, contentDescription = "Selecionar data")
-            },
-            colors = OutlinedTextFieldDefaults.colors(
-                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                disabledBorderColor = MaterialTheme.colorScheme.outline
-            )
-        )
-    }
-
-    if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = date.time,
-            selectableDates = PastOrPresentSelectableDates
-        )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let {
-                        val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
-                        calendar.timeInMillis = it
-                        onDateChange(calendar.time)
-                    }
-                    showDatePicker = false
-                }) { Text("OK") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancelar") }
-            }
-        ) {
-            DatePicker(state = datePickerState)
         }
     }
 }

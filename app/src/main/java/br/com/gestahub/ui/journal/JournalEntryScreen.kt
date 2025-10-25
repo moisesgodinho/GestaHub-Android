@@ -1,13 +1,12 @@
+// Local: app/src/main/java/br/com/gestahub/ui/journal/JournalEntryScreen.kt
 package br.com.gestahub.ui.journal
 
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,11 +15,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import java.time.Instant
+import br.com.gestahub.ui.components.form.DatePickerField
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -33,44 +30,20 @@ fun JournalEntryScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    var showDatePicker by remember { mutableStateOf(false) }
+    val selectableDates = remember(estimatedLmp) {
+        object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                val selectedDate = java.time.Instant.ofEpochMilli(utcTimeMillis)
+                    .atZone(java.time.ZoneId.of("UTC")).toLocalDate()
 
-    if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = LocalDate.parse(uiState.entry.date)
-                .atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { millis ->
-                        val selectedDate = Instant.ofEpochMilli(millis).atZone(ZoneId.of("UTC")).toLocalDate()
-                        val today = LocalDate.now()
+                val isAfterToday = selectedDate.isAfter(LocalDate.now())
+                val isBeforeLimit = estimatedLmp?.let {
+                    val limit = it.minusMonths(2)
+                    selectedDate.isBefore(limit)
+                } ?: false
 
-                        if (selectedDate.isAfter(today)) {
-                            Toast.makeText(context, "A data não pode ser no futuro.", Toast.LENGTH_SHORT).show()
-                            return@TextButton
-                        }
-
-                        estimatedLmp?.let {
-                            val limitDate = it.minusMonths(2)
-                            if (selectedDate.isBefore(limitDate)) {
-                                Toast.makeText(context, "Data muito antiga. Máximo de 2 meses antes da gestação.", Toast.LENGTH_LONG).show()
-                                return@TextButton
-                            }
-                        }
-
-                        showDatePicker = false
-                        onDateChange(selectedDate.format(DateTimeFormatter.ISO_LOCAL_DATE))
-                    }
-                }) { Text("OK") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancelar") }
+                return !isAfterToday && !isBeforeLimit
             }
-        ) {
-            DatePicker(state = datePickerState)
         }
     }
 
@@ -137,7 +110,11 @@ fun JournalEntryScreen(
                 DatePickerField(
                     label = "Data do Registro",
                     dateString = uiState.entry.date,
-                    onClick = { showDatePicker = true }
+                    onDateSelected = { newDate ->
+                        // Navega para a mesma tela com a nova data
+                        onDateChange(newDate)
+                    },
+                    selectableDates = selectableDates
                 )
 
                 SectionTitle("Como você está se sentindo hoje?")
@@ -208,44 +185,4 @@ fun SectionTitle(title: String) {
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier.padding(bottom = 12.dp)
     )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DatePickerField(
-    label: String,
-    dateString: String,
-    onClick: () -> Unit
-) {
-    val displayFormatter = remember { DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy", Locale("pt", "BR")) }
-    val dbFormatter = remember { DateTimeFormatter.ofPattern("yyyy-MM-dd") }
-
-    val dateForDisplay = remember(dateString) {
-        if (dateString.isNotBlank()) {
-            try {
-                LocalDate.parse(dateString, dbFormatter).format(displayFormatter)
-            } catch (e: Exception) { "" }
-        } else { "" }
-    }
-
-    Box(modifier = Modifier.clickable(onClick = onClick)) {
-        OutlinedTextField(
-            value = dateForDisplay,
-            onValueChange = {},
-            label = { Text(label) },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = false,
-            readOnly = true,
-            trailingIcon = {
-                Icon(Icons.Default.DateRange, contentDescription = "Selecionar data")
-            },
-            colors = OutlinedTextFieldDefaults.colors(
-                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                disabledBorderColor = MaterialTheme.colorScheme.outline,
-                disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        )
-    }
 }
