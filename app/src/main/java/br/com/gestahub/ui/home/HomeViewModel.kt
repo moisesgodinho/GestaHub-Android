@@ -1,6 +1,7 @@
 package br.com.gestahub.ui.home
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import br.com.gestahub.data.AppointmentRepository
 import br.com.gestahub.data.GestationalProfileRepository
 import br.com.gestahub.data.WeeklyInfo
@@ -10,9 +11,8 @@ import br.com.gestahub.ui.appointment.Appointment
 import br.com.gestahub.ui.appointment.ManualAppointment
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.ktx.toObject
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -51,8 +51,44 @@ class HomeViewModel : ViewModel() {
     private var appointmentsListener: ListenerRegistration? = null
     private val calculateGestationalInfoUseCase = CalculateGestationalInfoUseCase()
 
+    private val _gestationalInfo = MutableStateFlow<GestationalInfo?>(null)
+    private val _upcomingAppointments = MutableStateFlow<List<Appointment>>(emptyList())
+    private val _hasGestationalData = MutableStateFlow<Boolean?>(null)
+
     private val _uiState = MutableStateFlow(UiState())
     val uiState = _uiState.asStateFlow()
+
+    init {
+        // Combina os fluxos de dados em um único estado de UI
+        viewModelScope.launch {
+            combine(_gestationalInfo, _upcomingAppointments, _hasGestationalData) { info, appointments, hasData ->
+                when {
+                    hasData == false -> UiState(dataState = GestationalDataState.NoData)
+                    info != null -> {
+                        val gestationalData = GestationalData(
+                            lmp = info.estimatedLmp?.toString(), // Aproximação, usado para reedição
+                        )
+                        UiState(
+                            dataState = GestationalDataState.HasData(
+                                gestationalWeeks = info.gestationalWeeks,
+                                gestationalDays = info.gestationalDays,
+                                dueDate = info.dueDate,
+                                countdownWeeks = info.countdownWeeks,
+                                countdownDays = info.countdownDays,
+                                gestationalData = gestationalData,
+                                weeklyInfo = info.weeklyInfo,
+                                estimatedLmp = info.estimatedLmp,
+                                upcomingAppointments = appointments
+                            )
+                        )
+                    }
+                    else -> UiState(dataState = GestationalDataState.Loading)
+                }
+            }.collect {
+                _uiState.value = it
+            }
+        }
+    }
 
     fun listenToAllData(userId: String) {
         listenToGestationalData(userId)
@@ -61,83 +97,46 @@ class HomeViewModel : ViewModel() {
 
     private fun listenToGestationalData(userId: String) {
         gestationalDataListener?.remove()
-        gestationalDataListener = gestationalProfileRepository.getGestationalProfileFlow(userId).addSnapshotListener { snapshot, error ->
-            if (error != null || snapshot == null || !snapshot.exists()) {
-                _uiState.update { it.copy(dataState = GestationalDataState.NoData) }
+        gestationalDataListener = gestationalProfileRepository.getGestationalProfileFlow(userId).addSnapshotListener { snapshot, _ ->
+            if (snapshot == null || !snapshot.exists()) {
+                _hasGestationalData.value = false
+                _gestationalInfo.value = null
                 return@addSnapshotListener
             }
 
+            _hasGestationalData.value = true
             val profile = snapshot.get("gestationalProfile") as? Map<*, *>
-            val lmpString = profile?.get("lmp") as? String
-            val ultrasoundMap = profile?.get("ultrasound") as? Map<*, *>
-
             val rawData = GestationalData(
-                lmp = lmpString,
-                ultrasoundExamDate = ultrasoundMap?.get("examDate") as? String,
-                weeksAtExam = ultrasoundMap?.get("weeksAtExam") as? String,
-                daysAtExam = ultrasoundMap?.get("daysAtExam") as? String
+                lmp = profile?.get("lmp") as? String,
+                ultrasoundExamDate = (profile?.get("ultrasound") as? Map<*, *>)?.get("examDate") as? String,
+                weeksAtExam = (profile?.get("ultrasound") as? Map<*, *>)?.get("weeksAtExam") as? String,
+                daysAtExam = (profile?.get("ultrasound") as? Map<*, *>)?.get("daysAtExam") as? String
             )
-
-            processGestationalData(rawData)
+            _gestationalInfo.value = calculateGestationalInfoUseCase(rawData)
         }
     }
 
     private fun listenToAppointments(userId: String) {
         appointmentsListener?.remove()
-        appointmentsListener = appointmentRepository.getAppointmentsFlow(userId).addSnapshotListener { snapshot, error ->
-            if (error != null || snapshot == null) {
-                return@addSnapshotListener
-            }
+        appointmentsListener = appointmentRepository.getAppointmentsFlow(userId).addSnapshotListener { snapshot, _ ->
+            if (snapshot == null) return@addSnapshotListener
 
             val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
-
             val appointments = snapshot.documents.mapNotNull { it.toObject<ManualAppointment>() }
                 .filter { it.date != null && it.date >= today && !it.done }
                 .sortedBy { it.date }
                 .take(3)
-
-            val currentState = _uiState.value.dataState
-            if (currentState is GestationalDataState.HasData) {
-                _uiState.update {
-                    it.copy(
-                        dataState = currentState.copy(upcomingAppointments = appointments)
-                    )
-                }
-            }
-        }
-    }
-
-    private fun processGestationalData(data: GestationalData) {
-        val gestationalInfo: GestationalInfo? = calculateGestationalInfoUseCase(data)
-
-        if (gestationalInfo == null) {
-            _uiState.update { it.copy(dataState = GestationalDataState.NoData) }
-            return
-        }
-
-        val currentAppointments = (_uiState.value.dataState as? GestationalDataState.HasData)?.upcomingAppointments ?: emptyList()
-
-        _uiState.update {
-            it.copy(
-                dataState = GestationalDataState.HasData(
-                    gestationalWeeks = gestationalInfo.gestationalWeeks,
-                    gestationalDays = gestationalInfo.gestationalDays,
-                    dueDate = gestationalInfo.dueDate,
-                    countdownWeeks = gestationalInfo.countdownWeeks,
-                    countdownDays = gestationalInfo.countdownDays,
-                    gestationalData = data,
-                    weeklyInfo = gestationalInfo.weeklyInfo,
-                    estimatedLmp = gestationalInfo.estimatedLmp,
-                    upcomingAppointments = currentAppointments
-                )
-            )
+            _upcomingAppointments.value = appointments
         }
     }
 
     fun clearListeners() {
         gestationalDataListener?.remove()
         appointmentsListener?.remove()
-        _uiState.value = UiState() // Reseta o estado para Loading
+        _gestationalInfo.value = null
+        _upcomingAppointments.value = emptyList()
+        _hasGestationalData.value = null
+        _uiState.value = UiState()
     }
 
     override fun onCleared() {
