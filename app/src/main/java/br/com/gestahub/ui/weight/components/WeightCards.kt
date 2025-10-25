@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,7 +32,6 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.abs
 
-// --- Conteúdo de ChartCard.kt ---
 @Composable
 fun ChartCard(
     weightEntries: List<SimpleChartEntry>,
@@ -63,7 +63,6 @@ fun ChartCard(
     }
 }
 
-// --- Conteúdo de HistoryCard.kt com ANIMAÇÃO ---
 @Composable
 fun HistoryCard(
     uiState: WeightUiState,
@@ -73,10 +72,8 @@ fun HistoryCard(
     var showDialog by remember { mutableStateOf(false) }
     var entryToDelete by remember { mutableStateOf<WeightEntry?>(null) }
 
-    // Estado para controlar a visibilidade dos itens da lista
     var itemsVisible by remember { mutableStateOf(false) }
     LaunchedEffect(uiState.entries) {
-        // Ativa a animação sempre que a lista de entradas for (re)carregada
         itemsVisible = true
     }
 
@@ -125,7 +122,6 @@ fun HistoryCard(
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     uiState.entries.forEachIndexed { index, entry ->
-                        // Envolve cada item com AnimatedVisibility
                         AnimatedVisibility(
                             visible = itemsVisible,
                             enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = index * 100))
@@ -155,7 +151,7 @@ fun HistoryCard(
 fun InitialProfilePrompt(onAddClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
@@ -163,20 +159,31 @@ fun InitialProfilePrompt(onAddClick: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            Icon(
+                imageVector = Icons.Outlined.Analytics,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
-                "Vamos começar!",
+                "Acompanhe sua evolução!",
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                "Para calcular seu IMC e acompanhar seu ganho de peso, precisamos da sua altura e peso antes da gestação.",
+                "Para calcularmos seu IMC e as recomendações de ganho de peso, precisamos que você informe sua altura e seu peso antes de engravidar.",
                 style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(24.dp))
-            Button(onClick = onAddClick) {
-                Text("Adicionar Meus Dados")
+            Button(
+                onClick = onAddClick,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Configurar Perfil de Peso")
             }
         }
     }
@@ -254,18 +261,26 @@ private fun EmptyState() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(24.dp),
+            .padding(vertical = 32.dp, horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        Icon(
+            imageVector = Icons.Outlined.Analytics,
+            contentDescription = null,
+            modifier = Modifier.size(40.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "Nenhum registro de peso",
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Toque no botão '+' para adicionar seu primeiro registro.",
+            text = "Toque no botão '+' no canto da tela para adicionar seu primeiro registro de peso e começar a acompanhar sua evolução.",
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -273,7 +288,6 @@ private fun EmptyState() {
     }
 }
 
-// --- Conteúdo de InfoCard.kt ---
 @Composable
 fun InfoCard(
     label: String,
@@ -315,7 +329,6 @@ fun InfoCard(
     }
 }
 
-// --- Conteúdo de ProfileCard.kt ---
 @Composable
 fun ProfileCard(profile: WeightProfile, isDarkTheme: Boolean, onEditClick: () -> Unit) {
     Card(
@@ -361,7 +374,6 @@ fun ProfileCard(profile: WeightProfile, isDarkTheme: Boolean, onEditClick: () ->
     }
 }
 
-// --- Conteúdo de SummaryCard.kt ---
 @Composable
 fun SummaryCard(
     initialBmi: Double,
@@ -388,23 +400,10 @@ fun SummaryCard(
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        InfoCard(label = "IMC Inicial", value = String.format("%.1f", initialBmi), isDarkTheme = isDarkTheme)
-                    }
-                    Box(modifier = Modifier.weight(1f)) {
-                        InfoCard(label = "IMC Atual", value = String.format("%.1f", currentBmi), isDarkTheme = isDarkTheme)
-                    }
-                    Box(modifier = Modifier.weight(1f)) {
-                        InfoCard(
-                            label = gainOrLossText,
-                            value = "${String.format("%.1f", abs(totalGain))} kg",
-                            isDarkTheme = isDarkTheme,
-                            valueColor = totalGainColor
-                        )
-                    }
-                    Box(modifier = Modifier.weight(1f)) {
-                        InfoCard(label = "Meta de Ganho", value = gainGoal, isDarkTheme = isDarkTheme)
-                    }
+                    Box(modifier = Modifier.weight(1f)) { InfoCard(label = "IMC Inicial", value = String.format("%.1f", initialBmi), isDarkTheme = isDarkTheme) }
+                    Box(modifier = Modifier.weight(1f)) { InfoCard(label = "IMC Atual", value = String.format("%.1f", currentBmi), isDarkTheme = isDarkTheme) }
+                    Box(modifier = Modifier.weight(1f)) { InfoCard(label = gainOrLossText, value = "${String.format("%.1f", abs(totalGain))} kg", isDarkTheme = isDarkTheme, valueColor = totalGainColor) }
+                    Box(modifier = Modifier.weight(1f)) { InfoCard(label = "Meta de Ganho", value = gainGoal, isDarkTheme = isDarkTheme) }
                 }
             } else {
                 Column(
@@ -415,28 +414,15 @@ fun SummaryCard(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            InfoCard(label = "IMC Inicial", value = String.format("%.1f", initialBmi), isDarkTheme = isDarkTheme)
-                        }
-                        Box(modifier = Modifier.weight(1f)) {
-                            InfoCard(label = "IMC Atual", value = String.format("%.1f", currentBmi), isDarkTheme = isDarkTheme)
-                        }
+                        Box(modifier = Modifier.weight(1f)) { InfoCard(label = "IMC Inicial", value = String.format("%.1f", initialBmi), isDarkTheme = isDarkTheme) }
+                        Box(modifier = Modifier.weight(1f)) { InfoCard(label = "IMC Atual", value = String.format("%.1f", currentBmi), isDarkTheme = isDarkTheme) }
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            InfoCard(
-                                label = gainOrLossText,
-                                value = "${String.format("%.1f", abs(totalGain))} kg",
-                                isDarkTheme = isDarkTheme,
-                                valueColor = totalGainColor
-                            )
-                        }
-                        Box(modifier = Modifier.weight(1f)) {
-                            InfoCard(label = "Meta de Ganho", value = gainGoal, isDarkTheme = isDarkTheme)
-                        }
+                        Box(modifier = Modifier.weight(1f)) { InfoCard(label = gainOrLossText, value = "${String.format("%.1f", abs(totalGain))} kg", isDarkTheme = isDarkTheme, valueColor = totalGainColor) }
+                        Box(modifier = Modifier.weight(1f)) { InfoCard(label = "Meta de Ganho", value = gainGoal, isDarkTheme = isDarkTheme) }
                     }
                 }
             }
@@ -444,7 +430,6 @@ fun SummaryCard(
     }
 }
 
-// --- Conteúdo de WeightGainRecommendationsCard.kt ---
 enum class BmiCategory {
     LOW, NORMAL, OVERWEIGHT, OBESE
 }
@@ -486,34 +471,10 @@ fun WeightGainRecommendationsCard(initialBmi: Double, isDarkTheme: Boolean) {
             )
             Spacer(modifier = Modifier.height(16.dp))
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                RecommendationItem(
-                    category = "Baixo Peso",
-                    imcRange = "IMC < 18.5",
-                    recommendedGain = "12.5 a 18 kg",
-                    isDarkTheme = isDarkTheme,
-                    isHighlighted = currentCategory == BmiCategory.LOW
-                )
-                RecommendationItem(
-                    category = "Peso Adequado",
-                    imcRange = "IMC 18.5 - 24.9",
-                    recommendedGain = "11.5 a 16 kg",
-                    isDarkTheme = isDarkTheme,
-                    isHighlighted = currentCategory == BmiCategory.NORMAL
-                )
-                RecommendationItem(
-                    category = "Sobrepeso",
-                    imcRange = "IMC 25.0 - 29.9",
-                    recommendedGain = "7 a 11.5 kg",
-                    isDarkTheme = isDarkTheme,
-                    isHighlighted = currentCategory == BmiCategory.OVERWEIGHT
-                )
-                RecommendationItem(
-                    category = "Obesidade",
-                    imcRange = "IMC ≥ 30.0",
-                    recommendedGain = "5 a 9 kg",
-                    isDarkTheme = isDarkTheme,
-                    isHighlighted = currentCategory == BmiCategory.OBESE
-                )
+                RecommendationItem("Baixo Peso", "IMC < 18.5", "12.5 a 18 kg", isDarkTheme, currentCategory == BmiCategory.LOW)
+                RecommendationItem("Peso Adequado", "IMC 18.5 - 24.9", "11.5 a 16 kg", isDarkTheme, currentCategory == BmiCategory.NORMAL)
+                RecommendationItem("Sobrepeso", "IMC 25.0 - 29.9", "7 a 11.5 kg", isDarkTheme, currentCategory == BmiCategory.OVERWEIGHT)
+                RecommendationItem("Obesidade", "IMC ≥ 30.0", "5 a 9 kg", isDarkTheme, currentCategory == BmiCategory.OBESE)
             }
         }
     }
@@ -527,45 +488,21 @@ private fun RecommendationItem(
     isDarkTheme: Boolean,
     isHighlighted: Boolean
 ) {
-    val containerColor = if (isDarkTheme) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        MaterialTheme.colorScheme.surfaceVariant
-    }
-    val categoryStyle = if (isHighlighted) {
-        SpanStyle(fontWeight = FontWeight.SemiBold, color = Rose500)
-    } else {
-        SpanStyle(fontWeight = FontWeight.SemiBold)
-    }
+    val containerColor = if (isDarkTheme) { MaterialTheme.colorScheme.primaryContainer } else { MaterialTheme.colorScheme.surfaceVariant }
+    val categoryStyle = if (isHighlighted) { SpanStyle(fontWeight = FontWeight.SemiBold, color = Rose500) } else { SpanStyle(fontWeight = FontWeight.SemiBold) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
-        Row(
-            modifier = Modifier.height(IntrinsicSize.Min)
-        ) {
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .fillMaxHeight()
-                    .background(if (isHighlighted) Rose500 else Color.Transparent)
-            )
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 12.dp, end = 16.dp, top = 12.dp, bottom = 12.dp)
-            ) {
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            Box(modifier = Modifier.width(4.dp).fillMaxHeight().background(if (isHighlighted) Rose500 else Color.Transparent))
+            Column(modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 16.dp, top = 12.dp, bottom = 12.dp)) {
                 Text(
                     buildAnnotatedString {
-                        withStyle(style = categoryStyle) {
-                            append("$category ")
-                        }
-                        withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.onSurfaceVariant)) {
-                            append("($imcRange)")
-                        }
+                        withStyle(style = categoryStyle) { append("$category ") }
+                        withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.onSurfaceVariant)) { append("($imcRange)") }
                     },
                     style = MaterialTheme.typography.titleMedium
                 )

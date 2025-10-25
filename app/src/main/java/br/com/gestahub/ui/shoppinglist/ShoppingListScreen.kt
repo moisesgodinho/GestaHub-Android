@@ -8,6 +8,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Restore
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -198,16 +201,24 @@ fun ItemRow(
     onRemove: () -> Unit
 ) {
     val textColor = if (isChecked) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+    val haptic = LocalHapticFeedback.current
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 4.dp)
+            .clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onToggle()
+            },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
             checked = isChecked,
-            onCheckedChange = { onToggle() },
+            onCheckedChange = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onToggle()
+            },
             colors = CheckboxDefaults.colors(
                 checkedColor = MaterialTheme.colorScheme.secondary,
                 uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -219,17 +230,17 @@ fun ItemRow(
             text = item.label,
             style = MaterialTheme.typography.bodyLarge,
             color = textColor,
-            // 2. CORREÇÃO VISUAL: Removido o 'textDecoration'
             modifier = Modifier.weight(1f)
         )
-
-            IconButton(onClick = onRemove) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Remover Item",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
+        IconButton(onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onRemove()
+        }) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Remover Item",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }

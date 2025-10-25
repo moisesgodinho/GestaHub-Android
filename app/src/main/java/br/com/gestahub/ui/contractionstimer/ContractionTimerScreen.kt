@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.outlined.Timer // <- NOVO IMPORT
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -48,16 +51,14 @@ fun ContractionTimerScreen(
             )
         }
     ) { paddingValues ->
-        // V ALTERAÇÃO AQUI V
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(16.dp) // Adiciona padding em todos os lados do conteúdo
+            contentPadding = PaddingValues(16.dp)
         ) {
-            // ^ ALTERAÇÃO AQUI ^
             item {
                 TimerCard(
                     timer = timer,
@@ -81,12 +82,15 @@ fun ContractionTimerScreen(
                 )
             }
 
-            if (contractions.isNotEmpty()) {
-                item {
+            // --- LÓGICA ATUALIZADA AQUI ---
+            item {
+                if (contractions.isNotEmpty()) {
                     HistoryCard(
                         contractions = contractions,
                         onDeleteRequest = { contractionToDelete = it }
                     )
+                } else {
+                    EmptyHistoryState() // Mostra o estado vazio se não houver contrações
                 }
             }
         }
@@ -105,7 +109,46 @@ fun ContractionTimerScreen(
     }
 }
 
+// --- NOVO COMPONENT ADICIONADO ---
+@Composable
+fun EmptyHistoryState() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 32.dp, horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Timer,
+                contentDescription = null,
+                modifier = Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Nenhum registro ainda",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Quando você cronometrar suas contrações, o histórico completo aparecerá aqui.",
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
 
+// ... O restante do código do arquivo permanece o mesmo
 @Composable
 fun HistoryCard(
     contractions: List<Contraction>,
@@ -177,6 +220,8 @@ fun TimerCard(
     lastContraction: Contraction?,
     onStartStop: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -200,7 +245,10 @@ fun TimerCard(
                 color = MaterialTheme.colorScheme.primary
             )
             Button(
-                onClick = onStartStop,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onStartStop()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp)

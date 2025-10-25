@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import br.com.gestahub.ui.components.ConfirmationDialog
 import br.com.gestahub.ui.components.Header
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import br.com.gestahub.ui.theme.Rose500
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -258,6 +260,8 @@ fun ActiveSessionScreen(
     onIncrementClick: () -> Unit,
     onStopClick: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -289,7 +293,10 @@ fun ActiveSessionScreen(
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Button(
-                onClick = onIncrementClick,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onIncrementClick()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp),

@@ -9,6 +9,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Restore
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -236,15 +238,24 @@ fun ChecklistItem(
     onToggle: () -> Unit,
     onRemove: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current // Obtém a instância do feedback tátil
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 4.dp)
+            .clickable { // Adicionamos o clickable em toda a linha para uma melhor UX
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onToggle()
+            },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
             checked = isChecked,
-            onCheckedChange = { onToggle() },
+            onCheckedChange = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onToggle()
+            },
             colors = CheckboxDefaults.colors(
                 checkedColor = MaterialTheme.colorScheme.secondary,
                 uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -257,7 +268,10 @@ fun ChecklistItem(
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f)
         )
-        IconButton(onClick = onRemove) {
+        IconButton(onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onRemove()
+        }) {
             Icon(
                 imageVector = Icons.Default.Delete,
                 contentDescription = "Remover Item",
