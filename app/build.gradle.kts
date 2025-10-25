@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.gms.google.services)
+    alias(libs.plugins.hilt.android.plugin)
+    id("kotlin-kapt") // <-- CORREÇÃO: Usar o ID direto para evitar conflito
 }
 
 android {
@@ -31,7 +33,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-        // --- HABILITAR O DESUGARING AQUI ---
         isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
@@ -40,10 +41,13 @@ android {
     buildFeatures {
         compose = true
     }
+    // Adicione esta seção para o Kapt funcionar
+    kapt {
+        correctErrorTypes = true
+    }
 }
 
 dependencies {
-    // --- DEPENDÊNCIA DO DESUGARING ADICIONADA AQUI ---
     coreLibraryDesugaring(libs.android.desugarJdkLibs)
 
     // Firebase Bill of Materials (BOM)
@@ -72,7 +76,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
 
-    // Dependências de Teste
+    // Teste
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -81,13 +85,18 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
+    // Outras
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.kotlinx.coroutines.playservices)
     implementation(libs.androidx.emoji2)
+    implementation(libs.androidx.work.runtime.ktx)
 
-
-    implementation(libs.androidx.work.runtime.ktx) // <-- ADICIONE DESTA FORMA
+    // Accompanist para Animações
     implementation(libs.google.accompanist.navigation.animation)
+
+    // Hilt Dependencies
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.compiler) // Esta linha agora funcionará
 }
