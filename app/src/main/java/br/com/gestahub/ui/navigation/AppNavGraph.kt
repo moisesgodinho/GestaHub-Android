@@ -1,6 +1,8 @@
 // Local: app/src/main/java/br/com/gestahub/ui/navigation/AppNavGraph.kt
 package br.com.gestahub.ui.navigation
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,8 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import br.com.gestahub.ui.appointment.AppointmentFormScreen
@@ -38,15 +38,18 @@ import br.com.gestahub.ui.medicationtracker.MedicationViewModel
 import br.com.gestahub.ui.medicationtracker.MedicationViewModelFactory
 import br.com.gestahub.ui.more.MoreScreen
 import br.com.gestahub.ui.movementcounter.MovementCounterScreen
-import br.com.gestahub.ui.onboarding.OnboardingScreen // <- NOVO IMPORT
+import br.com.gestahub.ui.onboarding.OnboardingScreen
 import br.com.gestahub.ui.profile.EditProfileScreen
 import br.com.gestahub.ui.profile.ProfileScreen
 import br.com.gestahub.ui.shoppinglist.ShoppingListScreen
 import br.com.gestahub.ui.weight.WeightEntryFormScreen
 import br.com.gestahub.ui.weight.WeightProfileFormScreen
 import br.com.gestahub.ui.weight.WeightScreen
+import com.google.accompanist.navigation.animation.AnimatedNavHost
+import com.google.accompanist.navigation.animation.composable
 import java.time.LocalDate
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
@@ -61,39 +64,46 @@ fun AppNavGraph(
     val appointmentsUiState by appointmentsViewModel.uiState.collectAsState()
     val dataState = homeUiState.dataState
 
-    NavHost(
+    val mainScreenEnterTransition = slideInHorizontally(initialOffsetX = { 300 }, animationSpec = tween(300)) + fadeIn(animationSpec = tween(300))
+    val mainScreenExitTransition = slideOutHorizontally(targetOffsetX = { -300 }, animationSpec = tween(300)) + fadeOut(animationSpec = tween(300))
+    val mainScreenPopEnterTransition = slideInHorizontally(initialOffsetX = { -300 }, animationSpec = tween(300)) + fadeIn(animationSpec = tween(300))
+    val mainScreenPopExitTransition = slideOutHorizontally(targetOffsetX = { 300 }, animationSpec = tween(300)) + fadeOut(animationSpec = tween(300))
+
+    val internalScreenEnterTransition = slideInVertically(initialOffsetY = { it }, animationSpec = tween(400)) + fadeIn(animationSpec = tween(400))
+    val internalScreenExitTransition = slideOutVertically(targetOffsetY = { it }, animationSpec = tween(400)) + fadeOut(animationSpec = tween(400))
+
+    AnimatedNavHost(
         navController = navController,
-        startDestination = "decision_route", // <- MUDANÇA: Ponto de partida agora é a rota de decisão
-        modifier = Modifier.fillMaxSize()
+        startDestination = "decision_route",
+        modifier = Modifier.fillMaxSize(),
+        enterTransition = { fadeIn(animationSpec = tween(350)) },
+        exitTransition = { fadeOut(animationSpec = tween(350)) }
     ) {
-        // ROTA DE DECISÃO: Verifica se o usuário tem dados e redireciona
         composable("decision_route") {
-            // Efeito que executa apenas uma vez quando o estado de dados muda de Loading
             LaunchedEffect(dataState) {
-                // Se o estado não for mais de carregamento, tome uma decisão
                 if (dataState !is GestationalDataState.Loading) {
                     val destination = if (dataState is GestationalDataState.HasData) "home" else "onboarding"
                     navController.navigate(destination) {
-                        // Limpa a pilha de navegação para que o usuário não possa voltar para esta tela de decisão
                         popUpTo("decision_route") { inclusive = true }
                     }
                 }
             }
-
-            // Enquanto decide, mostra um indicador de carregamento
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         }
 
-        // NOVA ROTA DE ONBOARDING
         composable("onboarding") {
             OnboardingScreen(
                 onNavigateToCalculator = { navController.navigate("calculator") }
             )
         }
 
-        composable("home") {
+        composable(
+            "home",
+            enterTransition = { mainScreenEnterTransition }, exitTransition = { mainScreenExitTransition },
+            popEnterTransition = { mainScreenPopEnterTransition }, popExitTransition = { mainScreenPopExitTransition }
+        ) {
             HomeScreen(
                 contentPadding = innerPadding,
                 homeViewModel = homeViewModel,
@@ -109,11 +119,10 @@ fun AppNavGraph(
             )
         }
 
-        // ... (o restante do seu código do AppNavGraph permanece o mesmo) ...
-
         composable(
-            route = "appointments",
-            deepLinks = listOf(navDeepLink { uriPattern = "gestahub://appointments" })
+            "appointments", deepLinks = listOf(navDeepLink { uriPattern = "gestahub://appointments" }),
+            enterTransition = { mainScreenEnterTransition }, exitTransition = { mainScreenExitTransition },
+            popEnterTransition = { mainScreenPopEnterTransition }, popExitTransition = { mainScreenPopExitTransition }
         ) {
             AppointmentsScreen(
                 contentPadding = innerPadding,
@@ -135,9 +144,11 @@ fun AppNavGraph(
                 }
             )
         }
+
         composable(
-            "journal",
-            deepLinks = listOf(navDeepLink { uriPattern = "gestahub://journal" })
+            "journal", deepLinks = listOf(navDeepLink { uriPattern = "gestahub://journal" }),
+            enterTransition = { mainScreenEnterTransition }, exitTransition = { mainScreenExitTransition },
+            popEnterTransition = { mainScreenPopEnterTransition }, popExitTransition = { mainScreenPopExitTransition }
         ) {
             val lmp = (dataState as? GestationalDataState.HasData)?.estimatedLmp
             JournalScreen(
@@ -149,9 +160,13 @@ fun AppNavGraph(
                 }
             )
         }
-        composable("weight") {
-            val estimatedLmp = (dataState as? GestationalDataState.HasData)?.estimatedLmp
 
+        composable(
+            "weight",
+            enterTransition = { mainScreenEnterTransition }, exitTransition = { mainScreenExitTransition },
+            popEnterTransition = { mainScreenPopEnterTransition }, popExitTransition = { mainScreenPopExitTransition }
+        ) {
+            val estimatedLmp = (dataState as? GestationalDataState.HasData)?.estimatedLmp
             WeightScreen(
                 contentPadding = innerPadding,
                 isDarkTheme = isDarkTheme,
@@ -159,7 +174,12 @@ fun AppNavGraph(
                 estimatedLmp = estimatedLmp
             )
         }
-        composable("more") {
+
+        composable(
+            "more",
+            enterTransition = { mainScreenEnterTransition }, exitTransition = { mainScreenExitTransition },
+            popEnterTransition = { mainScreenPopEnterTransition }, popExitTransition = { mainScreenPopExitTransition }
+        ) {
             Box(Modifier.padding(innerPadding)) {
                 MoreScreen(
                     onNavigateToMovementCounter = { navController.navigate("movement_counter") },
@@ -171,16 +191,7 @@ fun AppNavGraph(
                 )
             }
         }
-        composable(
-            route = "appointmentForm?appointmentId={appointmentId}&appointmentType={appointmentType}&preselectedDate={preselectedDate}",
-            arguments = listOf(
-                navArgument("appointmentId") { type = NavType.StringType; nullable = true },
-                navArgument("appointmentType") { type = NavType.StringType; nullable = true },
-                navArgument("preselectedDate") { type = NavType.StringType; nullable = true }
-            )
-        ) {
-            AppointmentFormScreen(onNavigateBack = { navController.popBackStack() })
-        }
+
         composable(
             route = "calculator?lmp={lmp}&examDate={examDate}&weeks={weeks}&days={days}",
             arguments = listOf(
@@ -188,11 +199,12 @@ fun AppNavGraph(
                 navArgument("examDate") { type = NavType.StringType; nullable = true },
                 navArgument("weeks") { type = NavType.StringType; nullable = true },
                 navArgument("days") { type = NavType.StringType; nullable = true }
-            )
+            ),
+            enterTransition = { internalScreenEnterTransition },
+            exitTransition = { internalScreenExitTransition }
         ) { backStackEntry ->
             CalculatorScreen(
                 onSaveSuccess = {
-                    // MUDANÇA: Após salvar, vai para a home e limpa a pilha até a rota de decisão
                     navController.navigate("home") {
                         popUpTo("decision_route") { inclusive = true }
                     }
@@ -204,21 +216,25 @@ fun AppNavGraph(
                 initialDays = backStackEntry.arguments?.getString("days"),
             )
         }
-        composable("profile") {
-            ProfileScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onEditClick = { navController.navigate("editProfile") }
-            )
+
+        composable(
+            route = "appointmentForm?appointmentId={appointmentId}&appointmentType={appointmentType}&preselectedDate={preselectedDate}",
+            arguments = listOf(
+                navArgument("appointmentId") { type = NavType.StringType; nullable = true },
+                navArgument("appointmentType") { type = NavType.StringType; nullable = true },
+                navArgument("preselectedDate") { type = NavType.StringType; nullable = true }
+            ),
+            enterTransition = { internalScreenEnterTransition },
+            exitTransition = { internalScreenExitTransition }
+        ) {
+            AppointmentFormScreen(onNavigateBack = { navController.popBackStack() })
         }
-        composable("editProfile") {
-            EditProfileScreen(
-                onSaveSuccess = { navController.popBackStack() },
-                onCancelClick = { navController.popBackStack() }
-            )
-        }
+
         composable(
             route = "journalEntry/{date}",
-            arguments = listOf(navArgument("date") { type = NavType.StringType })
+            arguments = listOf(navArgument("date") { type = NavType.StringType }),
+            enterTransition = { internalScreenEnterTransition },
+            exitTransition = { internalScreenExitTransition }
         ) {
             val lmp = (dataState as? GestationalDataState.HasData)?.estimatedLmp
             JournalEntryScreen(
@@ -230,45 +246,43 @@ fun AppNavGraph(
                 }
             )
         }
-        composable("weight_entry_form") {
+
+        val internalExitPop = internalScreenExitTransition
+
+        composable("profile", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
+            ProfileScreen(onNavigateBack = { navController.popBackStack() }, onEditClick = { navController.navigate("editProfile") })
+        }
+        composable("editProfile", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
+            EditProfileScreen(onSaveSuccess = { navController.popBackStack() }, onCancelClick = { navController.popBackStack() })
+        }
+        composable("weight_entry_form", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
             WeightEntryFormScreen(onNavigateBack = { navController.popBackStack() })
         }
-        composable("weight_profile_form") {
+        composable("weight_profile_form", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
             WeightProfileFormScreen(onNavigateBack = { navController.popBackStack() })
         }
-        composable("movement_counter") {
+        composable("movement_counter", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
             val lmp = (dataState as? GestationalDataState.HasData)?.estimatedLmp
-            MovementCounterScreen(
-                onNavigateBack = { navController.popBackStack() },
-                estimatedLmp = lmp,
-                isDarkTheme = isDarkTheme
-            )
+            MovementCounterScreen(onNavigateBack = { navController.popBackStack() }, estimatedLmp = lmp, isDarkTheme = isDarkTheme)
         }
-        composable("maternity_bag") {
-            MaternityBagScreen(
-                onNavigateBack = { navController.popBackStack() },
-                isDarkTheme = isDarkTheme
-            )
+        composable("maternity_bag", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
+            MaternityBagScreen(onNavigateBack = { navController.popBackStack() }, isDarkTheme = isDarkTheme)
         }
-        composable("hydration_tracker") {
-            HydrationTrackerScreen(
-                onNavigateBack = { navController.popBackStack() },
-                isDarkTheme = isDarkTheme
-            )
+        composable("hydration_tracker", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
+            HydrationTrackerScreen(onNavigateBack = { navController.popBackStack() }, isDarkTheme = isDarkTheme)
         }
-        composable("shopping_list") {
-            ShoppingListScreen(
-                navController = navController
-            )
+        composable("shopping_list", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
+            ShoppingListScreen(navController = navController)
         }
-        composable("contraction_timer") {
+        composable("contraction_timer", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
             ContractionTimerScreen(onBack = { navController.popBackStack() })
         }
-        composable("medication_tracker") {
+        composable(
+            "medication_tracker",
+            enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }
+        ) {
             val estimatedLmp = (dataState as? GestationalDataState.HasData)?.estimatedLmp
-            val medicationViewModelFactory = MedicationViewModelFactory(estimatedLmp)
-            val medicationViewModel: MedicationViewModel = viewModel(factory = medicationViewModelFactory)
-
+            val medicationViewModel: MedicationViewModel = viewModel(factory = MedicationViewModelFactory(estimatedLmp))
             MedicationTrackerScreen(
                 onBack = { navController.popBackStack() },
                 onNavigateToForm = { medId ->
@@ -279,11 +293,9 @@ fun AppNavGraph(
             )
         }
         composable(
-            route = "medicationForm?medicationId={medicationId}",
-            arguments = listOf(navArgument("medicationId") {
-                type = NavType.StringType
-                nullable = true
-            })
+            "medicationForm?medicationId={medicationId}",
+            arguments = listOf(navArgument("medicationId") { type = NavType.StringType; nullable = true }),
+            enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }
         ) {
             MedicationFormScreen(onNavigateBack = { navController.popBackStack() })
         }

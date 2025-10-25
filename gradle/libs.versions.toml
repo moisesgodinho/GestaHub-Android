@@ -21,6 +21,7 @@ kotlinx-coroutines-playservices = "1.7.3"
 emoji2 = "1.4.0"
 kizitonwoseCalendar = "2.5.1"
 androidxWork = "2.9.0" # <-- ADICIONE ESTA LINHA
+accompanist = "0.32.0" # <-- ADICIONE ESTA LINHA
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -44,7 +45,7 @@ androidx-compose-runtime-livedata = { group = "androidx.compose.runtime", name =
 kizitonwose-calendar-compose = { group = "com.kizitonwose.calendar", name = "compose", version.ref = "kizitonwoseCalendar" }
 android-desugarJdkLibs = { group = "com.android.tools", name = "desugar_jdk_libs", version = "2.0.4" }
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "androidxWork" } # <-- ADICIONE ESTA LINHA
-
+google-accompanist-navigation-animation = { group = "com.google.accompanist", name = "accompanist-navigation-animation", version.ref = "accompanist" }
 
 # Firebase
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }

@@ -89,4 +89,5 @@ dependencies {
 
 
     implementation(libs.androidx.work.runtime.ktx) // <-- ADICIONE DESTA FORMA
+    implementation(libs.google.accompanist.navigation.animation)
 }
