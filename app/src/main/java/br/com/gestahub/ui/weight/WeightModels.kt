@@ -14,3 +14,8 @@ data class WeightProfile(
     val height: Int = 0,
     val prePregnancyWeight: Double = 0.0
 )
+
+/**
+ * Classe de dados simples para armazenar os pontos do gráfico, removendo a dependência da Vico.
+ */
+data class SimpleChartEntry(val x: Float, val y: Float)

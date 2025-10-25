@@ -69,7 +69,8 @@ fun WeightScreen(
                 item {
                     ChartCard(
                         weightEntries = uiState.weightChartEntries,
-                        dateLabels = uiState.chartDateLabels
+                        dateLabels = uiState.chartDateLabels,
+                        isDarkTheme = isDarkTheme
                     )
                 }
             }

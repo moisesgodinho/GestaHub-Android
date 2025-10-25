@@ -9,7 +9,6 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
-import com.patrykandpatrick.vico.core.entry.FloatEntry
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -30,7 +29,7 @@ data class WeightUiState(
     val currentBmi: Double = 0.0,
     val totalGain: Double = 0.0,
     val gainGoal: String = "",
-    val weightChartEntries: List<FloatEntry> = emptyList(),
+    val weightChartEntries: List<SimpleChartEntry> = emptyList(),
     val chartDateLabels: List<String> = emptyList()
 )
 
@@ -110,15 +109,15 @@ class WeightViewModel(private val estimatedLmp: LocalDate?) : ViewModel() {
             return
         }
 
-        val chartEntries = mutableListOf<FloatEntry>()
+        val chartEntries = mutableListOf<SimpleChartEntry>()
         val dateLabels = mutableListOf<String>()
         val dateFormatter = DateTimeFormatter.ofPattern("dd/MM")
 
-        chartEntries.add(FloatEntry(0f, profile.prePregnancyWeight.toFloat()))
+        chartEntries.add(SimpleChartEntry(0f, profile.prePregnancyWeight.toFloat()))
         dateLabels.add("Início")
 
         entries.sortedBy { it.date }.forEachIndexed { index, entry ->
-            chartEntries.add(FloatEntry(index + 1f, entry.weight.toFloat()))
+            chartEntries.add(SimpleChartEntry(index + 1f, entry.weight.toFloat()))
             try {
                 dateLabels.add(LocalDate.parse(entry.date).format(dateFormatter))
             } catch (e: Exception) {
@@ -129,7 +128,7 @@ class WeightViewModel(private val estimatedLmp: LocalDate?) : ViewModel() {
         val dueDate = estimatedLmp.plusDays(280)
         if (dueDate.isAfter(LocalDate.now())) {
             val lastWeight = entries.firstOrNull()?.weight?.toFloat() ?: profile.prePregnancyWeight.toFloat()
-            chartEntries.add(FloatEntry(chartEntries.size.toFloat(), lastWeight))
+            chartEntries.add(SimpleChartEntry(chartEntries.size.toFloat(), lastWeight))
             dateLabels.add("DPP")
         }
 

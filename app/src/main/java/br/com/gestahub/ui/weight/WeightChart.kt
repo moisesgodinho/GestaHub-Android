@@ -1,212 +1,203 @@
 package br.com.gestahub.ui.weight
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.forEachGesture
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import br.com.gestahub.ui.theme.Rose500
-import com.patrykandpatrick.vico.compose.axis.horizontal.rememberBottomAxis
-import com.patrykandpatrick.vico.compose.axis.vertical.rememberStartAxis
-import com.patrykandpatrick.vico.compose.chart.Chart
-import com.patrykandpatrick.vico.compose.chart.line.lineChart
-import com.patrykandpatrick.vico.compose.chart.scroll.rememberChartScrollSpec
-import com.patrykandpatrick.vico.compose.component.shape.shader.verticalGradient
-import com.patrykandpatrick.vico.core.axis.AxisItemPlacer
-import com.patrykandpatrick.vico.core.axis.AxisPosition
-import com.patrykandpatrick.vico.core.axis.formatter.AxisValueFormatter
-import com.patrykandpatrick.vico.core.chart.line.LineChart
-import com.patrykandpatrick.vico.core.chart.values.AxisValuesOverrider
-import com.patrykandpatrick.vico.core.component.OverlayingComponent
-import com.patrykandpatrick.vico.core.component.shape.ShapeComponent
-import com.patrykandpatrick.vico.core.component.shape.Shapes
-import com.patrykandpatrick.vico.core.component.text.textComponent
-import com.patrykandpatrick.vico.core.dimensions.MutableDimensions
-import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
-import kotlin.math.abs
-import kotlin.math.max
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.roundToInt
 
+private fun Path.cubicTo(p1: Offset, p2: Offset, p3: Offset) {
+    cubicTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y)
+}
 
 @Composable
 fun WeightChart(
-    chartEntryModelProducer: ChartEntryModelProducer,
+    weightData: List<SimpleChartEntry>,
     dateLabels: List<String>,
-    minY: Float?,
-    maxY: Float?
+    isDarkTheme: Boolean
 ) {
     var selectedIndex by remember { mutableStateOf<Int?>(null) }
-    var selectedDate by remember { mutableStateOf<String?>(null) }
-    var selectedWeight by remember { mutableStateOf<Float?>(null) }
 
-    val combinedEntryProducer = remember { ChartEntryModelProducer() }
+    // Cores
+    val lineAndFillColor = Rose500
+    val gridColor = if (isDarkTheme) Color.White.copy(alpha = 0.2f) else Color.Black.copy(alpha = 0.2f)
+    val textColor = if (isDarkTheme) Color.White.copy(alpha = 0.7f) else Color.Black.copy(alpha = 0.7f)
+    val tooltipBackgroundColor = if (isDarkTheme) Color.DarkGray.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.9f)
+    val tooltipTextColor = if (isDarkTheme) Color.White else Color.Black
 
-    LaunchedEffect(selectedIndex, chartEntryModelProducer.getModel()) {
-        val mainEntries = chartEntryModelProducer.getModel()?.entries?.firstOrNull() ?: emptyList()
-        val selectedEntryList = selectedIndex?.let { mainEntries.getOrNull(it) }?.let { listOf(it) } ?: emptyList()
-        combinedEntryProducer.setEntries(mainEntries, selectedEntryList)
-    }
+    val textMeasurer = rememberTextMeasurer()
 
-    val bottomAxisValueFormatter =
-        AxisValueFormatter<AxisPosition.Horizontal.Bottom> { value, _ ->
-            dateLabels.getOrNull(value.toInt()) ?: ""
-        }
+    // Lógica para os eixos
+    val minY = weightData.minOfOrNull { it.y } ?: 0f
+    val maxY = weightData.maxOfOrNull { it.y } ?: 100f
+    val paddedMinY = floor(minY - 2)
+    val paddedMaxY = ceil(maxY + 2)
+    val yRange = paddedMaxY - paddedMinY
+    val numGridLines = 5
+    val yStep = if (yRange > 0) yRange / numGridLines else 1f
 
-    val actualMinY = minY ?: 0f
-    val actualMaxY = maxY ?: 0f
-    val steps = 9
-    val stepValue = if (actualMaxY > actualMinY) {
-        (actualMaxY - actualMinY) / steps
-    } else 1f
-
-    val yAxisValues = List<Float>(10) { i -> actualMinY + i * stepValue }
-
-    val yAxisValueFormatter =
-        AxisValueFormatter<AxisPosition.Vertical.Start> { value, _ ->
-            val closest = yAxisValues.minByOrNull { kotlin.math.abs(it - value) } ?: value
-            if (kotlin.math.abs(value - closest) < stepValue / 2) {
-                closest.roundToInt().toString()
-            } else ""
-        }
-
-    val verticalItemPlacer = AxisItemPlacer.Vertical.default(maxItemCount = 10)
-    val desiredLabelCount = 7
-    val spacing = max(1, if (dateLabels.isNotEmpty()) dateLabels.size / desiredLabelCount else 1)
-    val bottomAxisItemPlacer = AxisItemPlacer.Horizontal.default(spacing = spacing, offset = 0, shiftExtremeTicks = true)
-    val axisLabelColor = MaterialTheme.colorScheme.onBackground
-
-    val selectedPointComponent = remember {
-        val outer = ShapeComponent(
-            shape = Shapes.pillShape,
-            color = Color.White.toArgb(),
-            margins = MutableDimensions(2f, 2f, 2f, 2f)
-        )
-        val inner = ShapeComponent(shape = Shapes.pillShape, color = Rose500.toArgb())
-        OverlayingComponent(outer = outer, inner = inner)
-    }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-    ) {
-        Chart(
-            chart = lineChart(
-                lines = listOf(
-                    LineChart.LineSpec(
-                        lineColor = Rose500.toArgb(),
-                        lineThicknessDp = 3f,
-                        lineBackgroundShader = verticalGradient(
-                            arrayOf(
-                                Rose500.copy(alpha = 0.4f),
-                                Rose500.copy(alpha = 0.0f)
-                            ),
-                        ),
-                    ),
-                    LineChart.LineSpec(
-                        lineColor = Color.Transparent.toArgb(),
-                        point = selectedPointComponent,
-                        pointSizeDp = 12f
-                    )
-                ),
-                axisValuesOverrider = AxisValuesOverrider.fixed(
-                    minY = actualMinY,
-                    maxY = actualMaxY
-                )
-            ),
-            chartModelProducer = combinedEntryProducer,
-            startAxis = rememberStartAxis(
-                valueFormatter = yAxisValueFormatter,
-                itemPlacer = verticalItemPlacer,
-                label = textComponent { color = axisLabelColor.toArgb() },
-                guideline = null,
-                tickLength = 0.dp
-            ),
-            bottomAxis = rememberBottomAxis(
-                valueFormatter = bottomAxisValueFormatter,
-                guideline = null,
-                itemPlacer = bottomAxisItemPlacer,
-                labelRotationDegrees = 25f,
-                label = textComponent { color = axisLabelColor.toArgb() }
-            ),
-            chartScrollSpec = rememberChartScrollSpec(isScrollEnabled = false),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(300.dp)
-                // 👇 AQUI ESTÁ A LÓGICA ATUALIZADA DE INTERAÇÃO
-                .pointerInput(Unit) {
-                    forEachGesture {
-                        awaitPointerEventScope {
-                            // Espera o primeiro toque
-                            val down = awaitFirstDown(requireUnconsumed = false)
+            .height(250.dp)
+            .pointerInput(weightData.size) {
+                detectTapGestures(
+                    onPress = { offset ->
+                        val yAxisAreaWidth = 40.dp.toPx()
+                        val chartWidth = size.width - yAxisAreaWidth
+                        val stepX = chartWidth / (weightData.size - 1).coerceAtLeast(1)
+                        val tappedIndex = ((offset.x - yAxisAreaWidth) / stepX)
+                            .roundToInt()
+                            .coerceIn(0, weightData.size - 1)
+                        selectedIndex = tappedIndex
 
-                            var pointerId = down.id
+                        val released = tryAwaitRelease()
 
-                            // Função para atualizar a seleção
-                            val updateSelection = { x: Float ->
-                                val chartWidth = size.width
-                                val xPercent = (x / chartWidth).coerceIn(0f, 1f)
-                                val clickedIndex = (xPercent * (dateLabels.size - 1)).roundToInt()
-
-                                if (clickedIndex in dateLabels.indices) {
-                                    selectedIndex = clickedIndex
-                                    selectedDate = dateLabels[clickedIndex]
-                                    selectedWeight = chartEntryModelProducer.getModel()?.entries?.firstOrNull()?.getOrNull(clickedIndex)?.y
-                                }
-                            }
-
-                            // Atualiza a seleção no toque inicial
-                            updateSelection(down.position.x)
-
-                            // Loop para rastrear o movimento de arrastar
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                val dragChange = event.changes.find { it.id == pointerId }
-
-                                if (dragChange == null || !dragChange.pressed) {
-                                    // Dedo levantado ou gesto cancelado
-                                    selectedIndex = null
-                                    break // Sai do loop
-                                }
-
-                                // Atualiza a seleção durante o arraste
-                                updateSelection(dragChange.position.x)
-                            }
+                        if (released) {
+                            selectedIndex = null
                         }
                     }
-                }
-        )
+                )
+            }
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val yAxisAreaWidth = 40.dp.toPx()
+            val xAxisAreaHeight = 30.dp.toPx()
+            val chartHeight = size.height - xAxisAreaHeight
+            val chartWidth = size.width - yAxisAreaWidth
+            val stepX = chartWidth / (weightData.size - 1).coerceAtLeast(1)
 
-        if (selectedIndex != null && selectedDate != null && selectedWeight != null) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 16.dp)
-                    .background(color = Rose500.copy(alpha = 0.9f), shape = MaterialTheme.shapes.small)
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = "$selectedDate • ${"%.1f".format(selectedWeight)} kg",
-                    fontSize = 12.sp,
-                    color = Color.White,
-                    fontWeight = FontWeight.Medium
+            // Desenhar Eixo Y (Grid e Labels)
+            for (i in 0..numGridLines) {
+                val yValue = paddedMinY + (i * yStep)
+                val y = chartHeight - ((yValue - paddedMinY) / yRange) * chartHeight
+                drawLine(
+                    color = gridColor,
+                    start = Offset(yAxisAreaWidth, y),
+                    end = Offset(size.width, y),
+                    strokeWidth = 1.dp.toPx()
+                )
+                val measuredText = textMeasurer.measure(
+                    text = yValue.roundToInt().toString(),
+                    style = TextStyle(color = textColor, fontSize = 10.sp, textAlign = TextAlign.End)
+                )
+                drawText(
+                    textLayoutResult = measuredText,
+                    topLeft = Offset(yAxisAreaWidth - measuredText.size.width - 4.dp.toPx(), y - (measuredText.size.height / 2))
+                )
+            }
+
+            // Mapear pontos e desenhar gráfico
+            val points = weightData.mapIndexed { index, value ->
+                val y = chartHeight - ((value.y - paddedMinY) / yRange * chartHeight).coerceIn(0f, chartHeight)
+                Offset(yAxisAreaWidth + (index * stepX), y)
+            }
+
+            val linePath = Path()
+            val fillPath = Path()
+
+            if (points.isNotEmpty()) {
+                linePath.moveTo(points.first().x, points.first().y)
+                fillPath.moveTo(points.first().x, chartHeight)
+                fillPath.lineTo(points.first().x, points.first().y)
+
+                for (i in 0 until points.size - 1) {
+                    val p0 = points.getOrElse(i - 1) { points[i] }
+                    val p1 = points[i]
+                    val p2 = points[i + 1]
+                    val p3 = points.getOrElse(i + 2) { p2 }
+                    val controlPoint1 = Offset(p1.x + (p2.x - p0.x) / 6f, p1.y + (p2.y - p0.y) / 6f)
+                    val controlPoint2 = Offset(p2.x - (p3.x - p1.x) / 6f, p2.y - (p3.y - p1.y) / 6f)
+                    linePath.cubicTo(controlPoint1, controlPoint2, p2)
+                    fillPath.cubicTo(controlPoint1, controlPoint2, p2)
+                }
+
+                fillPath.lineTo(points.last().x, chartHeight)
+                fillPath.close()
+            }
+
+            drawPath(
+                path = fillPath,
+                brush = Brush.verticalGradient(
+                    colors = listOf(lineAndFillColor.copy(alpha = 0.3f), Color.Transparent),
+                    endY = chartHeight
+                )
+            )
+            drawPath(path = linePath, color = lineAndFillColor, style = Stroke(width = 2.dp.toPx()))
+
+
+            // Desenhar Eixo X (Labels)
+            val numLabels = 7
+            val xLabelStep = (dateLabels.size / numLabels).coerceAtLeast(1)
+            (dateLabels.indices step xLabelStep).forEach { index ->
+                val x = yAxisAreaWidth + (index * stepX)
+                val measuredText = textMeasurer.measure(
+                    text = dateLabels[index],
+                    style = TextStyle(color = textColor, fontSize = 10.sp, textAlign = TextAlign.Center)
+                )
+                drawText(
+                    textLayoutResult = measuredText,
+                    topLeft = Offset(x - (measuredText.size.width / 2), chartHeight + 4.dp.toPx())
+                )
+            }
+
+            // Desenhar Tooltip
+            selectedIndex?.let { index ->
+                val point = points.getOrNull(index) ?: return@let
+                val x = point.x
+
+                drawLine(color = gridColor, start = Offset(x, 0f), end = Offset(x, chartHeight), strokeWidth = 1.dp.toPx())
+                drawCircle(color = lineAndFillColor, radius = 5.dp.toPx(), center = point)
+                drawCircle(color = Color.White, radius = 3.dp.toPx(), center = point)
+
+                val date = dateLabels.getOrNull(index) ?: ""
+                val weight = weightData.getOrNull(index)?.y ?: 0f
+                val tooltipText = "$date • ${"%.1f".format(weight)} kg"
+                val measuredText = textMeasurer.measure(
+                    text = tooltipText,
+                    style = TextStyle(color = tooltipTextColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                )
+
+                val tooltipPadding = 8.dp.toPx()
+                val tooltipWidth = measuredText.size.width + tooltipPadding * 2
+                val tooltipHeight = measuredText.size.height + tooltipPadding
+                var tooltipX = x - (tooltipWidth / 2)
+                if (tooltipX < yAxisAreaWidth) tooltipX = yAxisAreaWidth
+                if (tooltipX + tooltipWidth > size.width) tooltipX = size.width - tooltipWidth
+                val tooltipY = point.y - tooltipHeight - 8.dp.toPx()
+
+                drawRoundRect(
+                    color = tooltipBackgroundColor,
+                    topLeft = Offset(tooltipX, if (tooltipY > 0) tooltipY else 0f),
+                    size = Size(tooltipWidth, tooltipHeight),
+                    cornerRadius = CornerRadius(6.dp.toPx())
+                )
+                drawText(
+                    textLayoutResult = measuredText,
+                    topLeft = Offset(tooltipX + tooltipPadding, (if (tooltipY > 0) tooltipY else 0f) + tooltipPadding / 2)
                 )
             }
         }

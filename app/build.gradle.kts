@@ -87,10 +87,6 @@ dependencies {
     implementation(libs.kotlinx.coroutines.playservices)
     implementation(libs.androidx.emoji2)
 
-    // Gráfico de Linhas (Vico)
-    implementation(libs.vico.core)
-    implementation(libs.vico.compose)
-    implementation(libs.vico.compose.m3)
 
     implementation(libs.androidx.work.runtime.ktx) // <-- ADICIONE DESTA FORMA
 }

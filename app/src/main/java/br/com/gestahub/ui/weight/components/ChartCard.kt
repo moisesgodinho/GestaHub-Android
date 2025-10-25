@@ -10,30 +10,19 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import br.com.gestahub.ui.weight.SimpleChartEntry
 import br.com.gestahub.ui.weight.WeightChart
-import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
-import com.patrykandpatrick.vico.core.entry.FloatEntry
 
 @Composable
 fun ChartCard(
-    weightEntries: List<FloatEntry>,
-    dateLabels: List<String>
+    weightEntries: List<SimpleChartEntry>,
+    dateLabels: List<String>,
+    isDarkTheme: Boolean
 ) {
-    val chartEntryModelProducer = remember { ChartEntryModelProducer() }
-
-    LaunchedEffect(key1 = weightEntries) {
-        chartEntryModelProducer.setEntries(weightEntries)
-    }
-
-    val minY = weightEntries.minByOrNull { it.y }?.y?.minus(2)
-    val maxY = weightEntries.maxByOrNull { it.y }?.y?.plus(2)
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -51,10 +40,9 @@ fun ChartCard(
             )
             Spacer(modifier = Modifier.height(16.dp))
             WeightChart(
-                chartEntryModelProducer = chartEntryModelProducer,
+                weightData = weightEntries,
                 dateLabels = dateLabels,
-                minY = minY,
-                maxY = maxY
+                isDarkTheme = isDarkTheme
             )
         }
     }
