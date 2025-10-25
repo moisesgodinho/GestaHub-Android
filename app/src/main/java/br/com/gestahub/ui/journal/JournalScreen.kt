@@ -1,6 +1,10 @@
 // Local: app/src/main/java/br/com/gestahub/ui/journal/JournalScreen.kt
 package br.com.gestahub.ui.journal
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -41,6 +45,11 @@ fun JournalScreen(
     var entryToShow by remember { mutableStateOf<JournalEntry?>(null) }
     var dateToAdd by remember { mutableStateOf<LocalDate?>(null) }
     var entryToDelete by remember { mutableStateOf<JournalEntry?>(null) }
+
+    var itemsVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(entriesForHistoryMonth) {
+        itemsVisible = true
+    }
 
     entryToShow?.let {
         ViewJournalEntryDialog(
@@ -112,8 +121,7 @@ fun JournalScreen(
                 onNextClick = { viewModel.selectNextCalendarMonth() },
                 isPreviousEnabled = isPreviousCalendarMonthEnabled,
                 isNextEnabled = isNextCalendarMonthEnabled,
-                isDarkTheme = isDarkTheme // Adicione esta linha
-
+                isDarkTheme = isDarkTheme
             )
         }
 
@@ -150,13 +158,22 @@ fun JournalScreen(
                         EmptyMonthScreen()
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            entriesForHistoryMonth.forEach { entry ->
-                                JournalItem(
-                                    entry = entry,
-                                    onEditClick = { onNavigateToEntry(entry.date) },
-                                    onDeleteClick = { entryToDelete = it },
-                                    isDarkTheme = isDarkTheme
-                                )
+                            entriesForHistoryMonth.forEachIndexed { index, entry ->
+                                AnimatedVisibility(
+                                    visible = itemsVisible,
+                                    enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = index * 100))
+                                            + slideInVertically(
+                                        initialOffsetY = { it / 2 },
+                                        animationSpec = tween(durationMillis = 500, delayMillis = index * 100)
+                                    )
+                                ) {
+                                    JournalItem(
+                                        entry = entry,
+                                        onEditClick = { onNavigateToEntry(entry.date) },
+                                        onDeleteClick = { entryToDelete = it },
+                                        isDarkTheme = isDarkTheme
+                                    )
+                                }
                             }
                         }
                     }
@@ -165,7 +182,8 @@ fun JournalScreen(
         }
     }
 }
-
+// ... o restante do arquivo (MonthNavigator, EmptyMonthScreen, JournalItem) permanece o mesmo
+// ...
 @Composable
 fun MonthNavigator(
     selectedMonth: YearMonth,

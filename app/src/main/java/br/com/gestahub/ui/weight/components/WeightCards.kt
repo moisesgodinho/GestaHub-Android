@@ -1,6 +1,10 @@
 // Local: app/src/main/java/br/com/gestahub/ui/weight/components/WeightCards.kt
 package br.com.gestahub.ui.weight.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -59,7 +63,7 @@ fun ChartCard(
     }
 }
 
-// --- Conteúdo de HistoryCard.kt ---
+// --- Conteúdo de HistoryCard.kt com ANIMAÇÃO ---
 @Composable
 fun HistoryCard(
     uiState: WeightUiState,
@@ -68,6 +72,13 @@ fun HistoryCard(
 ) {
     var showDialog by remember { mutableStateOf(false) }
     var entryToDelete by remember { mutableStateOf<WeightEntry?>(null) }
+
+    // Estado para controlar a visibilidade dos itens da lista
+    var itemsVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(uiState.entries) {
+        // Ativa a animação sempre que a lista de entradas for (re)carregada
+        itemsVisible = true
+    }
 
     if (showDialog && entryToDelete != null) {
         ConfirmationDialog(
@@ -113,16 +124,26 @@ fun HistoryCard(
                 EmptyState()
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    uiState.entries.forEach { entry ->
-                        WeightItem(
-                            entry = entry,
-                            gestationalAge = uiState.gestationalAges[entry.date],
-                            isDarkTheme = isDarkTheme,
-                            onDelete = {
-                                entryToDelete = entry
-                                showDialog = true
-                            }
-                        )
+                    uiState.entries.forEachIndexed { index, entry ->
+                        // Envolve cada item com AnimatedVisibility
+                        AnimatedVisibility(
+                            visible = itemsVisible,
+                            enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = index * 100))
+                                    + slideInVertically(
+                                initialOffsetY = { it / 2 },
+                                animationSpec = tween(durationMillis = 500, delayMillis = index * 100)
+                            )
+                        ) {
+                            WeightItem(
+                                entry = entry,
+                                gestationalAge = uiState.gestationalAges[entry.date],
+                                isDarkTheme = isDarkTheme,
+                                onDelete = {
+                                    entryToDelete = entry
+                                    showDialog = true
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -340,7 +361,7 @@ fun ProfileCard(profile: WeightProfile, isDarkTheme: Boolean, onEditClick: () ->
     }
 }
 
-
+// --- Conteúdo de SummaryCard.kt ---
 @Composable
 fun SummaryCard(
     initialBmi: Double,
@@ -423,7 +444,7 @@ fun SummaryCard(
     }
 }
 
-
+// --- Conteúdo de WeightGainRecommendationsCard.kt ---
 enum class BmiCategory {
     LOW, NORMAL, OVERWEIGHT, OBESE
 }

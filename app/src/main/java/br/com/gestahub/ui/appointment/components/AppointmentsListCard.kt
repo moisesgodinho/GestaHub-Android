@@ -1,12 +1,16 @@
 // Local: app/src/main/java/br/com/gestahub/ui/appointment/components/AppointmentsListCard.kt
 package br.com.gestahub.ui.appointment.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -24,6 +28,11 @@ fun AppointmentsListCard(
     onEditClick: (Appointment) -> Unit,
     onDeleteOrClearRequest: (Appointment) -> Unit
 ) {
+    var itemsVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        itemsVisible = true
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -42,15 +51,24 @@ fun AppointmentsListCard(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                appointments.forEach { appointment ->
-                    AppointmentItem(
-                        appointment = appointment,
-                        lmpDate = lmpDate,
-                        isDarkTheme = isDarkTheme,
-                        onToggleDone = onToggleDone,
-                        onEdit = onEditClick,
-                        onDelete = onDeleteOrClearRequest
-                    )
+                appointments.forEachIndexed { index, appointment ->
+                    AnimatedVisibility(
+                        visible = itemsVisible,
+                        enter = fadeIn(animationSpec = tween(durationMillis = 500, delayMillis = index * 100))
+                                + slideInVertically(
+                            initialOffsetY = { it / 2 },
+                            animationSpec = tween(durationMillis = 500, delayMillis = index * 100)
+                        )
+                    ) {
+                        AppointmentItem(
+                            appointment = appointment,
+                            lmpDate = lmpDate,
+                            isDarkTheme = isDarkTheme,
+                            onToggleDone = onToggleDone,
+                            onEdit = onEditClick,
+                            onDelete = onDeleteOrClearRequest
+                        )
+                    }
                 }
             }
         }
