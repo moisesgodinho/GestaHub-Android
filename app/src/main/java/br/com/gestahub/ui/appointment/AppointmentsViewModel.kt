@@ -3,6 +3,8 @@ package br.com.gestahub.ui.appointment
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import br.com.gestahub.data.AppointmentRepository
+import br.com.gestahub.data.GestationalProfileRepository
 import br.com.gestahub.domain.usecase.GetEstimatedLmpUseCase
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldValue
@@ -10,6 +12,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
@@ -17,6 +20,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
+import javax.inject.Inject
 
 data class AppointmentsUiState(
     val upcomingAppointments: List<Appointment> = emptyList(),
@@ -26,8 +30,13 @@ data class AppointmentsUiState(
     val userMessage: String? = null
 )
 
-class AppointmentsViewModel : ViewModel() {
-    private val db = Firebase.firestore
+@HiltViewModel
+class AppointmentsViewModel @Inject constructor(
+    private val appointmentRepository: AppointmentRepository,
+    private val gestationalProfileRepository: GestationalProfileRepository
+) : ViewModel() {
+
+    private val db = Firebase.firestore // Mantido para operações de escrita/deleção por simplicidade
     private val getEstimatedLmpUseCase = GetEstimatedLmpUseCase()
 
     private var manualAppointmentsListener: ListenerRegistration? = null
@@ -44,7 +53,7 @@ class AppointmentsViewModel : ViewModel() {
     fun listenToData(userId: String) {
         if (userId.isBlank()) return
 
-        manualAppointmentsListener = db.collection("users").document(userId).collection("appointments")
+        manualAppointmentsListener = appointmentRepository.getAppointmentsFlow(userId)
             .addSnapshotListener { snapshot, e ->
                 if (e != null) {
                     Log.e("AppointmentsViewModel", "Erro ao buscar consultas", e)
@@ -54,7 +63,7 @@ class AppointmentsViewModel : ViewModel() {
                 _manualAppointments.value = snapshot?.documents?.mapNotNull { it.toObject<ManualAppointment>() } ?: emptyList()
             }
 
-        gestationalProfileListener = db.collection("users").document(userId)
+        gestationalProfileListener = gestationalProfileRepository.getGestationalProfileFlow(userId)
             .addSnapshotListener { snapshot, e ->
                 if (e != null) {
                     _uiState.update { it.copy(userMessage = "Erro ao buscar perfil.") }
@@ -143,16 +152,30 @@ class AppointmentsViewModel : ViewModel() {
         try {
             when (appointment) {
                 is ManualAppointment -> {
-                    db.collection("users").document(userId).collection("appointments").document(appointment.id)
-                        .update("done", newDoneStatus).await()
+                    val docRef = db.collection("users").document(userId)
+                        .collection("appointments").document(appointment.id)
+                    docRef.update("done", newDoneStatus).await()
                 }
                 is UltrasoundAppointment -> {
-                    db.collection("users").document(userId)
-                        .update("gestationalProfile.ultrasoundSchedule.${appointment.id}.done", newDoneStatus).await()
+                    val docRef = db.collection("users").document(userId)
+                    val fieldPath = "gestationalProfile.ultrasoundSchedule.${appointment.id}.done"
+                    docRef.update(fieldPath, newDoneStatus).await()
                 }
             }
+            Log.d("ViewModel", "Status atualizado com sucesso!")
         } catch (e: Exception) {
-            _uiState.update { it.copy(userMessage = "Erro ao atualizar o status da consulta.") }
+            if (appointment is UltrasoundAppointment) {
+                val docRef = db.collection("users").document(userId)
+                val ultrasoundUpdate = mapOf("done" to newDoneStatus)
+                val scheduleUpdate = mapOf(appointment.id to ultrasoundUpdate)
+                val profileUpdate = mapOf("ultrasoundSchedule" to scheduleUpdate)
+                val finalUpdate = mapOf("gestationalProfile" to profileUpdate)
+                docRef.set(finalUpdate, com.google.firebase.firestore.SetOptions.merge())
+                    .addOnSuccessListener { Log.d("ViewModel", "Status (com merge) atualizado com sucesso!") }
+                    .addOnFailureListener { _ -> _uiState.update { it.copy(userMessage = "Erro ao mesclar dados.") } }
+            } else {
+                _uiState.update { it.copy(userMessage = "Erro ao atualizar o status.") }
+            }
         }
     }
 
@@ -184,6 +207,7 @@ class AppointmentsViewModel : ViewModel() {
                 "gestationalProfile.ultrasoundSchedule.${appointment.id}.notes" to FieldValue.delete()
             )
             docRef.update(updates).await()
+            _uiState.update { it.copy(userMessage = "Agendamento do ultrassom foi limpo.") }
         } catch (e: Exception) {
             _uiState.update { it.copy(userMessage = "Erro ao limpar agendamento.") }
         }

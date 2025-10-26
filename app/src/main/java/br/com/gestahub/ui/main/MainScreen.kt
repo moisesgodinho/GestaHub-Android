@@ -1,5 +1,6 @@
 package br.com.gestahub.ui.main
 
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
@@ -7,26 +8,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
 import br.com.gestahub.ui.appointment.AppointmentsViewModel
 import br.com.gestahub.ui.components.AppHeader
 import br.com.gestahub.ui.home.HomeViewModel
 import br.com.gestahub.ui.navigation.AppNavGraph
 import br.com.gestahub.ui.navigation.navItems
+import com.google.accompanist.navigation.animation.rememberAnimatedNavController
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun MainScreen(
     mainViewModel: MainViewModel,
     homeViewModel: HomeViewModel,
     appointmentsViewModel: AppointmentsViewModel,
     isDarkTheme: Boolean,
-    showDeleteDialog: (br.com.gestahub.ui.appointment.Appointment) -> Unit,
-    showClearDialog: (br.com.gestahub.ui.appointment.Appointment) -> Unit
 ) {
-    val navController = rememberNavController()
+    val navController = rememberAnimatedNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -93,8 +92,6 @@ fun MainScreen(
             homeViewModel = homeViewModel,
             appointmentsViewModel = appointmentsViewModel,
             isDarkTheme = isDarkTheme,
-            showDeleteDialog = showDeleteDialog,
-            showClearDialog = showClearDialog
         )
     }
 }

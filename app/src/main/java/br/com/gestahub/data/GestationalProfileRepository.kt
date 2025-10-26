@@ -5,8 +5,12 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class GestationalProfileRepository {
+
+@Singleton
+class GestationalProfileRepository @Inject constructor() {
     private val db = Firebase.firestore
     // O userId foi removido daqui para não guardar um valor antigo.
 

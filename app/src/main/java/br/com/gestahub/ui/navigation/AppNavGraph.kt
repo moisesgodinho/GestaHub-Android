@@ -14,6 +14,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -57,11 +58,8 @@ fun AppNavGraph(
     homeViewModel: HomeViewModel,
     appointmentsViewModel: AppointmentsViewModel,
     isDarkTheme: Boolean,
-    showDeleteDialog: (br.com.gestahub.ui.appointment.Appointment) -> Unit,
-    showClearDialog: (br.com.gestahub.ui.appointment.Appointment) -> Unit
 ) {
     val homeUiState by homeViewModel.uiState.collectAsState()
-    val appointmentsUiState by appointmentsViewModel.uiState.collectAsState()
     val dataState = homeUiState.dataState
 
     val mainScreenEnterTransition = slideInHorizontally(initialOffsetX = { 300 }, animationSpec = tween(300)) + fadeIn(animationSpec = tween(300))
@@ -120,33 +118,27 @@ fun AppNavGraph(
         }
 
         composable(
-            "appointments", deepLinks = listOf(navDeepLink { uriPattern = "gestahub://appointments" }),
+            "appointments",
+            deepLinks = listOf(navDeepLink { uriPattern = "gestahub://appointments" }),
             enterTransition = { mainScreenEnterTransition }, exitTransition = { mainScreenExitTransition },
             popEnterTransition = { mainScreenPopEnterTransition }, popExitTransition = { mainScreenPopExitTransition }
         ) {
             AppointmentsScreen(
                 contentPadding = innerPadding,
-                uiState = appointmentsUiState,
+                viewModel = appointmentsViewModel,
                 isDarkTheme = isDarkTheme,
-                onToggleDone = { appointmentsViewModel.toggleDone(it) },
-                onEditClick = { appointment ->
-                    navController.navigate("appointmentForm?appointmentId=${appointment.id}&appointmentType=${appointment.type.name}")
-                },
-                onDeleteOrClearRequest = { appointment ->
-                    if (appointment.type == AppointmentType.MANUAL) {
-                        showDeleteDialog(appointment)
-                    } else {
-                        showClearDialog(appointment)
-                    }
-                },
-                onNavigateToForm = { date ->
+                onNavigateToFormWithDate = { date ->
                     navController.navigate("appointmentForm?preselectedDate=$date")
+                },
+                onNavigateToFormWithAppointment = { appointment ->
+                    navController.navigate("appointmentForm?appointmentId=${appointment.id}&appointmentType=${appointment.type.name}")
                 }
             )
         }
 
         composable(
-            "journal", deepLinks = listOf(navDeepLink { uriPattern = "gestahub://journal" }),
+            "journal",
+            deepLinks = listOf(navDeepLink { uriPattern = "gestahub://journal" }),
             enterTransition = { mainScreenEnterTransition }, exitTransition = { mainScreenExitTransition },
             popEnterTransition = { mainScreenPopEnterTransition }, popExitTransition = { mainScreenPopExitTransition }
         ) {
@@ -192,6 +184,8 @@ fun AppNavGraph(
             }
         }
 
+        val internalExitPop = internalScreenExitTransition
+
         composable(
             route = "calculator?lmp={lmp}&examDate={examDate}&weeks={weeks}&days={days}",
             arguments = listOf(
@@ -201,14 +195,11 @@ fun AppNavGraph(
                 navArgument("days") { type = NavType.StringType; nullable = true }
             ),
             enterTransition = { internalScreenEnterTransition },
-            exitTransition = { internalScreenExitTransition }
+            exitTransition = { internalScreenExitTransition },
+            popExitTransition = { internalExitPop }
         ) { backStackEntry ->
             CalculatorScreen(
-                onSaveSuccess = {
-                    navController.navigate("home") {
-                        popUpTo("decision_route") { inclusive = true }
-                    }
-                },
+                onSaveSuccess = { navController.navigate("home") { popUpTo("decision_route") { inclusive = true } } },
                 onCancelClick = { navController.popBackStack() },
                 initialLmp = backStackEntry.arguments?.getString("lmp"),
                 initialExamDate = backStackEntry.arguments?.getString("examDate"),
@@ -225,7 +216,8 @@ fun AppNavGraph(
                 navArgument("preselectedDate") { type = NavType.StringType; nullable = true }
             ),
             enterTransition = { internalScreenEnterTransition },
-            exitTransition = { internalScreenExitTransition }
+            exitTransition = { internalScreenExitTransition },
+            popExitTransition = { internalExitPop }
         ) {
             AppointmentFormScreen(onNavigateBack = { navController.popBackStack() })
         }
@@ -234,7 +226,8 @@ fun AppNavGraph(
             route = "journalEntry/{date}",
             arguments = listOf(navArgument("date") { type = NavType.StringType }),
             enterTransition = { internalScreenEnterTransition },
-            exitTransition = { internalScreenExitTransition }
+            exitTransition = { internalScreenExitTransition },
+            popExitTransition = { internalExitPop }
         ) {
             val lmp = (dataState as? GestationalDataState.HasData)?.estimatedLmp
             JournalEntryScreen(
@@ -246,8 +239,6 @@ fun AppNavGraph(
                 }
             )
         }
-
-        val internalExitPop = internalScreenExitTransition
 
         composable("profile", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
             ProfileScreen(onNavigateBack = { navController.popBackStack() }, onEditClick = { navController.navigate("editProfile") })
@@ -277,6 +268,7 @@ fun AppNavGraph(
         composable("contraction_timer", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
             ContractionTimerScreen(onBack = { navController.popBackStack() })
         }
+
         composable(
             "medication_tracker",
             enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }
@@ -292,6 +284,7 @@ fun AppNavGraph(
                 viewModel = medicationViewModel
             )
         }
+
         composable(
             "medicationForm?medicationId={medicationId}",
             arguments = listOf(navArgument("medicationId") { type = NavType.StringType; nullable = true }),
