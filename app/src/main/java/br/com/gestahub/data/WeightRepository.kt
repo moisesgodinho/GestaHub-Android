@@ -7,8 +7,11 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class WeightRepository {
+@Singleton
+class WeightRepository @Inject constructor() {
     private val db = Firebase.firestore
 
     /**

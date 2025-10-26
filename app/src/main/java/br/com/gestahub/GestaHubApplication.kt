@@ -1,9 +1,11 @@
-package br.com.gestahub // <-- Verifique esta linha
+package br.com.gestahub
 
 import android.app.Application
-import br.com.gestahub.services.NotificationService // <-- Verifique o import
-import br.com.gestahub.services.DailyReminderManager // Importe o novo manager
+import br.com.gestahub.services.NotificationService
+import br.com.gestahub.services.DailyReminderManager
+import dagger.hilt.android.HiltAndroidApp // <-- ADICIONE ESTE IMPORT
 
+@HiltAndroidApp // <-- ADICIONE ESTA ANOTAÇÃO
 class GestaHubApplication : Application() {
 
     override fun onCreate() {

@@ -99,4 +99,5 @@ dependencies {
     // Hilt Dependencies
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler) // Esta linha agora funcionará
+    implementation(libs.androidx.hilt.navigation.compose) // <-- ADICIONE ESTA LINHA
 }

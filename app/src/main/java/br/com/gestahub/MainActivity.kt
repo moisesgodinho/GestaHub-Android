@@ -21,8 +21,10 @@ import br.com.gestahub.ui.login.AuthViewModel
 import br.com.gestahub.ui.main.MainViewModel
 import br.com.gestahub.ui.navigation.GestaHubApp
 import br.com.gestahub.ui.theme.GestaHubTheme
+import dagger.hilt.android.AndroidEntryPoint // <-- ADICIONE ESTE IMPORT
 import br.com.gestahub.workers.NotificationWorker // <-- CORRIGIR ESTA LINHA
 
+@AndroidEntryPoint // <-- ADICIONE ESTA ANOTAÇÃO
 class MainActivity : ComponentActivity() {
 
     private val requestPermissionLauncher =

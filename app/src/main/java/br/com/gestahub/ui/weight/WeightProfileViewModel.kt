@@ -5,10 +5,12 @@ import androidx.lifecycle.viewModelScope
 import br.com.gestahub.data.WeightRepository
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class WeightProfileUiState(
     val height: String = "",
@@ -18,8 +20,13 @@ data class WeightProfileUiState(
     val userMessage: String? = null
 )
 
-class WeightProfileViewModel : ViewModel() {
-    private val repository = WeightRepository()
+@HiltViewModel // <-- 1. Anota a classe para o Hilt
+class WeightProfileViewModel @Inject constructor( // <-- 2. Adiciona @Inject e o construtor
+    private val repository: WeightRepository // <-- 3. Recebe o repositório como parâmetro
+) : ViewModel() {
+
+    // 4. A linha "private val repository = WeightRepository()" foi removida.
+
     private val userId = Firebase.auth.currentUser?.uid
 
     private val _uiState = MutableStateFlow(WeightProfileUiState())
@@ -35,13 +42,12 @@ class WeightProfileViewModel : ViewModel() {
             return
         }
         viewModelScope.launch {
-            // Agora a chamada para getWeightProfile funciona.
+            // Usa o repositório que foi injetado pelo Hilt
             val profile = repository.getWeightProfile(userId)
             if (profile != null) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        // E as referências para 'height' e 'prePregnancyWeight' também.
                         height = if (profile.height > 0) profile.height.toString() else "",
                         prePregnancyWeight = if (profile.prePregnancyWeight > 0) profile.prePregnancyWeight.toString() else ""
                     )
@@ -89,6 +95,7 @@ class WeightProfileViewModel : ViewModel() {
                     height = heightValue,
                     prePregnancyWeight = weightValue
                 )
+                // Usa o repositório injetado
                 repository.saveWeightProfile(userId, profile)
                 _uiState.update { it.copy(saveSuccess = true) }
             } catch (e: Exception) {

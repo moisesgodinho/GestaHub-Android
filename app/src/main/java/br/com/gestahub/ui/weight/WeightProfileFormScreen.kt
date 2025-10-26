@@ -11,13 +11,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel // <-- 1. ADICIONE ESTE IMPORT
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WeightProfileFormScreen(
     onNavigateBack: () -> Unit,
-    viewModel: WeightProfileViewModel = viewModel()
+    viewModel: WeightProfileViewModel = hiltViewModel() // <-- 2. MUDE de viewModel() para hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current

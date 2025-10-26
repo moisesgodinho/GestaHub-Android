@@ -23,6 +23,7 @@ kizitonwoseCalendar = "2.5.1"
 androidxWork = "2.9.0" # <-- ADICIONE ESTA LINHA
 accompanist = "0.32.0" # <-- ADICIONE ESTA LINHA
 hilt = "2.51.1" # <-- ADICIONE ESTA LINHA
+hiltNavigationCompose = "1.2.0" # <-- ADICIONE ESTA LINHA
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -51,6 +52,7 @@ google-accompanist-navigation-animation = { group = "com.google.accompanist", na
 # Hilt
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" } # <-- ADICIONE ESTA LINHA
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" } # <-- ADICIONE ESTA LINHA
+androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" } # <-- ADICIONE ESTA LINHA
 
 # Firebase
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }

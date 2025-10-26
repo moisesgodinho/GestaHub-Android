@@ -1,4 +1,3 @@
-// Local: app/src/main/java/br/com/gestahub/ui/weight/WeightEntryForm.kt
 package br.com.gestahub.ui.weight
 
 import android.widget.Toast
@@ -12,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel // <-- 1. Import correto
 import br.com.gestahub.ui.components.form.DatePickerField
 import java.text.SimpleDateFormat
 import java.util.*
@@ -21,7 +20,7 @@ import java.util.*
 @Composable
 fun WeightEntryFormScreen(
     onNavigateBack: () -> Unit,
-    viewModel: WeightEntryViewModel = viewModel()
+    viewModel: WeightEntryViewModel = hiltViewModel() // <-- 2. Correção de viewModel() para hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
