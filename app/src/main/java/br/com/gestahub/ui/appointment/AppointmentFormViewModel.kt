@@ -1,4 +1,3 @@
-// Local: app/src/main/java/br/com/gestahub/ui/appointment/AppointmentFormViewModel.kt
 package br.com.gestahub.ui.appointment
 
 import androidx.lifecycle.SavedStateHandle
@@ -8,6 +7,8 @@ import br.com.gestahub.domain.usecase.GetEstimatedLmpUseCase
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -34,7 +35,9 @@ data class AppointmentFormUiState(
     val userMessage: String? = null
 )
 
-class AppointmentFormViewModel(
+@HiltViewModel
+class AppointmentFormViewModel @Inject constructor(
+    private val getEstimatedLmpUseCase: GetEstimatedLmpUseCase, // Injeção via construtor
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -43,11 +46,11 @@ class AppointmentFormViewModel(
 
     private val appointmentId: String? = savedStateHandle["appointmentId"]
     private val appointmentType: String? = savedStateHandle["appointmentType"]
-    private val preselectedDate: String? = savedStateHandle["preselectedDate"] // Novo
+    private val preselectedDate: String? = savedStateHandle["preselectedDate"]
 
     private var estimatedLmp: LocalDate? = null
     private var dueDate: LocalDate? = null
-    private val getEstimatedLmpUseCase = GetEstimatedLmpUseCase()
+    // A linha "private val getEstimatedLmpUseCase = GetEstimatedLmpUseCase()" foi REMOVIDA daqui.
 
     private val _uiState = MutableStateFlow(AppointmentFormUiState())
     val uiState = _uiState.asStateFlow()
@@ -76,7 +79,6 @@ class AppointmentFormViewModel(
                     loadAppointment(userId, appointmentId, AppointmentType.valueOf(appointmentType))
                 } else {
                     _uiState.update { it.copy(
-                        // Usa a data pré-selecionada se existir, senão usa a data de hoje
                         date = preselectedDate ?: today,
                         time = now,
                         isLoading = false
@@ -181,7 +183,6 @@ class AppointmentFormViewModel(
             return
         }
 
-        // --- VALIDAÇÃO ATUALIZADA USANDO A DUM ESTIMADA ---
         if (estimatedLmp != null && dueDate != null) {
             val extendedDueDate = dueDate!!.plusDays(14)
             if (selectedDate.isBefore(estimatedLmp) || selectedDate.isAfter(extendedDueDate)) {

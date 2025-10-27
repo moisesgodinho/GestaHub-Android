@@ -3,6 +3,8 @@ package br.com.gestahub.ui.contractionstimer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Timestamp
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,9 +14,10 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import java.util.Date
 
-class ContractionTimerViewModel : ViewModel() {
-
-    private val repository = ContractionTimerRepository()
+@HiltViewModel
+class ContractionTimerViewModel @Inject constructor(
+    private val repository: ContractionTimerRepository
+) : ViewModel() {
 
     private val _contractions = MutableStateFlow<List<Contraction>>(emptyList())
     val contractions: StateFlow<List<Contraction>> = _contractions.asStateFlow()

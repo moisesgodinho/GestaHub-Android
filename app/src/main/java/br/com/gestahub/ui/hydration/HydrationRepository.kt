@@ -7,12 +7,15 @@ import com.google.firebase.firestore.SetOptions
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-class HydrationRepository {
+@Singleton
+class HydrationRepository @Inject constructor() {
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
 
@@ -48,7 +51,6 @@ class HydrationRepository {
         } ?: trySend(Result.failure(Exception("Usuário não autenticado.")))
     }
 
-    // --- NOVA FUNÇÃO ADICIONADA ---
     fun getWaterIntakeHistory(): Flow<Result<List<WaterIntakeEntry>>> = callbackFlow {
         getWaterIntakeCollection()?.let { collection ->
             val listener = collection.orderBy("date", Query.Direction.DESCENDING)

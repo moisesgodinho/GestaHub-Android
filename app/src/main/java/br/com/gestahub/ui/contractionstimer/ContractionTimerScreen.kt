@@ -26,12 +26,13 @@ import br.com.gestahub.ui.components.ConfirmationDialog
 import br.com.gestahub.ui.theme.Rose500
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.hilt.navigation.compose.hiltViewModel // Importe esta dependência
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContractionTimerScreen(
     onBack: () -> Unit,
-    viewModel: ContractionTimerViewModel = viewModel()
+    viewModel: ContractionTimerViewModel = hiltViewModel()
 ) {
     val contractions by viewModel.contractions.collectAsState()
     val isTiming by viewModel.isTiming.collectAsState()

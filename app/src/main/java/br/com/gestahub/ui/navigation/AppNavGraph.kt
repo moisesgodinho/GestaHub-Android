@@ -1,12 +1,17 @@
 // Local: app/src/main/java/br/com/gestahub/ui/navigation/AppNavGraph.kt
 package br.com.gestahub.ui.navigation
 
-import androidx.compose.animation.*
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -21,7 +26,6 @@ import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
 import br.com.gestahub.ui.appointment.AppointmentFormScreen
-import br.com.gestahub.ui.appointment.AppointmentType
 import br.com.gestahub.ui.appointment.AppointmentsScreen
 import br.com.gestahub.ui.appointment.AppointmentsViewModel
 import br.com.gestahub.ui.calculator.CalculatorScreen
@@ -107,9 +111,7 @@ fun AppNavGraph(
                 homeViewModel = homeViewModel,
                 isDarkTheme = isDarkTheme,
                 onAddDataClick = { navController.navigate("calculator") },
-                // CORREÇÃO APLICADA AQUI
                 onEditDataClick = { data ->
-                    // Usamos o operador 'elvis' (?:) para garantir que valores nulos se tornem strings vazias
                     val lmp = data.lmp ?: ""
                     val examDate = data.ultrasoundExamDate ?: ""
                     val weeks = data.weeksAtExam ?: ""
@@ -175,16 +177,16 @@ fun AppNavGraph(
             enterTransition = { mainScreenEnterTransition }, exitTransition = { mainScreenExitTransition },
             popEnterTransition = { mainScreenPopEnterTransition }, popExitTransition = { mainScreenPopExitTransition }
         ) {
-            Box(Modifier.padding(innerPadding)) {
-                MoreScreen(
-                    onNavigateToMovementCounter = { navController.navigate("movement_counter") },
-                    onNavigateToMaternityBag = { navController.navigate("maternity_bag") },
-                    onNavigateToHydrationTracker = { navController.navigate("hydration_tracker") },
-                    onNavigateToShoppingList = { navController.navigate("shopping_list") },
-                    onNavigateToContractionTimer = { navController.navigate("contraction_timer") },
-                    onNavigateToMedicationTracker = { navController.navigate("medication_tracker") }
-                )
-            }
+            // A chamada agora é direta, sem o Box, e passa o innerPadding
+            MoreScreen(
+                contentPadding = innerPadding,
+                onNavigateToMovementCounter = { navController.navigate("movement_counter") },
+                onNavigateToMaternityBag = { navController.navigate("maternity_bag") },
+                onNavigateToHydrationTracker = { navController.navigate("hydration_tracker") },
+                onNavigateToShoppingList = { navController.navigate("shopping_list") },
+                onNavigateToContractionTimer = { navController.navigate("contraction_timer") },
+                onNavigateToMedicationTracker = { navController.navigate("medication_tracker") }
+            )
         }
 
         val internalExitPop = internalScreenExitTransition
@@ -222,7 +224,10 @@ fun AppNavGraph(
             exitTransition = { internalScreenExitTransition },
             popExitTransition = { internalExitPop }
         ) {
-            AppointmentFormScreen(onNavigateBack = { navController.popBackStack() })
+            AppointmentFormScreen(
+                onNavigateBack = { navController.popBackStack() },
+                viewModel = hiltViewModel()
+            )
         }
 
         composable(
@@ -239,37 +244,70 @@ fun AppNavGraph(
                 onDateChange = { newDate ->
                     navController.popBackStack()
                     navController.navigate("journalEntry/$newDate")
-                }
+                },
+                viewModel = hiltViewModel()
             )
         }
 
         composable("profile", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
-            ProfileScreen(onNavigateBack = { navController.popBackStack() }, onEditClick = { navController.navigate("editProfile") })
+            ProfileScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onEditClick = { navController.navigate("editProfile") },
+                profileViewModel = hiltViewModel()
+            )
         }
         composable("editProfile", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
-            EditProfileScreen(onSaveSuccess = { navController.popBackStack() }, onCancelClick = { navController.popBackStack() })
+            EditProfileScreen(
+                onSaveSuccess = { navController.popBackStack() },
+                onCancelClick = { navController.popBackStack() },
+                editProfileViewModel = hiltViewModel()
+            )
         }
         composable("weight_entry_form", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
-            WeightEntryFormScreen(onNavigateBack = { navController.popBackStack() })
+            WeightEntryFormScreen(
+                onNavigateBack = { navController.popBackStack() },
+                viewModel = hiltViewModel()
+            )
         }
         composable("weight_profile_form", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
-            WeightProfileFormScreen(onNavigateBack = { navController.popBackStack() })
+            WeightProfileFormScreen(
+                onNavigateBack = { navController.popBackStack() },
+                viewModel = hiltViewModel()
+            )
         }
         composable("movement_counter", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
             val lmp = (dataState as? GestationalDataState.HasData)?.estimatedLmp
-            MovementCounterScreen(onNavigateBack = { navController.popBackStack() }, estimatedLmp = lmp, isDarkTheme = isDarkTheme)
+            MovementCounterScreen(
+                onNavigateBack = { navController.popBackStack() },
+                estimatedLmp = lmp,
+                isDarkTheme = isDarkTheme
+            )
         }
         composable("maternity_bag", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
-            MaternityBagScreen(onNavigateBack = { navController.popBackStack() }, isDarkTheme = isDarkTheme)
+            MaternityBagScreen(
+                onNavigateBack = { navController.popBackStack() },
+                isDarkTheme = isDarkTheme,
+                viewModel = hiltViewModel()
+            )
         }
         composable("hydration_tracker", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
-            HydrationTrackerScreen(onNavigateBack = { navController.popBackStack() }, isDarkTheme = isDarkTheme)
+            HydrationTrackerScreen(
+                onNavigateBack = { navController.popBackStack() },
+                isDarkTheme = isDarkTheme,
+                viewModel = hiltViewModel()
+            )
         }
         composable("shopping_list", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
-            ShoppingListScreen(navController = navController)
+            ShoppingListScreen(
+                navController = navController,
+                viewModel = hiltViewModel()
+            )
         }
         composable("contraction_timer", enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }) {
-            ContractionTimerScreen(onBack = { navController.popBackStack() })
+            ContractionTimerScreen(
+                onBack = { navController.popBackStack() },
+                viewModel = hiltViewModel()
+            )
         }
 
         composable(
@@ -293,7 +331,10 @@ fun AppNavGraph(
             arguments = listOf(navArgument("medicationId") { type = NavType.StringType; nullable = true }),
             enterTransition = { internalScreenEnterTransition }, exitTransition = { internalScreenExitTransition }, popExitTransition = { internalExitPop }
         ) {
-            MedicationFormScreen(onNavigateBack = { navController.popBackStack() })
+            MedicationFormScreen(
+                onNavigateBack = { navController.popBackStack() },
+                viewModel = hiltViewModel()
+            )
         }
     }
 }
