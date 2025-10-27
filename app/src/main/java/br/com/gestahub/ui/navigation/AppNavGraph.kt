@@ -107,11 +107,14 @@ fun AppNavGraph(
                 homeViewModel = homeViewModel,
                 isDarkTheme = isDarkTheme,
                 onAddDataClick = { navController.navigate("calculator") },
-                onEditDataClick = {
-                    if (dataState is GestationalDataState.HasData) {
-                        val data = dataState.gestationalData
-                        navController.navigate("calculator?lmp=${data.lmp ?: ""}&examDate=${data.ultrasoundExamDate ?: ""}&weeks=${data.weeksAtExam ?: ""}&days=${data.daysAtExam ?: ""}")
-                    }
+                // CORREÇÃO APLICADA AQUI
+                onEditDataClick = { data ->
+                    // Usamos o operador 'elvis' (?:) para garantir que valores nulos se tornem strings vazias
+                    val lmp = data.lmp ?: ""
+                    val examDate = data.ultrasoundExamDate ?: ""
+                    val weeks = data.weeksAtExam ?: ""
+                    val days = data.daysAtExam ?: ""
+                    navController.navigate("calculator?lmp=$lmp&examDate=$examDate&weeks=$weeks&days=$days")
                 },
                 navController = navController
             )

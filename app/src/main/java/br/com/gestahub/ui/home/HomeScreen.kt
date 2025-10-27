@@ -23,7 +23,8 @@ fun HomeScreen(
     homeViewModel: HomeViewModel = viewModel(),
     isDarkTheme: Boolean,
     onAddDataClick: () -> Unit,
-    onEditDataClick: () -> Unit,
+    // A assinatura da função onEditDataClick foi atualizada para receber os dados
+    onEditDataClick: (GestationalData) -> Unit,
     navController: NavController
 ) {
     val uiState by homeViewModel.uiState.collectAsState()
@@ -36,7 +37,6 @@ fun HomeScreen(
             }
         }
         is GestationalDataState.HasData -> {
-            // Estado para controlar a visibilidade dos cards
             var cardsVisible by remember { mutableStateOf(false) }
             LaunchedEffect(Unit) {
                 cardsVisible = true
@@ -50,19 +50,18 @@ fun HomeScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // O primeiro card aparece imediatamente
                 AnimatedVisibility(
                     visible = cardsVisible,
                     enter = fadeIn(animationSpec = tween(500)) + slideInVertically(animationSpec = tween(500))
                 ) {
                     GestationalInfoDashboard(
                         state = dataState,
-                        onEditDataClick = onEditDataClick,
+                        // Aqui passamos os dados para a função de clique
+                        onEditDataClick = { onEditDataClick(dataState.gestationalData) },
                         isDarkTheme = isDarkTheme
                     )
                 }
 
-                // O segundo card aparece um pouco depois, se existir
                 if (dataState.upcomingAppointments.isNotEmpty()) {
                     AnimatedVisibility(
                         visible = cardsVisible,

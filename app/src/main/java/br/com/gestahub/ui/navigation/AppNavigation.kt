@@ -1,12 +1,12 @@
+// Local: app/src/main/java/br/com/gestahub/ui/navigation/AppNavigation.kt
 package br.com.gestahub.ui.navigation
 
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.hilt.navigation.compose.hiltViewModel // <-- 1. ADICIONE ESTE IMPORT
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import br.com.gestahub.ui.appointment.Appointment
 import br.com.gestahub.ui.appointment.AppointmentsViewModel
 import br.com.gestahub.ui.main.MainScreen
 import br.com.gestahub.ui.main.MainViewModel
@@ -27,8 +27,8 @@ class WeightViewModelFactory(private val estimatedLmp: LocalDate?) : ViewModelPr
 
 @Composable
 fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
-    val homeViewModel: br.com.gestahub.ui.home.HomeViewModel = viewModel()
-    // A chamada para appointmentsViewModel agora usa hiltViewModel()
+    // --- CORREÇÃO DEFINITIVA ---
+    val homeViewModel: br.com.gestahub.ui.home.HomeViewModel = hiltViewModel()
     val appointmentsViewModel: AppointmentsViewModel = hiltViewModel()
 
     val appointmentsUiState by appointmentsViewModel.uiState.collectAsState()
@@ -61,7 +61,6 @@ fun GestaHubApp(mainViewModel: MainViewModel, user: FirebaseUser) {
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) {
-        // 2. CHAMADA CORRIGIDA: Removidos os parâmetros de diálogo
         MainScreen(
             mainViewModel = mainViewModel,
             homeViewModel = homeViewModel,

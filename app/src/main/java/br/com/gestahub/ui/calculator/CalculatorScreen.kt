@@ -16,7 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import br.com.gestahub.ui.components.form.DatePickerField
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,7 +29,7 @@ fun CalculatorScreen(
     initialWeeks: String?,
     initialDays: String?
 ) {
-    val viewModel: CalculatorViewModel = viewModel()
+    val viewModel: CalculatorViewModel = hiltViewModel()
     val saveState by viewModel.saveState.collectAsState()
     val context = LocalContext.current
 

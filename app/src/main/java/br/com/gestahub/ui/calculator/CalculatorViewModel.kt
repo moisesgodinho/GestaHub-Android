@@ -1,15 +1,17 @@
+// Local: app/src/main/java/br/com/gestahub/ui/calculator/CalculatorViewModel.kt
 package br.com.gestahub.ui.calculator
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.gestahub.data.GestationalProfileRepository
+import dagger.hilt.android.lifecycle.HiltViewModel // 1. Adicionar import
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
+import javax.inject.Inject // 2. Adicionar import
 
-// ... (a classe SaveState continua a mesma) ...
 sealed class SaveState {
     object Idle : SaveState()
     object Loading : SaveState()
@@ -17,8 +19,12 @@ sealed class SaveState {
     data class Error(val message: String) : SaveState()
 }
 
-class CalculatorViewModel : ViewModel() {
-    private val repository = GestationalProfileRepository() // Instancia o repositório
+@HiltViewModel // 3. Adicionar anotação
+class CalculatorViewModel @Inject constructor( // 4. Adicionar @Inject e o construtor
+    private val repository: GestationalProfileRepository
+) : ViewModel() {
+    // 5. REMOVER a linha abaixo:
+    // private val repository = GestationalProfileRepository()
 
     private val _saveState = MutableStateFlow<SaveState>(SaveState.Idle)
     val saveState = _saveState.asStateFlow()
@@ -72,7 +78,7 @@ class CalculatorViewModel : ViewModel() {
             val weeksInt = weeks.toIntOrNull()
             val daysInt = days.toIntOrNull()
 
-            if (weeksInt == null || daysInt == null || weeksInt < 0 || daysInt !in 0..6) { // <-- Validação aprimorada
+            if (weeksInt == null || daysInt == null || weeksInt < 0 || daysInt !in 0..6) {
                 _saveState.value = SaveState.Error("Semanas ou dias inválidos.")
                 return@launch
             }

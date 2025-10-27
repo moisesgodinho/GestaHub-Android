@@ -1,3 +1,4 @@
+// Local: app/src/main/java/br/com/gestahub/ui/home/HomeViewModel.kt
 package br.com.gestahub.ui.home
 
 import androidx.lifecycle.ViewModel
@@ -11,10 +12,12 @@ import br.com.gestahub.ui.appointment.Appointment
 import br.com.gestahub.ui.appointment.ManualAppointment
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.ktx.toObject
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import javax.inject.Inject
 
 sealed class GestationalDataState {
     object Loading : GestationalDataState()
@@ -43,31 +46,37 @@ data class UiState(
     val dataState: GestationalDataState = GestationalDataState.Loading
 )
 
-class HomeViewModel : ViewModel() {
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val gestationalProfileRepository: GestationalProfileRepository,
+    private val appointmentRepository: AppointmentRepository,
+    private val calculateGestationalInfoUseCase: CalculateGestationalInfoUseCase
+) : ViewModel() {
 
-    private val gestationalProfileRepository = GestationalProfileRepository()
-    private val appointmentRepository = AppointmentRepository()
     private var gestationalDataListener: ListenerRegistration? = null
     private var appointmentsListener: ListenerRegistration? = null
-    private val calculateGestationalInfoUseCase = CalculateGestationalInfoUseCase()
 
     private val _gestationalInfo = MutableStateFlow<GestationalInfo?>(null)
     private val _upcomingAppointments = MutableStateFlow<List<Appointment>>(emptyList())
     private val _hasGestationalData = MutableStateFlow<Boolean?>(null)
+    // --- NOVO ESTADO PARA GUARDAR OS DADOS BRUTOS ---
+    private val _rawGestationalData = MutableStateFlow(GestationalData())
 
     private val _uiState = MutableStateFlow(UiState())
     val uiState = _uiState.asStateFlow()
 
     init {
-        // Combina os fluxos de dados em um único estado de UI
         viewModelScope.launch {
-            combine(_gestationalInfo, _upcomingAppointments, _hasGestationalData) { info, appointments, hasData ->
+            // --- O 'combine' agora também observa os dados brutos ---
+            combine(
+                _gestationalInfo,
+                _upcomingAppointments,
+                _hasGestationalData,
+                _rawGestationalData
+            ) { info, appointments, hasData, rawData ->
                 when {
                     hasData == false -> UiState(dataState = GestationalDataState.NoData)
                     info != null -> {
-                        val gestationalData = GestationalData(
-                            lmp = info.estimatedLmp?.toString(), // Aproximação, usado para reedição
-                        )
                         UiState(
                             dataState = GestationalDataState.HasData(
                                 gestationalWeeks = info.gestationalWeeks,
@@ -75,7 +84,8 @@ class HomeViewModel : ViewModel() {
                                 dueDate = info.dueDate,
                                 countdownWeeks = info.countdownWeeks,
                                 countdownDays = info.countdownDays,
-                                gestationalData = gestationalData,
+                                // --- CORREÇÃO APLICADA AQUI: Passa os dados brutos e completos ---
+                                gestationalData = rawData,
                                 weeklyInfo = info.weeklyInfo,
                                 estimatedLmp = info.estimatedLmp,
                                 upcomingAppointments = appointments
@@ -106,13 +116,16 @@ class HomeViewModel : ViewModel() {
 
             _hasGestationalData.value = true
             val profile = snapshot.get("gestationalProfile") as? Map<*, *>
+            // --- CORREÇÃO APLICADA AQUI: Extrai os dados brutos... ---
             val rawData = GestationalData(
                 lmp = profile?.get("lmp") as? String,
                 ultrasoundExamDate = (profile?.get("ultrasound") as? Map<*, *>)?.get("examDate") as? String,
                 weeksAtExam = (profile?.get("ultrasound") as? Map<*, *>)?.get("weeksAtExam") as? String,
                 daysAtExam = (profile?.get("ultrasound") as? Map<*, *>)?.get("daysAtExam") as? String
             )
-            _gestationalInfo.value = calculateGestationalInfoUseCase(rawData)
+            // --- ...e atualiza os dois estados separadamente ---
+            _rawGestationalData.value = rawData // Guarda os dados brutos
+            _gestationalInfo.value = calculateGestationalInfoUseCase(rawData) // Calcula as informações processadas
         }
     }
 

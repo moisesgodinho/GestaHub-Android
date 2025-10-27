@@ -7,11 +7,12 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.*
+import javax.inject.Inject
 
 // Classe de dados para guardar o resultado do cálculo
 data class GestationalAge(val weeks: Long, val days: Long)
 
-class CalculateGestationalInfoUseCase {
+class CalculateGestationalInfoUseCase @Inject constructor() {
 
     // A lógica para obter a DUM estimada agora é uma função privada aqui dentro,
     // o que resolve o erro de referência e melhora o encapsulamento.
@@ -56,7 +57,7 @@ class CalculateGestationalInfoUseCase {
 }
 
 // Esta classe permanece para ser usada pelos ViewModels, que passam o perfil como um Map.
-class GetEstimatedLmpUseCase {
+class GetEstimatedLmpUseCase @Inject constructor() {
     operator fun invoke(gestationalProfile: Map<*, *>?): LocalDate? {
         if (gestationalProfile == null) return null
 
@@ -81,7 +82,7 @@ class GetEstimatedLmpUseCase {
     }
 }
 
-class CalculateGestationalAgeOnDateUseCase {
+class CalculateGestationalAgeOnDateUseCase @Inject constructor() {
     private val displayFormatter = DateTimeFormatter.ofPattern("dd/MM/yy", Locale("pt", "BR"))
 
     fun forUI(lmp: LocalDate, startWeek: Int): String {
