@@ -4,7 +4,6 @@ package br.com.gestahub.ui.weight
 data class WeightEntry(
     val date: String = "",
     val weight: Double = 0.0,
-    val bmi: Double = 0.0
 )
 
 /**

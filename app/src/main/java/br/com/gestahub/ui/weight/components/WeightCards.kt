@@ -1,4 +1,3 @@
-// Local: app/src/main/java/br/com/gestahub/ui/weight/components/WeightCards.kt
 package br.com.gestahub.ui.weight.components
 
 import androidx.compose.animation.AnimatedVisibility
@@ -130,9 +129,11 @@ fun HistoryCard(
                                 animationSpec = tween(durationMillis = 500, delayMillis = index * 100)
                             )
                         ) {
+                            // --- LÓGICA DE BUSCA DO IMC ATUALIZADA AQUI ---
                             WeightItem(
                                 entry = entry,
                                 gestationalAge = uiState.gestationalAges[entry.date],
+                                bmi = uiState.bmis[entry.date], // Pega o IMC do mapa
                                 isDarkTheme = isDarkTheme,
                                 onDelete = {
                                     entryToDelete = entry
@@ -193,6 +194,7 @@ fun InitialProfilePrompt(onAddClick: () -> Unit) {
 private fun WeightItem(
     entry: WeightEntry,
     gestationalAge: String?,
+    bmi: Double?, // <-- O IMC agora é recebido como um parâmetro nullable
     isDarkTheme: Boolean,
     onDelete: () -> Unit
 ) {
@@ -242,8 +244,10 @@ private fun WeightItem(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
+                // --- EXIBIÇÃO DO IMC ATUALIZADA ---
+                // Exibe o IMC formatado se não for nulo, ou "--" caso contrário
                 Text(
-                    text = "IMC: ${String.format("%.1f", entry.bmi)}",
+                    text = "IMC: ${bmi?.let { String.format("%.1f", it) } ?: "--"}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -256,6 +260,7 @@ private fun WeightItem(
     }
 }
 
+// ... O restante do arquivo (EmptyState, InfoCard, ProfileCard, etc.) permanece o mesmo ...
 @Composable
 private fun EmptyState() {
     Column(

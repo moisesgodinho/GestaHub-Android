@@ -67,15 +67,9 @@ class WeightEntryViewModel @Inject constructor( // <-- ADICIONE O @Inject E O CO
 
     fun saveWeightEntry() {
         val weightValue = _uiState.value.weight.toDoubleOrNull()
-        val heightInCm = userHeightCm
 
         if (weightValue == null || weightValue <= 0) {
             _uiState.update { it.copy(userMessage = "Por favor, insira um peso válido.") }
-            return
-        }
-
-        if (heightInCm == null || heightInCm <= 0) {
-            _uiState.update { it.copy(userMessage = "Não foi possível calcular o IMC. Verifique seu perfil de peso.") }
             return
         }
 
@@ -88,21 +82,18 @@ class WeightEntryViewModel @Inject constructor( // <-- ADICIONE O @Inject E O CO
         _uiState.update { it.copy(isSaving = true) }
         viewModelScope.launch {
             try {
-                val heightInMeters = heightInCm / 100.0
-                val bmi = weightValue / heightInMeters.pow(2)
-
                 val dateIdFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).apply {
                     timeZone = TimeZone.getTimeZone("UTC")
                 }
                 val dateId = dateIdFormatter.format(_uiState.value.date)
 
+                // Agora o objeto WeightEntry não precisa mais do IMC
                 val entry = WeightEntry(
                     date = dateId,
-                    weight = weightValue,
-                    bmi = bmi
+                    weight = weightValue
                 )
 
-                repository.saveWeightEntry(userId, entry) // Usa o repositório injetado
+                repository.saveWeightEntry(userId, entry)
                 _uiState.update { it.copy(isSaving = false, saveSuccess = true) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isSaving = false, userMessage = "Erro ao salvar o peso.") }
