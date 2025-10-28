@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.gestahub.data.WeightRepository
 import br.com.gestahub.domain.usecase.CalculateGestationalAgeOnDateUseCase
+import br.com.gestahub.domain.usecase.CalculateWeightSummaryUseCase
 import br.com.gestahub.domain.usecase.GestationalAge
+import br.com.gestahub.domain.usecase.PrepareWeightChartDataUseCase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ListenerRegistration
@@ -16,9 +18,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import kotlin.math.pow
-import kotlin.math.roundToInt
 
 data class WeightUiState(
     val profile: WeightProfile? = null,
@@ -34,12 +33,19 @@ data class WeightUiState(
     val chartDateLabels: List<String> = emptyList()
 )
 
+// O ViewModel agora recebe os Use Cases via construtor.
+// Como não estamos usando Hilt neste ViewModel específico, a injeção é manual.
 class WeightViewModel(private val estimatedLmp: LocalDate?) : ViewModel() {
     private val repository = WeightRepository()
     private var weightListener: ListenerRegistration? = null
     private var profileListener: ListenerRegistration? = null
     private val authStateListener: FirebaseAuth.AuthStateListener
+
+    // --- MUDANÇA: Instanciando os Use Cases ---
     private val calculateGestationalAgeUseCase = CalculateGestationalAgeOnDateUseCase()
+    private val calculateWeightSummaryUseCase = CalculateWeightSummaryUseCase()
+    private val prepareWeightChartDataUseCase = PrepareWeightChartDataUseCase()
+    // --- FIM DA MUDANÇA ---
 
     private val _uiState = MutableStateFlow(WeightUiState())
     val uiState = _uiState.asStateFlow()
@@ -63,8 +69,8 @@ class WeightViewModel(private val estimatedLmp: LocalDate?) : ViewModel() {
         profileListener?.remove()
         profileListener = repository.addWeightProfileListener(userId) { profile ->
             _uiState.update { it.copy(profile = profile) }
-            calculateWeightSummary()
-            updateWeightChartData()
+            // Ao receber um novo perfil, recalcula tudo
+            processAllData()
         }
     }
 
@@ -86,15 +92,13 @@ class WeightViewModel(private val estimatedLmp: LocalDate?) : ViewModel() {
                             val entryDate = LocalDate.parse(entry.date)
                             val age : GestationalAge = calculateGestationalAgeUseCase(estimatedLmp, entryDate)
                             ages[entry.date] = "${age.weeks}s ${age.days}d"
-                        } catch (e: Exception) {
-                            // Ignora entradas com data mal formatada
-                        }
+                        } catch (e: Exception) { /* Ignora entradas com data mal formatada */ }
                     }
                 }
 
                 _uiState.update { it.copy(isLoading = false, entries = entries, gestationalAges = ages) }
-                calculateWeightSummary()
-                updateWeightChartData()
+                // Ao receber novos registros, recalcula tudo
+                processAllData()
             } catch (e: Exception) {
                 Log.e("WeightViewModel", "FALHA AO CONVERTER DADOS DO FIREBASE!", e)
                 _uiState.update { it.copy(isLoading = false, userMessage = "Erro ao ler os dados salvos.") }
@@ -102,80 +106,36 @@ class WeightViewModel(private val estimatedLmp: LocalDate?) : ViewModel() {
         }
     }
 
-    private fun updateWeightChartData() {
+    // --- NOVO MÉTODO CENTRALIZADOR ---
+    /**
+     * Orquestra a chamada aos Use Cases e atualiza o estado da UI de uma só vez.
+     */
+    private fun processAllData() {
         val profile = _uiState.value.profile
         val entries = _uiState.value.entries
 
-        if (estimatedLmp == null || profile == null || profile.prePregnancyWeight <= 0) {
-            _uiState.update { it.copy(weightChartEntries = emptyList(), chartDateLabels = emptyList()) }
-            return
-        }
+        // Calcula o sumário usando o Use Case
+        val summary = calculateWeightSummaryUseCase(profile, entries)
 
-        val chartEntries = mutableListOf<SimpleChartEntry>()
-        val dateLabels = mutableListOf<String>()
-        val dateFormatter = DateTimeFormatter.ofPattern("dd/MM")
+        // Prepara os dados do gráfico usando o Use Case
+        val chartData = prepareWeightChartDataUseCase(entries, profile, estimatedLmp)
 
-        chartEntries.add(SimpleChartEntry(0f, profile.prePregnancyWeight.toFloat()))
-        dateLabels.add("Início")
-
-        entries.sortedBy { it.date }.forEachIndexed { index, entry ->
-            chartEntries.add(SimpleChartEntry(index + 1f, entry.weight.toFloat()))
-            try {
-                dateLabels.add(LocalDate.parse(entry.date).format(dateFormatter))
-            } catch (e: Exception) {
-                dateLabels.add("-")
-            }
-        }
-
-        val dueDate = estimatedLmp.plusDays(280)
-        if (dueDate.isAfter(LocalDate.now())) {
-            val lastWeight = entries.firstOrNull()?.weight?.toFloat() ?: profile.prePregnancyWeight.toFloat()
-            chartEntries.add(SimpleChartEntry(chartEntries.size.toFloat(), lastWeight))
-            dateLabels.add("DPP")
-        }
-
-        _uiState.update {
-            it.copy(weightChartEntries = chartEntries, chartDateLabels = dateLabels)
-        }
-    }
-
-    private fun calculateWeightSummary() {
-        val profile = _uiState.value.profile
-        val entries = _uiState.value.entries
-        if (profile == null || profile.height <= 0 || profile.prePregnancyWeight <= 0) {
-            return
-        }
-
-        val heightInMeters = profile.height / 100.0
-        val initialWeight = profile.prePregnancyWeight
-        val latestWeight = entries.firstOrNull()?.weight ?: initialWeight
-
-        // --- CORREÇÃO DE PRECISÃO DE PONTO FLUTUANTE ---
-        // 1. Calcula o IMC com precisão total
-        val unroundedInitialBmi = initialWeight / heightInMeters.pow(2)
-        // 2. Arredonda para 1 casa decimal para evitar erros de comparação
-        val initialBmi = (unroundedInitialBmi * 10).roundToInt() / 10.0
-
-        val currentBmi = latestWeight / heightInMeters.pow(2)
-        val totalGain = latestWeight - initialWeight
-
-        val gainGoal = when {
-            initialBmi < 18.5 -> "12.5 - 18.0 kg"
-            initialBmi >= 18.5 && initialBmi < 25.0 -> "11.5 - 16.0 kg"
-            initialBmi >= 25.0 && initialBmi < 30.0 -> "7.0 - 11.5 kg"
-            initialBmi >= 30.0 -> "5.0 - 9.0 kg"
-            else -> ""
-        }
-
+        // Atualiza o estado da UI com os dados processados
         _uiState.update {
             it.copy(
-                initialBmi = initialBmi,
-                currentBmi = currentBmi,
-                totalGain = totalGain,
-                gainGoal = gainGoal
+                initialBmi = summary.initialBmi,
+                currentBmi = summary.currentBmi,
+                totalGain = summary.totalGain,
+                gainGoal = summary.gainGoal,
+                weightChartEntries = chartData.entries,
+                chartDateLabels = chartData.labels
             )
         }
     }
+    // --- FIM DO NOVO MÉTODO ---
+
+    // --- ATENÇÃO: Os métodos updateWeightChartData() e calculateWeightSummary() foram REMOVIDOS ---
+    // A lógica deles agora está nos Use Cases e é orquestrada pelo novo método processAllData().
 
     fun deleteWeightEntry(entry: WeightEntry) {
         val userId = Firebase.auth.currentUser?.uid ?: return
