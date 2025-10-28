@@ -6,28 +6,25 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import br.com.gestahub.services.NotificationService
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    profileViewModel: ProfileViewModel = viewModel(),
     onNavigateBack: () -> Unit,
-    onEditClick: () -> Unit
+    onEditClick: () -> Unit,
+    profileViewModel: ProfileViewModel = hiltViewModel() // Alterado para hiltViewModel()
 ) {
-    // --- CORREÇÃO DEFINITIVA ---
-    // Coletamos o estado e especificamos seu tipo explicitamente.
-    val uiState: State<ProfileUiState> = profileViewModel.uiState.collectAsState()
-    // Agora acessamos o valor através de .value
-    val userProfile = uiState.value.userProfile
+    val uiState by profileViewModel.uiState.collectAsState()
+    val userProfile = uiState.userProfile
     val context = LocalContext.current
 
     Scaffold(
@@ -56,7 +53,7 @@ fun ProfileScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (uiState.value.isLoading) { // Acessando com .value
+                if (uiState.isLoading) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()

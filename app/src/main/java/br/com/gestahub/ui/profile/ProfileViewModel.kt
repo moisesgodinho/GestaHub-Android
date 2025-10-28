@@ -4,11 +4,12 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import br.com.gestahub.services.NotificationService
 import br.com.gestahub.workers.NotificationWorker
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -27,7 +28,8 @@ data class ProfileUiState(
     val isLoading: Boolean = true
 )
 
-class ProfileViewModel : ViewModel() {
+@HiltViewModel
+class ProfileViewModel @Inject constructor() : ViewModel() {
     private val db = Firebase.firestore
     private val authUser = Firebase.auth.currentUser
     private val userId = authUser?.uid
@@ -97,8 +99,6 @@ class ProfileViewModel : ViewModel() {
             "Data inválida"
         }
     }
-
-
 
     fun testAppointmentReminder(context: Context) {
         val testRequest = OneTimeWorkRequestBuilder<NotificationWorker>().build()
