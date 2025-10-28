@@ -22,12 +22,23 @@ import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import javax.inject.Inject
 
+// --- NOVA CLASSE SELADA PARA CONTROLAR OS DIÁLOGOS ---
+sealed class AppointmentDialogState {
+    object Hidden : AppointmentDialogState()
+    data class View(val date: LocalDate, val appointments: List<Appointment>) : AppointmentDialogState()
+    data class New(val date: LocalDate) : AppointmentDialogState()
+    data class DeleteOrClear(val appointment: Appointment) : AppointmentDialogState()
+}
+// --- FIM DA NOVA CLASSE ---
+
 data class AppointmentsUiState(
     val upcomingAppointments: List<Appointment> = emptyList(),
     val pastAppointments: List<Appointment> = emptyList(),
     val lmpDate: LocalDate? = null,
     val isLoading: Boolean = true,
-    val userMessage: String? = null
+    val userMessage: String? = null,
+    // --- NOVO ESTADO ADICIONADO ---
+    val dialogState: AppointmentDialogState = AppointmentDialogState.Hidden
 )
 
 @HiltViewModel
@@ -36,7 +47,7 @@ class AppointmentsViewModel @Inject constructor(
     private val gestationalProfileRepository: GestationalProfileRepository
 ) : ViewModel() {
 
-    private val db = Firebase.firestore // Mantido para operações de escrita/deleção por simplicidade
+    private val db = Firebase.firestore
     private val getEstimatedLmpUseCase = GetEstimatedLmpUseCase()
 
     private var manualAppointmentsListener: ListenerRegistration? = null
@@ -56,7 +67,6 @@ class AppointmentsViewModel @Inject constructor(
         manualAppointmentsListener = appointmentRepository.getAppointmentsFlow(userId)
             .addSnapshotListener { snapshot, e ->
                 if (e != null) {
-                    Log.e("AppointmentsViewModel", "Erro ao buscar consultas", e)
                     _uiState.update { it.copy(userMessage = "Ocorreu um erro ao buscar suas consultas.") }
                     return@addSnapshotListener
                 }
@@ -99,7 +109,8 @@ class AppointmentsViewModel @Inject constructor(
                 val allAppointments = (manual + ultrasoundList).filter { it.date != null || it.type == AppointmentType.ULTRASOUND }
                 val (past, upcoming) = allAppointments.partition { it.done }
 
-                AppointmentsUiState(
+                // Mantém o estado do diálogo ao atualizar a lista
+                _uiState.value.copy(
                     upcomingAppointments = upcoming.sortedWith { a, b ->
                         val dateComparison = compareValues(a.date, b.date)
                         if (dateComparison != 0) dateComparison else compareValues(a.time, b.time)
@@ -112,10 +123,28 @@ class AppointmentsViewModel @Inject constructor(
                     isLoading = false
                 )
             }.collect { combinedState ->
-                _uiState.value = combinedState.copy(userMessage = _uiState.value.userMessage)
+                _uiState.value = combinedState
             }
         }
     }
+
+    // --- NOVAS FUNÇÕES PARA GERENCIAR DIÁLOGOS ---
+    fun onDateClicked(date: LocalDate, appointmentsOnDay: List<Appointment>) {
+        if (appointmentsOnDay.isNotEmpty()) {
+            _uiState.update { it.copy(dialogState = AppointmentDialogState.View(date, appointmentsOnDay.sortedBy { app -> app.time })) }
+        } else {
+            _uiState.update { it.copy(dialogState = AppointmentDialogState.New(date)) }
+        }
+    }
+
+    fun onDeleteOrClearRequest(appointment: Appointment) {
+        _uiState.update { it.copy(dialogState = AppointmentDialogState.DeleteOrClear(appointment)) }
+    }
+
+    fun dismissDialog() {
+        _uiState.update { it.copy(dialogState = AppointmentDialogState.Hidden) }
+    }
+    // --- FIM DAS NOVAS FUNÇÕES ---
 
     fun clearListeners() {
         manualAppointmentsListener?.remove()
@@ -131,6 +160,7 @@ class AppointmentsViewModel @Inject constructor(
     }
 
     fun toggleDone(appointment: Appointment) = viewModelScope.launch {
+        // ... (código existente, sem alterações)
         val userId = Firebase.auth.currentUser?.uid ?: return@launch
         val newDoneStatus = !appointment.done
 
@@ -162,7 +192,6 @@ class AppointmentsViewModel @Inject constructor(
                     docRef.update(fieldPath, newDoneStatus).await()
                 }
             }
-            Log.d("ViewModel", "Status atualizado com sucesso!")
         } catch (e: Exception) {
             if (appointment is UltrasoundAppointment) {
                 val docRef = db.collection("users").document(userId)
@@ -171,7 +200,6 @@ class AppointmentsViewModel @Inject constructor(
                 val profileUpdate = mapOf("ultrasoundSchedule" to scheduleUpdate)
                 val finalUpdate = mapOf("gestationalProfile" to profileUpdate)
                 docRef.set(finalUpdate, com.google.firebase.firestore.SetOptions.merge())
-                    .addOnSuccessListener { Log.d("ViewModel", "Status (com merge) atualizado com sucesso!") }
                     .addOnFailureListener { _ -> _uiState.update { it.copy(userMessage = "Erro ao mesclar dados.") } }
             } else {
                 _uiState.update { it.copy(userMessage = "Erro ao atualizar o status.") }

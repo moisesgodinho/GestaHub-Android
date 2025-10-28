@@ -12,8 +12,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import br.com.gestahub.ui.appointment.components.AppointmentsListCard
-import br.com.gestahub.ui.components.ConfirmationDialog
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 @Composable
@@ -26,75 +24,28 @@ fun AppointmentsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // --- ESTADO LOCAL PARA TODOS OS DIÁLOGOS ---
-    var showNewAppointmentDialogForDate by remember { mutableStateOf<LocalDate?>(null) }
-    var appointmentsToShowInDialog by remember { mutableStateOf<List<Appointment>>(emptyList()) }
-    var dialogDate by remember { mutableStateOf<LocalDate?>(null) }
-    var itemToDeleteOrClear by remember { mutableStateOf<Appointment?>(null) }
-
-    // --- LÓGICA UNIFICADA PARA O DIÁLOGO DE CONFIRMAÇÃO ---
-    itemToDeleteOrClear?.let { appointment ->
-        val isManualDelete = appointment.type == AppointmentType.MANUAL
-        val title = if (isManualDelete) "Confirmar Exclusão" else "Limpar Agendamento"
-        val text = if (isManualDelete) {
-            "Tem certeza que deseja apagar a consulta \"${appointment.title}\"?"
-        } else {
-            "Tem certeza que deseja limpar os dados do agendamento para \"${appointment.title}\"? O item permanecerá na lista."
-        }
-        val confirmButtonText = if (isManualDelete) "Excluir" else "Limpar"
-
-        ConfirmationDialog(
-            title = title,
-            text = text,
-            confirmButtonText = confirmButtonText,
-            onConfirm = {
-                if (isManualDelete) {
-                    viewModel.deleteAppointment(appointment)
-                } else {
-                    viewModel.clearUltrasoundSchedule(appointment)
-                }
-                // Se o diálogo de visualização estiver aberto, atualiza a lista dele
-                appointmentsToShowInDialog = appointmentsToShowInDialog.filterNot { it.id == appointment.id }
-                itemToDeleteOrClear = null // Fecha o diálogo de confirmação
-            },
-            onDismissRequest = { itemToDeleteOrClear = null }
-        )
-    }
-
-    // Diálogo para dias sem consultas
-    showNewAppointmentDialogForDate?.let { date ->
-        NewAppointmentDialog(
-            date = date,
-            onDismiss = { showNewAppointmentDialogForDate = null },
-            onConfirm = {
-                onNavigateToFormWithDate(it.format(DateTimeFormatter.ISO_LOCAL_DATE))
-                showNewAppointmentDialogForDate = null
+    // O gerenciador de diálogos agora lida com toda a lógica de exibição.
+    AppointmentDialogsHandler(
+        dialogState = uiState.dialogState,
+        onDismiss = { viewModel.dismissDialog() },
+        onNavigateToFormWithDate = { date ->
+            viewModel.dismissDialog()
+            onNavigateToFormWithDate(date)
+        },
+        onNavigateToFormWithAppointment = { appointment ->
+            viewModel.dismissDialog()
+            onNavigateToFormWithAppointment(appointment)
+        },
+        onConfirmDeleteOrClear = { appointment ->
+            // A lógica de qual ação tomar (deletar ou limpar) é decidida e executada aqui.
+            if (appointment.type == AppointmentType.MANUAL) {
+                viewModel.deleteAppointment(appointment)
+            } else {
+                viewModel.clearUltrasoundSchedule(appointment)
             }
-        )
-    }
-
-    // Diálogo para dias com consultas (modal de visualização)
-    if (appointmentsToShowInDialog.isNotEmpty()) {
-        dialogDate?.let { date ->
-            ViewAppointmentsDialog(
-                date = date,
-                appointments = appointmentsToShowInDialog,
-                onDismiss = { appointmentsToShowInDialog = emptyList() },
-                onEdit = {
-                    onNavigateToFormWithAppointment(it)
-                    appointmentsToShowInDialog = emptyList()
-                },
-                onDelete = { appointment ->
-                    // A ação de deletar agora apenas define qual item será deletado/limpo
-                    itemToDeleteOrClear = appointment
-                },
-                onAddNew = {
-                    onNavigateToFormWithDate(it.format(DateTimeFormatter.ISO_LOCAL_DATE))
-                    appointmentsToShowInDialog = emptyList()
-                }
-            )
+            viewModel.dismissDialog()
         }
-    }
+    )
 
     if (uiState.isLoading) {
         Box(
@@ -116,13 +67,9 @@ fun AppointmentsScreen(
                     appointments = uiState.upcomingAppointments + uiState.pastAppointments,
                     lmpDate = uiState.lmpDate,
                     isDarkTheme = isDarkTheme,
+                    // A ação de clique agora apenas notifica o ViewModel.
                     onDateClick = { date, appointmentsOnDay ->
-                        if (appointmentsOnDay.isNotEmpty()) {
-                            dialogDate = date
-                            appointmentsToShowInDialog = appointmentsOnDay.sortedBy { it.time }
-                        } else {
-                            showNewAppointmentDialogForDate = date
-                        }
+                        viewModel.onDateClicked(date, appointmentsOnDay)
                     }
                 )
             }
@@ -148,7 +95,8 @@ fun AppointmentsScreen(
                             isDarkTheme = isDarkTheme,
                             onToggleDone = { viewModel.toggleDone(it) },
                             onEditClick = { onNavigateToFormWithAppointment(it) },
-                            onDeleteOrClearRequest = { itemToDeleteOrClear = it } // <-- Unificado
+                            // A ação de deletar agora apenas notifica o ViewModel.
+                            onDeleteOrClearRequest = { viewModel.onDeleteOrClearRequest(it) }
                         )
                     }
                 }
@@ -162,7 +110,8 @@ fun AppointmentsScreen(
                             isDarkTheme = isDarkTheme,
                             onToggleDone = { viewModel.toggleDone(it) },
                             onEditClick = { onNavigateToFormWithAppointment(it) },
-                            onDeleteOrClearRequest = { itemToDeleteOrClear = it } // <-- Unificado
+                            // A ação de deletar agora apenas notifica o ViewModel.
+                            onDeleteOrClearRequest = { viewModel.onDeleteOrClearRequest(it) }
                         )
                     }
                 }
