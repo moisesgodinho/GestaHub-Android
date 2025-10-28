@@ -11,6 +11,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -18,14 +20,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import br.com.gestahub.ui.components.ConfirmationDialog
 import br.com.gestahub.ui.components.Header
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import br.com.gestahub.ui.theme.Rose500
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import java.time.LocalDate
 
 @Composable
@@ -34,14 +32,8 @@ fun MovementCounterScreen(
     estimatedLmp: LocalDate?,
     isDarkTheme: Boolean
 ) {
-    val viewModel: MovementCounterViewModel = viewModel(
-        factory = MovementCounterViewModelFactory(
-            repository = MovementCounterRepository(
-                firestore = FirebaseFirestore.getInstance(),
-                auth = FirebaseAuth.getInstance()
-            )
-        )
-    )
+    // A única mudança principal é aqui: trocamos viewModel(factory = ...) por hiltViewModel()
+    val viewModel: MovementCounterViewModel = hiltViewModel()
 
     val uiState by viewModel.uiState.collectAsState()
     var sessionToDelete by remember { mutableStateOf<KickSession?>(null) }
@@ -94,7 +86,7 @@ fun MovementCounterScreen(
         topBar = {
             Header(
                 title = "Contador de Movimentos",
-                onNavigateBack = onBackPress, // Usa a nova lógica de voltar
+                onNavigateBack = onBackPress,
                 showBackButton = true
             )
         }
@@ -144,7 +136,7 @@ fun InitialScreenLayout(
             when {
                 uiState.isLoading -> CircularProgressIndicator(modifier = Modifier.padding(32.dp))
                 uiState.error != null -> Text(
-                    text = uiState.error!!,
+                    text = uiState.error,
                     modifier = Modifier.padding(16.dp),
                     textAlign = TextAlign.Center
                 )
@@ -161,7 +153,6 @@ fun InitialScreenLayout(
     }
 }
 
-// --- CARD INFORMATIVO COM A CORREÇÃO FINAL ---
 @Composable
 fun WhyCountMovementsCard() {
     Card(
@@ -173,15 +164,12 @@ fun WhyCountMovementsCard() {
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(Modifier.height(IntrinsicSize.Min)) {
-            // A Borda Azul
             Box(
                 modifier = Modifier
                     .width(6.dp)
                     .fillMaxHeight()
-                    .background(MaterialTheme.colorScheme.primary) // Cor azul do tema
+                    .background(MaterialTheme.colorScheme.primary)
             )
-
-            // Conteúdo
             Column(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)

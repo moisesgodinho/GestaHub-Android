@@ -2,10 +2,11 @@
 package br.com.gestahub.ui.journal
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import br.com.gestahub.data.JournalRepository
 import com.google.firebase.firestore.ListenerRegistration
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -16,11 +17,15 @@ data class JournalUiState(
     val errorMessage: String? = null
 )
 
-class JournalViewModel(
-    val estimatedLmp: LocalDate?
+@HiltViewModel
+class JournalViewModel @Inject constructor(
+    private val repository: JournalRepository
 ) : ViewModel() {
-    private val repository = JournalRepository()
     private var entriesListener: ListenerRegistration? = null
+
+    // A propriedade agora tem um setter privado para ser definida apenas internamente
+    var estimatedLmp: LocalDate? = null
+        private set
 
     private val _uiState = MutableStateFlow(JournalUiState())
     val uiState = _uiState.asStateFlow()
@@ -28,31 +33,31 @@ class JournalViewModel(
     private val _allEntries = MutableStateFlow<List<JournalEntry>>(emptyList())
     val allEntries = _allEntries.asStateFlow()
 
-    // --- LÓGICA DE NAVEGAÇÃO DUPLA ---
     private val _calendarMonth = MutableStateFlow(YearMonth.now())
     val calendarMonth = _calendarMonth.asStateFlow()
 
     private val _historyMonth = MutableStateFlow(YearMonth.now())
     val historyMonth = _historyMonth.asStateFlow()
 
+    private val maxMonth: YearMonth = YearMonth.now()
+    // A data mínima agora é um StateFlow que depende do estimatedLmp
+    private val _minMonth = MutableStateFlow<YearMonth?>(null)
 
-    val maxMonth: YearMonth = YearMonth.now()
-    val minMonth: YearMonth? = estimatedLmp?.let { YearMonth.from(it.minusMonths(2)) }
-
-    // Controlos para o navegador do Calendário
     val isNextCalendarMonthEnabled: StateFlow<Boolean> = _calendarMonth.map { it.isBefore(maxMonth) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-    val isPreviousCalendarMonthEnabled: StateFlow<Boolean> = _calendarMonth.map { minMonth == null || it.isAfter(minMonth) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
-    // Controlos para o navegador do Histórico
+    val isPreviousCalendarMonthEnabled: StateFlow<Boolean> = combine(_calendarMonth, _minMonth) { current, min ->
+        min == null || current.isAfter(min)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     val isNextHistoryMonthEnabled: StateFlow<Boolean> = _historyMonth.map { it.isBefore(maxMonth) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-    val isPreviousHistoryMonthEnabled: StateFlow<Boolean> = _historyMonth.map { minMonth == null || it.isAfter(minMonth) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val isPreviousHistoryMonthEnabled: StateFlow<Boolean> = combine(_historyMonth, _minMonth) { current, min ->
+        min == null || current.isAfter(min)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
 
-    // Filtra os registos para o mês do histórico
     val entriesForHistoryMonth: StateFlow<List<JournalEntry>> =
         combine(_allEntries, _historyMonth) { entries, month ->
             entries.filter {
@@ -62,7 +67,16 @@ class JournalViewModel(
         }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    init {
+    /**
+     * Este método deve ser chamado da UI assim que 'estimatedLmp' estiver disponível.
+     * Ele garante que o ViewModel seja inicializado com os dados dinâmicos necessários.
+     */
+    fun initialize(lmp: LocalDate?) {
+        // Roda apenas uma vez para evitar recarregar os dados desnecessariamente
+        if (this.estimatedLmp != null) return
+
+        this.estimatedLmp = lmp
+        this._minMonth.value = lmp?.let { YearMonth.from(it.minusMonths(2)) }
         loadJournalEntries()
     }
 
@@ -104,12 +118,5 @@ class JournalViewModel(
     override fun onCleared() {
         super.onCleared()
         entriesListener?.remove()
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    class Factory(private val estimatedLmp: LocalDate?) : ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return JournalViewModel(estimatedLmp) as T
-        }
     }
 }

@@ -1,4 +1,3 @@
-// Local: app/src/main/java/br/com/gestahub/ui/journal/JournalScreen.kt
 package br.com.gestahub.ui.journal
 
 import androidx.compose.animation.AnimatedVisibility
@@ -11,8 +10,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,11 +19,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.util.Locale
+import java.util.*
 
 @Composable
 fun JournalScreen(
@@ -33,7 +32,14 @@ fun JournalScreen(
     isDarkTheme: Boolean,
     onNavigateToEntry: (date: String) -> Unit
 ) {
-    val viewModel: JournalViewModel = viewModel(factory = JournalViewModel.Factory(estimatedLmp))
+    val viewModel: JournalViewModel = hiltViewModel()
+
+    // Este LaunchedEffect garante que o ViewModel seja inicializado com a data
+    // assim que ela estiver disponível, e apenas uma vez.
+    LaunchedEffect(estimatedLmp) {
+        viewModel.initialize(estimatedLmp)
+    }
+
     val allEntries by viewModel.allEntries.collectAsState()
     val calendarMonth by viewModel.calendarMonth.collectAsState()
     val entriesForHistoryMonth by viewModel.entriesForHistoryMonth.collectAsState()
@@ -110,7 +116,7 @@ fun JournalScreen(
             JournalCalendar(
                 entries = allEntries,
                 displayMonth = calendarMonth,
-                minDate = viewModel.minMonth?.atDay(1),
+                minDate = viewModel.estimatedLmp, // Acesso corrigido
                 onDateClick = { date, entry ->
                     if (entry != null) {
                         entryToShow = entry
@@ -183,8 +189,7 @@ fun JournalScreen(
         }
     }
 }
-// ... o restante do arquivo (MonthNavigator, EmptyMonthScreen, JournalItem) permanece o mesmo
-// ...
+
 @Composable
 fun MonthNavigator(
     selectedMonth: YearMonth,
@@ -253,7 +258,7 @@ fun EmptyMonthScreen() {
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            imageVector = Icons.Outlined.Book, // Ícone relacionado ao diário
+            imageVector = Icons.Outlined.Book,
             contentDescription = null,
             modifier = Modifier.size(40.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant

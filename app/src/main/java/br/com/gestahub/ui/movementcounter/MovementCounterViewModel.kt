@@ -1,11 +1,10 @@
-// app/src/main/java/br/com/gestahub/ui/movementcounter/MovementCounterViewModel.kt
-
 package br.com.gestahub.ui.movementcounter
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.Timestamp
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +25,8 @@ data class MovementCounterUiState(
     val sessionStartTime: LocalDateTime? = null
 )
 
-class MovementCounterViewModel(
+@HiltViewModel
+class MovementCounterViewModel @Inject constructor(
     private val repository: MovementCounterRepository
 ) : ViewModel() {
 
@@ -69,10 +69,8 @@ class MovementCounterViewModel(
         }
     }
 
-    // --- NOVA FUNÇÃO ADICIONADA ---
     fun discardSession() {
         timerJob?.cancel()
-        // Apenas reseta o estado da UI sem salvar
         _uiState.value = _uiState.value.copy(
             isSessionActive = false,
             kickCount = 0,
@@ -105,18 +103,9 @@ class MovementCounterViewModel(
     }
 
     fun deleteSession(session: KickSession) {
-        repository.deleteKickSession(session.id)
-    }
-}
-
-class MovementCounterViewModelFactory(
-    private val repository: MovementCounterRepository
-) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(MovementCounterViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return MovementCounterViewModel(repository) as T
+        // A lógica de deleção agora deve ser chamada no repositório.
+        viewModelScope.launch {
+            repository.deleteKickSession(session.id)
         }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

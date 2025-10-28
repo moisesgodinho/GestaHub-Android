@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,7 +13,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
-import java.time.YearMonth // Importação necessária
+import java.time.YearMonth
 import java.util.Date
 import java.util.Locale
 
@@ -23,8 +25,10 @@ data class HydrationUiState(
     val error: String? = null
 )
 
-class HydrationViewModel : ViewModel() {
-    private val repository = HydrationRepository()
+@HiltViewModel
+class HydrationViewModel @Inject constructor(
+    private val repository: HydrationRepository
+) : ViewModel() {
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
 

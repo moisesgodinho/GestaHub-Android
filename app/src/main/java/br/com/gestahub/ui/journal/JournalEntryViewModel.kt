@@ -1,10 +1,11 @@
-// Local: app/src/main/java/br/com/gestahub/ui/journal/JournalEntryViewModel.kt
 package br.com.gestahub.ui.journal
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.gestahub.data.JournalRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -18,10 +19,12 @@ data class JournalEntryUiState(
     val errorMessage: String? = null
 )
 
-class JournalEntryViewModel(
+@HiltViewModel
+class JournalEntryViewModel @Inject constructor(
+    private val repository: JournalRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
-    private val repository = JournalRepository()
+
     private val date: String = savedStateHandle.get<String>("date")!!
 
     private val _uiState = MutableStateFlow(JournalEntryUiState())
