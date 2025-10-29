@@ -10,7 +10,10 @@ fun AppointmentDialogsHandler(
     onDismiss: () -> Unit,
     onNavigateToFormWithDate: (date: String) -> Unit,
     onNavigateToFormWithAppointment: (appointment: Appointment) -> Unit,
-    onConfirmDeleteOrClear: (appointment: Appointment) -> Unit
+    // Este callback é para QUANDO o usuário clica no botão de confirmação do diálogo de exclusão
+    onConfirmDeleteOrClear: (appointment: Appointment) -> Unit,
+    // Este novo callback é para QUANDO o usuário clica no ícone de lixeira, solicitando a confirmação
+    onRequestDeleteConfirmation: (appointment: Appointment) -> Unit
 ) {
     when (dialogState) {
         is AppointmentDialogState.Hidden -> {
@@ -31,10 +34,9 @@ fun AppointmentDialogsHandler(
                 appointments = dialogState.appointments,
                 onDismiss = onDismiss,
                 onEdit = onNavigateToFormWithAppointment,
-                onDelete = { appointment ->
-                    // Ao clicar em deletar no diálogo de visualização, pedimos ao ViewModel para mostrar o diálogo de confirmação.
-                    onConfirmDeleteOrClear(appointment)
-                },
+                // --- CORREÇÃO APLICADA AQUI ---
+                // Agora, o clique no botão de deletar chama a função que SOLICITA a confirmação.
+                onDelete = onRequestDeleteConfirmation,
                 onAddNew = {
                     onNavigateToFormWithDate(it.format(DateTimeFormatter.ISO_LOCAL_DATE))
                 }
@@ -55,6 +57,7 @@ fun AppointmentDialogsHandler(
                 title = title,
                 text = text,
                 confirmButtonText = confirmButtonText,
+                // Ao confirmar, chamamos a função que executa a exclusão/limpeza.
                 onConfirm = { onConfirmDeleteOrClear(appointment) },
                 onDismissRequest = onDismiss
             )

@@ -12,7 +12,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import br.com.gestahub.ui.appointment.components.AppointmentsListCard
-import java.time.format.DateTimeFormatter
 
 @Composable
 fun AppointmentsScreen(
@@ -24,7 +23,8 @@ fun AppointmentsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // O gerenciador de diálogos agora lida com toda a lógica de exibição.
+    // --- CORREÇÃO APLICADA AQUI ---
+    // A chamada ao Handler agora passa as duas funções separadamente.
     AppointmentDialogsHandler(
         dialogState = uiState.dialogState,
         onDismiss = { viewModel.dismissDialog() },
@@ -36,8 +36,14 @@ fun AppointmentsScreen(
             viewModel.dismissDialog()
             onNavigateToFormWithAppointment(appointment)
         },
+        // 1. O que fazer quando o usuário SOLICITA a deleção (clica na lixeira):
+        //    Apenas pedimos ao ViewModel para mudar o estado e mostrar o diálogo de confirmação.
+        onRequestDeleteConfirmation = { appointment ->
+            viewModel.onDeleteOrClearRequest(appointment)
+        },
+        // 2. O que fazer quando o usuário CONFIRMA a deleção no segundo diálogo:
+        //    Executamos a ação de deletar ou limpar e fechamos o diálogo.
         onConfirmDeleteOrClear = { appointment ->
-            // A lógica de qual ação tomar (deletar ou limpar) é decidida e executada aqui.
             if (appointment.type == AppointmentType.MANUAL) {
                 viewModel.deleteAppointment(appointment)
             } else {
@@ -67,7 +73,6 @@ fun AppointmentsScreen(
                     appointments = uiState.upcomingAppointments + uiState.pastAppointments,
                     lmpDate = uiState.lmpDate,
                     isDarkTheme = isDarkTheme,
-                    // A ação de clique agora apenas notifica o ViewModel.
                     onDateClick = { date, appointmentsOnDay ->
                         viewModel.onDateClicked(date, appointmentsOnDay)
                     }
@@ -95,7 +100,7 @@ fun AppointmentsScreen(
                             isDarkTheme = isDarkTheme,
                             onToggleDone = { viewModel.toggleDone(it) },
                             onEditClick = { onNavigateToFormWithAppointment(it) },
-                            // A ação de deletar agora apenas notifica o ViewModel.
+                            // O clique aqui agora chama a função que mostra o diálogo de confirmação.
                             onDeleteOrClearRequest = { viewModel.onDeleteOrClearRequest(it) }
                         )
                     }
@@ -110,7 +115,7 @@ fun AppointmentsScreen(
                             isDarkTheme = isDarkTheme,
                             onToggleDone = { viewModel.toggleDone(it) },
                             onEditClick = { onNavigateToFormWithAppointment(it) },
-                            // A ação de deletar agora apenas notifica o ViewModel.
+                            // O clique aqui agora chama a função que mostra o diálogo de confirmação.
                             onDeleteOrClearRequest = { viewModel.onDeleteOrClearRequest(it) }
                         )
                     }
