@@ -124,16 +124,39 @@ fun WeightChart(
                 fillPath.moveTo(points.first().x, chartHeight)
                 fillPath.lineTo(points.first().x, points.first().y)
 
+                // --- CORREÇÃO APLICADA AQUI ---
                 for (i in 0 until points.size - 1) {
-                    val p0 = points.getOrElse(i - 1) { points[i] }
                     val p1 = points[i]
                     val p2 = points[i + 1]
-                    val p3 = points.getOrElse(i + 2) { p2 }
-                    val controlPoint1 = Offset(p1.x + (p2.x - p0.x) / 6f, p1.y + (p2.y - p0.y) / 6f)
-                    val controlPoint2 = Offset(p2.x - (p3.x - p1.x) / 6f, p2.y - (p3.y - p1.y) / 6f)
-                    linePath.cubicTo(controlPoint1, controlPoint2, p2)
-                    fillPath.cubicTo(controlPoint1, controlPoint2, p2)
+
+                    // Se os pontos Y forem iguais, desenha uma linha reta.
+                    if (p1.y == p2.y) {
+                        linePath.lineTo(p2.x, p2.y)
+                        fillPath.lineTo(p2.x, p2.y)
+                    } else {
+                        // Se não, desenha a curva com os pontos de controle limitados.
+                        val p0 = points.getOrElse(i - 1) { p1 }
+                        val p3 = points.getOrElse(i + 2) { p2 }
+
+                        // Define os limites verticais para a curva deste segmento
+                        val minY = minOf(p1.y, p2.y)
+                        val maxY = maxOf(p1.y, p2.y)
+
+                        // Calcula os pontos de controle da curva
+                        val controlPoint1 = Offset(
+                            x = p1.x + (p2.x - p0.x) / 6f,
+                            y = (p1.y + (p2.y - p0.y) / 6f).coerceIn(minY, maxY) // Limita o Y
+                        )
+                        val controlPoint2 = Offset(
+                            x = p2.x - (p3.x - p1.x) / 6f,
+                            y = (p2.y - (p3.y - p1.y) / 6f).coerceIn(minY, maxY) // Limita o Y
+                        )
+
+                        linePath.cubicTo(controlPoint1, controlPoint2, p2)
+                        fillPath.cubicTo(controlPoint1, controlPoint2, p2)
+                    }
                 }
+                // --- FIM DA CORREÇÃO ---
 
                 fillPath.lineTo(points.last().x, chartHeight)
                 fillPath.close()
