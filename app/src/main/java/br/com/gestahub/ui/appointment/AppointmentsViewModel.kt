@@ -22,14 +22,12 @@ import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
 import javax.inject.Inject
 
-// --- NOVA CLASSE SELADA PARA CONTROLAR OS DIÁLOGOS ---
 sealed class AppointmentDialogState {
     object Hidden : AppointmentDialogState()
     data class View(val date: LocalDate, val appointments: List<Appointment>) : AppointmentDialogState()
     data class New(val date: LocalDate) : AppointmentDialogState()
     data class DeleteOrClear(val appointment: Appointment) : AppointmentDialogState()
 }
-// --- FIM DA NOVA CLASSE ---
 
 data class AppointmentsUiState(
     val upcomingAppointments: List<Appointment> = emptyList(),
@@ -37,7 +35,6 @@ data class AppointmentsUiState(
     val lmpDate: LocalDate? = null,
     val isLoading: Boolean = true,
     val userMessage: String? = null,
-    // --- NOVO ESTADO ADICIONADO ---
     val dialogState: AppointmentDialogState = AppointmentDialogState.Hidden
 )
 
@@ -109,12 +106,33 @@ class AppointmentsViewModel @Inject constructor(
                 val allAppointments = (manual + ultrasoundList).filter { it.date != null || it.type == AppointmentType.ULTRASOUND }
                 val (past, upcoming) = allAppointments.partition { it.done }
 
-                // Mantém o estado do diálogo ao atualizar a lista
                 _uiState.value.copy(
+                    // --- CORREÇÃO DE ORDENAÇÃO APLICADA AQUI ---
                     upcomingAppointments = upcoming.sortedWith { a, b ->
-                        val dateComparison = compareValues(a.date, b.date)
+                        // Função auxiliar para obter a data de ordenação de um compromisso
+                        fun getSortDate(appointment: Appointment, lmp: LocalDate?): LocalDate? {
+                            // Se tiver uma data agendada, use-a.
+                            if (appointment.date != null) {
+                                return try { LocalDate.parse(appointment.date) } catch (e: Exception) { null }
+                            }
+                            // Se for um ultrassom não agendado e tivermos a DUM, calcule o início da janela.
+                            if (appointment is UltrasoundAppointment && lmp != null) {
+                                return lmp.plusWeeks((appointment.startWeek - 1).toLong())
+                            }
+                            // Caso contrário, não há data para ordenar.
+                            return null
+                        }
+
+                        val dateA = getSortDate(a, estimatedLmp)
+                        val dateB = getSortDate(b, estimatedLmp)
+
+                        // Compara as datas (compareValues lida com nulos de forma segura)
+                        val dateComparison = compareValues(dateA, dateB)
+                        // Se as datas forem diferentes, usa essa comparação.
+                        // Se forem iguais (ou ambas nulas), desempata pelo horário.
                         if (dateComparison != 0) dateComparison else compareValues(a.time, b.time)
                     },
+                    // --- FIM DA CORREÇÃO ---
                     pastAppointments = past.sortedWith { a, b ->
                         val dateComparison = compareValues(b.date, a.date)
                         if (dateComparison != 0) dateComparison else compareValues(b.time, a.time)
@@ -128,7 +146,6 @@ class AppointmentsViewModel @Inject constructor(
         }
     }
 
-    // --- NOVAS FUNÇÕES PARA GERENCIAR DIÁLOGOS ---
     fun onDateClicked(date: LocalDate, appointmentsOnDay: List<Appointment>) {
         if (appointmentsOnDay.isNotEmpty()) {
             _uiState.update { it.copy(dialogState = AppointmentDialogState.View(date, appointmentsOnDay.sortedBy { app -> app.time })) }
@@ -144,7 +161,6 @@ class AppointmentsViewModel @Inject constructor(
     fun dismissDialog() {
         _uiState.update { it.copy(dialogState = AppointmentDialogState.Hidden) }
     }
-    // --- FIM DAS NOVAS FUNÇÕES ---
 
     fun clearListeners() {
         manualAppointmentsListener?.remove()
@@ -160,7 +176,6 @@ class AppointmentsViewModel @Inject constructor(
     }
 
     fun toggleDone(appointment: Appointment) = viewModelScope.launch {
-        // ... (código existente, sem alterações)
         val userId = Firebase.auth.currentUser?.uid ?: return@launch
         val newDoneStatus = !appointment.done
 
