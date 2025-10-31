@@ -1,3 +1,4 @@
+// app/src/main/java/br/com/gestahub/ui/shoppinglist/ShoppingListViewModel.kt
 package br.com.gestahub.ui.shoppinglist
 
 import androidx.compose.runtime.mutableStateOf
@@ -21,9 +22,23 @@ class ShoppingListViewModel : ViewModel() {
         viewModelScope.launch {
             loading.value = true
             val data = repository.getShoppingListData()
-            listData.value = data?.first
-            checkedItems.value = data?.second ?: emptyList()
+            listData.value = data?.shoppingList
+            checkedItems.value = data?.shoppingListChecked ?: emptyList()
             loading.value = false
+        }
+    }
+
+    // Função auxiliar para atualizar o Firestore
+    private fun updateFirestore() {
+        viewModelScope.launch {
+            val currentList = listData.value
+            if (currentList != null) {
+                val dataToSave = ShoppingListFirestore(
+                    shoppingList = currentList,
+                    shoppingListChecked = checkedItems.value
+                )
+                repository.updateShoppingListData(dataToSave)
+            }
         }
     }
 
@@ -35,9 +50,7 @@ class ShoppingListViewModel : ViewModel() {
             currentChecked.add(itemId)
         }
         checkedItems.value = currentChecked
-        viewModelScope.launch {
-            repository.updateCheckedItems(currentChecked)
-        }
+        updateFirestore()
     }
 
     fun addItem(categoryId: String, label: String) {
@@ -50,13 +63,11 @@ class ShoppingListViewModel : ViewModel() {
             isCustom = true
         )
 
-        val updatedItems = category.items.toMutableList().apply { add(newItem) }
+        val updatedItems = category.items + newItem
         currentList[categoryId] = category.copy(items = updatedItems)
         listData.value = currentList
 
-        viewModelScope.launch {
-            repository.updateShoppingList(currentList)
-        }
+        updateFirestore()
     }
 
     fun removeItem(categoryId: String, itemId: String) {
@@ -68,14 +79,10 @@ class ShoppingListViewModel : ViewModel() {
         listData.value = currentList
 
         if (checkedItems.value.contains(itemId)) {
-            val newChecked = checkedItems.value.filter { it != itemId }
-            checkedItems.value = newChecked
-            viewModelScope.launch { repository.updateCheckedItems(newChecked) }
+            checkedItems.value = checkedItems.value.filter { it != itemId }
         }
 
-        viewModelScope.launch {
-            repository.updateShoppingList(currentList)
-        }
+        updateFirestore()
     }
 
     fun restoreDefaults() {
@@ -103,7 +110,7 @@ class ShoppingListViewModel : ViewModel() {
 
         if (itemsRestored > 0) {
             listData.value = updatedList
-            viewModelScope.launch { repository.updateShoppingList(updatedList) }
+            updateFirestore()
         }
     }
 }
