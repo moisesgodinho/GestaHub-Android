@@ -1,3 +1,4 @@
+// app/src/main/java/br/com/gestahub/ui/hydration/HydrationRepository.kt
 package br.com.gestahub.ui.hydration
 
 import com.google.firebase.auth.FirebaseAuth
@@ -93,6 +94,19 @@ class HydrationRepository @Inject constructor() {
                 "gestationalProfile.waterCupSize" to cupSize
             )
             userDocRef.set(updates, SetOptions.merge()).await()
+        }
+    }
+
+    // NOVA FUNÇÃO para buscar as configurações de hidratação do perfil
+    suspend fun getProfileWaterSettings(userId: String): Pair<Int, Int> {
+        return try {
+            val docRef = db.collection("users").document(userId)
+            val document = docRef.get().await()
+            val goal = (document?.get("gestationalProfile.waterGoal") as? Long)?.toInt() ?: 2500
+            val cupSize = (document?.get("gestationalProfile.waterCupSize") as? Long)?.toInt() ?: 250
+            Pair(goal, cupSize)
+        } catch (e: Exception) {
+            Pair(2500, 250)
         }
     }
 }
