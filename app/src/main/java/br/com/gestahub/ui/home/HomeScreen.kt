@@ -16,7 +16,10 @@ import androidx.navigation.NavController
 import br.com.gestahub.ui.home.components.EmptyHomeScreen
 import br.com.gestahub.ui.home.components.GestationalInfoDashboard
 import br.com.gestahub.ui.home.components.HydrationSummaryCard
+import br.com.gestahub.ui.home.components.JournalSummaryCard
 import br.com.gestahub.ui.home.components.UpcomingAppointmentsCard
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -74,10 +77,24 @@ fun HomeScreen(
                     )
                 }
 
+                // CHAMADA ATUALIZADA DO CARD DO DIÁRIO
+                AnimatedVisibility(
+                    visible = cardsVisible,
+                    enter = fadeIn(animationSpec = tween(500, delayMillis = 250)) + slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(500, delayMillis = 250))
+                ) {
+                    val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+                    JournalSummaryCard(
+                        entry = dataState.todayJournalEntry,
+                        onRegisterClick = { navController.navigate("journalEntry/$today") },
+                        onEditClick = { navController.navigate("journalEntry/$today") },
+                        onNavigateToJournal = { navController.navigate("journal") }
+                    )
+                }
+
                 if (dataState.upcomingAppointments.isNotEmpty()) {
                     AnimatedVisibility(
                         visible = cardsVisible,
-                        enter = fadeIn(animationSpec = tween(500, delayMillis = 250)) + slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(500, delayMillis = 250))
+                        enter = fadeIn(animationSpec = tween(500, delayMillis = 350)) + slideInVertically(initialOffsetY = { it / 2 }, animationSpec = tween(500, delayMillis = 350))
                     ) {
                         UpcomingAppointmentsCard(
                             appointments = dataState.upcomingAppointments,

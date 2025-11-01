@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.gestahub.data.AppointmentRepository
 import br.com.gestahub.data.GestationalProfileRepository
+import br.com.gestahub.data.JournalRepository
 import br.com.gestahub.data.WeeklyInfo
 import br.com.gestahub.domain.model.GestationalInfo
 import br.com.gestahub.domain.usecase.CalculateGestationalInfoUseCase
@@ -12,6 +13,7 @@ import br.com.gestahub.ui.appointment.Appointment
 import br.com.gestahub.ui.appointment.ManualAppointment
 import br.com.gestahub.ui.hydration.HydrationRepository
 import br.com.gestahub.ui.hydration.WaterIntakeEntry
+import br.com.gestahub.ui.journal.JournalEntry
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.ktx.toObject
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -37,7 +39,8 @@ sealed class GestationalDataState {
         val weeklyInfo: WeeklyInfo?,
         val estimatedLmp: LocalDate?,
         val upcomingAppointments: List<Appointment> = emptyList(),
-        val todayHydration: WaterIntakeEntry? = null
+        val todayHydration: WaterIntakeEntry? = null,
+        val todayJournalEntry: JournalEntry? = null
     ) : GestationalDataState()
 }
 
@@ -57,7 +60,8 @@ class HomeViewModel @Inject constructor(
     private val gestationalProfileRepository: GestationalProfileRepository,
     private val appointmentRepository: AppointmentRepository,
     private val calculateGestationalInfoUseCase: CalculateGestationalInfoUseCase,
-    private val hydrationRepository: HydrationRepository
+    private val hydrationRepository: HydrationRepository,
+    private val journalRepository: JournalRepository
 ) : ViewModel() {
 
     private var gestationalDataListener: ListenerRegistration? = null
@@ -68,19 +72,32 @@ class HomeViewModel @Inject constructor(
     private val _hasGestationalData = MutableStateFlow<Boolean?>(null)
     private val _rawGestationalData = MutableStateFlow(GestationalData())
     private val _todayHydration = MutableStateFlow<WaterIntakeEntry?>(null)
+    private val _todayJournalEntry = MutableStateFlow<JournalEntry?>(null)
 
     private val _uiState = MutableStateFlow(UiState())
     val uiState = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
+            // --- CORREÇÃO APLICADA AQUI ---
+            // Quando usamos mais de 5 fluxos, a sintaxe do `combine` muda.
+            // Recebemos um array de valores (`values`) em vez de parâmetros individuais.
             combine(
                 _gestationalInfo,
                 _upcomingAppointments,
                 _hasGestationalData,
                 _rawGestationalData,
-                _todayHydration
-            ) { info, appointments, hasData, rawData, hydration ->
+                _todayHydration,
+                _todayJournalEntry
+            ) { values ->
+                // Extraímos cada valor do array pelo seu índice
+                val info = values[0] as GestationalInfo?
+                val appointments = values[1] as List<Appointment>
+                val hasData = values[2] as Boolean?
+                val rawData = values[3] as GestationalData
+                val hydration = values[4] as WaterIntakeEntry?
+                val journalEntry = values[5] as JournalEntry?
+
                 when {
                     hasData == false -> UiState(dataState = GestationalDataState.NoData)
                     info != null -> {
@@ -95,7 +112,8 @@ class HomeViewModel @Inject constructor(
                                 weeklyInfo = info.weeklyInfo,
                                 estimatedLmp = info.estimatedLmp,
                                 upcomingAppointments = appointments,
-                                todayHydration = hydration
+                                todayHydration = hydration,
+                                todayJournalEntry = journalEntry
                             )
                         )
                     }
@@ -111,6 +129,39 @@ class HomeViewModel @Inject constructor(
         listenToGestationalData(userId)
         listenToAppointments(userId)
         listenToHydration(userId)
+        listenToJournal()
+    }
+
+    private fun listenToJournal() {
+        viewModelScope.launch {
+            val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            journalRepository.listenToJournalEntryForDate(today).collect { entry ->
+                _todayJournalEntry.value = entry
+            }
+        }
+    }
+
+    fun addWater() {
+        viewModelScope.launch {
+            val currentData = _todayHydration.value ?: return@launch
+            val newAmount = currentData.current + currentData.cupSize
+            val newHistory = currentData.history + currentData.cupSize
+            val newData = currentData.copy(current = newAmount, history = newHistory)
+            hydrationRepository.updateWaterData(newData)
+        }
+    }
+
+    fun undoLastWater() {
+        viewModelScope.launch {
+            val currentData = _todayHydration.value ?: return@launch
+            if (currentData.history.isEmpty()) return@launch
+
+            val lastAmount = currentData.history.last()
+            val newAmount = (currentData.current - lastAmount).coerceAtLeast(0)
+            val newHistory = currentData.history.dropLast(1)
+            val newData = currentData.copy(current = newAmount, history = newHistory)
+            hydrationRepository.updateWaterData(newData)
+        }
     }
 
     private fun listenToHydration(userId: String) {
@@ -138,29 +189,6 @@ class HomeViewModel @Inject constructor(
                     }
                 )
             }
-        }
-    }
-
-    fun addWater() {
-        viewModelScope.launch {
-            val currentData = _todayHydration.value ?: return@launch
-            val newAmount = currentData.current + currentData.cupSize
-            val newHistory = currentData.history + currentData.cupSize
-            val newData = currentData.copy(current = newAmount, history = newHistory)
-            hydrationRepository.updateWaterData(newData)
-        }
-    }
-
-    fun undoLastWater() {
-        viewModelScope.launch {
-            val currentData = _todayHydration.value ?: return@launch
-            if (currentData.history.isEmpty()) return@launch
-
-            val lastAmount = currentData.history.last()
-            val newAmount = (currentData.current - lastAmount).coerceAtLeast(0)
-            val newHistory = currentData.history.dropLast(1)
-            val newData = currentData.copy(current = newAmount, history = newHistory)
-            hydrationRepository.updateWaterData(newData)
         }
     }
 
@@ -208,6 +236,7 @@ class HomeViewModel @Inject constructor(
         _hasGestationalData.value = null
         _uiState.value = UiState()
         _todayHydration.value = null
+        _todayJournalEntry.value = null
     }
 
     override fun onCleared() {
