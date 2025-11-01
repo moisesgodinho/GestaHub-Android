@@ -109,7 +109,8 @@ private fun SummaryJournalContent(
         ) {
             Text(
                 "Humor de Hoje",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             // Ação 1: "Ver mais"

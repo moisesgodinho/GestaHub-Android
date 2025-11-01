@@ -56,7 +56,7 @@ fun HydrationSummaryCard(
             ) {
                 Text(
                     "Hidratação de Hoje",
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold
                 )
                 TextButton(onClick = onNavigateToTracker) {

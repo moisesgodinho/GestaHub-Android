@@ -36,7 +36,7 @@ fun UpcomingAppointmentsCard(
             ) {
                 Text(
                     "Próximos Compromissos",
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold
                 )
                 // --- CORREÇÃO DE NAVEGAÇÃO APLICADA AQUI ---
